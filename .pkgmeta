@@ -28,6 +28,9 @@ externals:
     Libs/AceGUI-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceGUI-3.0
         tag: latest
+    Libs/AceComm-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceComm-3.0
+        tag: latest
 ignore:
 	- globalcheck.lua
 	- localcheck.lua
