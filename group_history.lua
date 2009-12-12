@@ -1,5 +1,5 @@
--- local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local modname = "GroupHistory"
+local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local AceGUI = LibStub("AceGUI-3.0")
 local parent = SexyGroup
 local mod = parent:NewModule(modname, "AceEvent-3.0")
@@ -18,7 +18,7 @@ function mod:OnInitialize()
 	chars = self.db.global.characters
 	f = AceGUI:Create("Frame")
 	surveyFrame = f
-	f:SetTitle("Rate This Group")
+	f:SetTitle(L["Rate This Group"])
 	f:SetStatusText("")
 	f:SetLayout("Flow")
 	f:SetWidth(640)
@@ -35,7 +35,7 @@ function mod:InitFrame()
 		local key = "party" .. i
 		if UnitExists(key) then
 			local isTank, isHealer, isDamage = UnitGroupRolesAssigned(key)
-			local role = (isTank and "Tank") or (isHealer and "Healer") or (isDamage and "Damage") or ""
+			local role = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
 			local g = AceGUI:Create("InlineGroup")
 			
 			local label = AceGUI:Create("Label")
@@ -46,7 +46,7 @@ function mod:InitFrame()
 			local rating = AceGUI:Create("Slider")
 			rating:SetSliderValues(0, 10, 1)
 			rating:SetValue(5)
-			rating:SetLabel("Rate this player's performance")
+			rating:SetLabel(L["Rate this player's performance"])
 			rating:SetCallback("OnValueChanged", function(self, event, value)
 				if not mod.lastRun[UnitGUID(key)] then return end
 				mod.lastRun[UnitGUID(key)].rating = value
@@ -54,7 +54,7 @@ function mod:InitFrame()
 			g:AddChild(rating)
 
 			local notes = AceGUI:Create("EditBox")
-			notes:SetLabel("Notes")
+			notes:SetLabel(L["Notes"])
 			notes:SetCallback("OnEnterPressed", function(self, event, text)
 				if not mod.lastRun[UnitGUID(key)] then return end
 				mod.lastRun[UnitGUID(key)].notes = text
@@ -65,8 +65,10 @@ function mod:InitFrame()
 		end
 	end
 	f:Show()
-	local heroic = GetInstanceDifficulty() > 1
-	f:SetStatusText(("Instance run: %s%s"):format(heroic and "Heroic " or "", GetRealZoneText()))
+	PlaySoundFile([[Interface\AddOns\SexyGroup\question.mp3]])
+	f:SetStatusText((L["Instance run: %s"]):format(
+		GetInstanceDifficulty() > 1 and (HEROIC_PREFIX):format(GetRealZoneText()) or GetRealZoneText()
+	))
 end
 
 function mod:OnEnable()
