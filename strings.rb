@@ -2,7 +2,11 @@ puts <<EOF
 -- This file is script-generated and should not be manually edited. 
 -- Localizers may copy this file to edit as necessary. 
 local AceLocale = LibStub:GetLibrary("AceLocale-3.0") 
-local L = AceLocale:NewLocale("SexyGroup", "enUS", true) 
+local silent
+--@debug@--
+silent = true
+--@debug--
+local L = AceLocale:NewLocale("SexyGroup", "enUS", true, silent) 
 if not L then return end 
  
 EOF

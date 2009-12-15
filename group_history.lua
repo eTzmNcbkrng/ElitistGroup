@@ -84,7 +84,7 @@ function mod:LogGroup()
 			chars[guid] = chars[guid] or {}
 			local isTank, isHealer, isDamage = UnitGroupRolesAssigned(key)
 			local run = {
-				role = bit.band(isTank and 4 or 0, isHealer and 2 or 0, isDamage and 1 or 0),
+				role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0),
 				instance = GetRealZoneText(),
 				notes = "",
 				rating = 0
