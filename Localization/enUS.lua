@@ -14,7 +14,10 @@ if not L then return end
 
 -- ./group_history.lua
 L["Rate This Group"] = true
+L["Rate and make notes on the players in your group."] = true
 L["Rate this player's performance"] = true
+L["Terrible"] = true
+L["Great"] = true
 L["Notes"] = true
 L["Instance run: %s"] = true
 
