@@ -20,6 +20,7 @@ Libs\AceComm-3.0\AceComm-3.0.xml
 
 Localization\enUS.lua
 core.lua
+experience_data.lua
 data.lua
 users.lua
 group_history.lua

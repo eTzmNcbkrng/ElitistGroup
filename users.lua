@@ -211,7 +211,13 @@ end
 
 function Users:UpdateTabPage()
 	self.frame.tabFrame.notesButton:SetFormattedText(L["Notes (%d)"], #(self.activeData.notes))
-
+	if( #(self.activeData.notes) == 0 ) then
+		self.frame.tabFrame.selectedTab = "achievements"
+		self.frame.tabFrame.notesButton:Disable()
+	else
+		self.frame.tabFrame.notesButton:Enable()
+	end
+	
 	if( self.frame.tabFrame.selectedTab == "notes" ) then
 		self.frame.noteFrame:Show()
 		self.frame.achievementFrame:Hide()
@@ -517,6 +523,7 @@ function Users:CreateUI()
 	frame.tabFrame.notesButton = CreateFrame("Button", nil, frame.tabFrame)
 	frame.tabFrame.notesButton:SetNormalFontObject(GameFontNormal)
 	frame.tabFrame.notesButton:SetHighlightFontObject(GameFontHighlight)
+	frame.tabFrame.notesButton:SetDisabledFontObject(GameFontDisable)
 	frame.tabFrame.notesButton:SetPoint("BOTTOMLEFT", frame.tabFrame, "TOPLEFT", 0, -1)
 	frame.tabFrame.notesButton:SetScript("OnClick", tabClicked)
 	frame.tabFrame.notesButton:SetText("*")
@@ -531,6 +538,7 @@ function Users:CreateUI()
 	frame.tabFrame.achievementsButton = CreateFrame("Button", nil, frame.tabFrame)
 	frame.tabFrame.achievementsButton:SetNormalFontObject(GameFontNormal)
 	frame.tabFrame.achievementsButton:SetHighlightFontObject(GameFontHighlight)
+	frame.tabFrame.achievementsButton:SetDisabledFontObject(GameFontDisable)
 	frame.tabFrame.achievementsButton:SetPoint("TOPLEFT", frame.tabFrame.notesButton, "TOPRIGHT", 4, 0)
 	frame.tabFrame.achievementsButton:SetScript("OnClick", tabClicked)
 	frame.tabFrame.achievementsButton:SetText(L["Experience"])

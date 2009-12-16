@@ -68,7 +68,7 @@ function mod:InitFrame()
 			g:AddChild(label)
 			
 			local rating = AceGUI:Create("Slider")
-			rating:SetSliderValues(1, 5, 1)
+			rating:SetSliderValues(0, SexyGroup.MAX_RATING, 1)
 			rating:SetValue(3)
 			-- rating:SetLabel(L["Rate this player's performance"])
 			rating:SetCallback("OnValueChanged", function(self, event, value)
@@ -130,7 +130,7 @@ function mod:LogGroup()
 				chars[guid] = chars[guid] or {}
 				local isTank, isHealer, isDamage = UnitGroupRolesAssigned(key)
 				local run = {
-				role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0),
+					role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0),
 					instance = GetRealZoneText(),
 					notes = "",
 					rating = 0

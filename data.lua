@@ -5,6 +5,16 @@ SexyGroup.ROLE_HEALER = 0x02
 SexyGroup.ROLE_DAMAGE = 0x01
 SexyGroup.MAX_RATING = 5
 
+-- Simple map of valid achievements
+SexyGroup.VALID_ACHIEVEMENTS = {}
+for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+	for achievementID in pairs(data) do
+		if( type(achievementID) == "number" ) then
+			SexyGroup.VALID_ACHIEVEMENTS[achievementID] = true
+		end
+	end
+end
+
 -- While it's true that we could apply additional modifiers like 1.05 for legendaries, it's not really necessary because legendaries aren't items
 -- that people have 70% of their equipment as that need a modifier to separate them.
 SexyGroup.QUALITY_MODIFIERS = {
@@ -186,38 +196,40 @@ SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 		return "unknown"
 	end,
 })
-
+		
 -- normal/heroic is for separating the dungeons like TotC/TotGC, hard will be for dungeons like Ulduar or Sartharion with hard modes on heroic
 SexyGroup.DUNGEON_TYPES = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
 local MOD = 0.87
 SexyGroup.DUNGEON_DATA = {
-	L["T7 Dungeons"],			200 * MOD, 5,	"heroic",
-	L["Sartharion"],			200 * MOD, 10,	"normal",
-	L["Naxxramas"],				200 * MOD, 10,	"normal",
-	L["Archavon, Vault"],		200 * MOD, 10,	"normal",
-	L["Naxxramas"],				213 * MOD, 25,	"normal",
-	L["Malygos"], 				213 * MOD, 10,	"normal",
-	L["Archavon, Vault"],		213 * MOD, 25,	"heroic",
-	L["Ulduar"], 				219 * MOD, 10,	"normal",
-	L["Emalon, Vault"],			219 * MOD, 10,	"normal",
-	L["T9 Dungeons"],			219 * MOD, 5,	"heroic",
-	L["Ulduar"], 				226 * MOD, 25,	"normal",
-	L["Emalon, Vault"], 		226 * MOD, 25,	"heroic",
-	L["Malygos"], 				226 * MOD, 25,	"normal",
-	L["Sartharion"], 			226 * MOD, 25,	"normal",
-	L["T10 Dungeons"], 			232 * MOD, 5,	"heroic",
-	L["Koralon, Vault"],		232 * MOD, 10,	"normal",
-	L["Trial of the Crusader"],	232 * MOD, 10,	"normal",
-	L["Onyxia's Lair"], 		232 * MOD, 10,	"normal",
-	L["Onyxia's Lair"], 		245 * MOD, 25,	"normal",
-	L["Trial of the Crusader"], 245 * MOD, 10,	"heroic",
-	L["Koralon, Vault"], 		245 * MOD, 25,	"heroic",
-	L["Trial of the Crusader"], 245 * MOD, 25,	"normal",
-	L["Icecrown Citadel"], 		251 * MOD, 10,	"normal",
-	L["Trial of the Crusader"], 258 * MOD, 25,	"heroic",
-	L["Icecrown Citadel"],		264 * MOD, 10,	"heroic",
-	L["Icecrown Citadel"], 		264 * MOD, 25,	"normal", 
-	L["Icecrown Citadel"], 		277 * MOD, 25,	"heroic",
+	L["T7 Dungeons"],					200 * MOD, 5,	"heroic",
+	L["Sartharion"],					200 * MOD, 10,	"normal",
+	L["Naxxramas"],						200 * MOD, 10,	"normal",
+	L["Archavon, Vault"],				200 * MOD, 10,	"normal",
+	L["Naxxramas"],						213 * MOD, 25,	"normal",
+	L["Malygos"], 						213 * MOD, 10,	"normal",
+	L["Archavon, Vault"],				213 * MOD, 25,	"normal",
+	L["Ulduar"], 						219 * MOD, 10,	"normal",
+	L["Emalon, Vault"],					219 * MOD, 10,	"normal",
+	L["T9 Dungeons"],					219 * MOD, 5,	"heroic",
+	L["Ulduar"],						226 * MOD, 10,	"heroic",
+	L["Ulduar"], 						226 * MOD, 25,	"normal",
+	L["Emalon, Vault"], 				226 * MOD, 25,	"normal",
+	L["Malygos"], 						226 * MOD, 25,	"normal",
+	L["Sartharion"], 					226 * MOD, 25,	"normal",
+	L["T10 Dungeons"], 					232 * MOD, 5,	"heroic",
+	L["Koralon, Vault"],				232 * MOD, 10,	"normal",
+	L["Trial of the Crusader"],			232 * MOD, 10,	"normal",
+	L["Onyxia's Lair"], 				232 * MOD, 10,	"normal",
+	L["Ulduar"],						239 * MOD, 25,	"heroic",
+	L["Onyxia's Lair"], 				245 * MOD, 25,	"normal",
+	L["Trial of the Grand Crusader"],	245 * MOD, 10,	"heroic",
+	L["Koralon, Vault"], 				245 * MOD, 25,	"normal",
+	L["Trial of the Crusader"],			245 * MOD, 25,	"normal",
+	L["Icecrown Citadel"], 				251 * MOD, 10,	"normal",
+	L["Trial of the Grand Crusader"],	258 * MOD, 25,	"heroic",
+	L["Icecrown Citadel"],				264 * MOD, 10,	"heroic",
+	L["Icecrown Citadel"], 				264 * MOD, 25,	"normal", 
+	L["Icecrown Citadel"], 				277 * MOD, 25,	"heroic",
 }
 
 -- I'm lazy!
