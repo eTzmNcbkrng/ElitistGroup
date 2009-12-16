@@ -19,7 +19,7 @@ Libs\AceComm-3.0\AceComm-3.0.xml
 #@end-no-lib-strip@
 
 Localization\enUS.lua
-core.lua
+SexyGroup.lua
 experience_data.lua
 data.lua
 users.lua

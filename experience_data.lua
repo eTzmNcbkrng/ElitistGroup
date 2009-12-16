@@ -1,9 +1,19 @@
+-- Yes I could put this into the normal data file, but I would rather not look through 400 lines of table data to modify normal data and such
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 
--- Yes I could put this into the normal data file, but I would rather not look through 400 lines of table data to modify normal data and such
+--[[
+	Here's what you need to know about this file:
+	Everything needs an id, it has to be unique but a simple t#-#m or name-#m work.
+	If you want points from another category to cascade into another use cascade=<to>, <to> being the id.
+	Order matters! If you list instance A, B, C, D, E and you setup B and D to cascade to C, then C to cascade to A, it will cascade B/C's combined score into A, but not D.
+	You shouldn't want this, so don't mess up ordering!
+	
+	Currently cascading is setup to do 10 man heroic -> 10 man normal, might also cascade 25 man normal -> 10 man normal, 25 man heroic -> 10 man heroic, but someone is also
+	more likely to have been carried through a 25 man than a 10, so not sure if it's "accurate" to cascade that.
+]]
 SexyGroup.EXPERIENCE_POINTS = {
 	-- T7 Dungeons, 5 man, heroic (Drak'Tharon Keep, Violet Hold, etc)
-	{name = L["T7 Dungeons"], id = "t7-5m", players = 5, heroic = true,
+	{name = L["T7 Dungeons"], parent = true, childLess = true, id = "t7-heroic", players = 5, heroic = true,
 		experienced = 30, -- 6 full clears
 		[1504] = 5, -- Ingvar the Plunderer kills (Heroic Utgarde Keep)
 		[1505] = 5, -- Keristrasza kills (Heroic Nexus)
@@ -21,10 +31,10 @@ SexyGroup.EXPERIENCE_POINTS = {
 	},
 	
 	-- T7 Raids, 10 man
-	{name = L["T7 Raids"], id = "t7-10m", players = 10,
+	{name = L["T7 Raids"], parent = true, id = "t7-10m", players = 10,
 		experienced = 325, -- Experienced for this entire 10-man tier, 5 naxx clears, or a combination of Sarth/Malygos
 	},
-	{name = L["Naxxramas"], parent = "t7-10m", 
+	{name = L["Naxxramas"], child = "t7-10m", id = "naxx-10m", players = 10,
 		experienced = 260, -- 3 full clears / 2 full clears + undying
 		[1361] = 2, -- Anub'Rekhan kills (Naxxramas 10 player)
 		[1362] = 2, -- Grand Widow Faerlina kills (Naxxramas 10 player)
@@ -44,21 +54,21 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[576] = 65, -- The Fall of Naxxramas (10 player)
 		[2187] = 65, -- The Undying
 	},
-	{name = L["Sartharion"], parent = "t7-10m",
+	{name = L["Sartharion"], child = "t7-10m", id = "sarth-10m", players = 10,
 		experienced = 30, -- 3 kills or a 3-drake kill
 		[1392] = 10, -- Sartharion kills (Chamber of the Aspects 10 player)
 		[2051] = 30, -- The Twilight Zone (10 player)
 	},
-	{name = L["Malygos"], parent = "t7-10m",
+	{name = L["Malygos"], child = "t7-10m", id = "malygos-10m", players = 10,
 		experienced = 30, -- 3 kills or a sub-6 minute kill
 		[1391] = 10, -- Malygos kills (10 player)
 		[1874] = 30, -- You Don't Have An Eternity (10 player)
 	},
 	-- T7 Raids, 25 man
-	{name = L["T7 Raids"], id = "t7-25m", players = 25,
+	{name = L["T7 Raids"], parent = true, id = "t7-25m", players = 25,
 		experienced = 350,
 	},
-	{name = L["Naxxramas"], parent = "t7-25m",
+	{name = L["Naxxramas"], child = "t7-25m", id = "naxx-25m", players = 25,
 		experienced = 280, -- 3 full clears/2 full clears + immortal
 		[1368] = 2, -- Anub'Rekhan kills (Naxxramas 25 player)
 		[1380] = 2, -- Grand Widow Faerlina kills (Naxxramas 25 player)
@@ -78,19 +88,19 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[577] = 70, -- The Fall of Naxxramas (25 player)
 		[2186] = 70, -- The Immortal
 	},
-	{name = L["Sartharion"], parent = "t7-25m",
+	{name = L["Sartharion"], child = "t7-25m", id = "sarth-25m", players = 25,
 		experienced = 30, -- 3 kills or 3-drake
 		[1393] = 10, -- Sartharion kills (Chamber of the Aspects 25 player)
 		[2051] = 30, -- The Twilight Zone (10 player)
 	},
-	{name = L["Malygos"], parent = "t7-25m",
+	{name = L["Malygos"], child = "t7-25m", id = "malygos-25m", players = 25,
 		experienced = 30,
 		[1394] = 10, -- Malygos kills (25 player)
 		[1875] = 30, -- You Don't Have An Eternity (25 player)
 	},
 	-- T8 Raids, 10 man
-	{name = L["T8 Raids"], id = "t8-10m", players = 10},
-	{name = L["Ulduar"], parent = "t8-10m",
+	{name = L["T8 Raids"], parent = true, id = "t8-10m", players = 10},
+	{name = L["Ulduar"], child = "t8-10m", id = "ulduar-10m-n", players = 10,
 		experienced = 240, -- 3 full clears, 2 with Champion of Ulduar, Algalon is a bonus
 		[2856] = 1, -- Flame Leviathan kills (Ulduar 10 player)
 		[2857] = 1, -- Razorscale kills (Ulduar 10 player)
@@ -109,7 +119,7 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[2894] = 60, -- The Secrets of Ulduar (10 player)
 		[2903] = 60, -- Champion of Ulduar
 	},
-	{name = L["Ulduar"], parent = "t8-10m", heroic = true, 
+	{name = L["Ulduar"], child = "t8-10m", heroic = true, id = "ulduar-10m-h", cascade = "ulduar-10m-n", players = 10,
 		experienced = 60, -- 4 of the 7 hard modes, or one zero light + two other misc hard modes
 		[2941] = 15, -- I Choose You, Steelbreaker (10 player)
 		[3056] = 5, -- Orbit-uary (10 player)
@@ -122,8 +132,8 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[3004] = 25, -- He Feeds On Your Tears (10 player)
 	},
 	-- T8 Raids, 25 man
-	{name = L["T8 Raids"], id = "t8-25m", players = 25}, 
-	{name = L["Ulduar"], parent = "t8-25m",
+	{name = L["T8 Raids"], parent = true, id = "t8-25m", players = 25}, 
+	{name = L["Ulduar"], child = "t8-25m", id = "ulduar-25m-n", players = 25,
 		experienced = 240, -- 3 full clears, 2 with Conqueror of Ulduar, Algalon is a bonus
 		[2872] = 1, -- Flame Leviathan kills (Ulduar 25 player)
 		[2873] = 1, -- Razorscale kills (Ulduar 25 player)
@@ -142,7 +152,8 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[2895] = 60, -- The Secrets of Ulduar (25 player)
 		[2904] = 60, -- Conqueror of Ulduar
 	},
-	{name = L["Ulduar"], parent = "t8-25m", heroic = true,
+	{name = L["Ulduar"], child = "t8-25m", id = "ulduar-25m-h", cascade = "ulduar-25m-n", heroic = true, players = 25,
+		experienced = 60, -- 4 of the 7 hard modes, or one zero light + two other misc hard modes
 		[2944] = 15, -- I Choose You, Steelbreaker (25 player)
 		[3057] = 5, -- Orbit-uary (25 player)
 		[3059] = 10, -- Heartbreaker (25 player)
@@ -155,15 +166,15 @@ SexyGroup.EXPERIENCE_POINTS = {
 	},
 
 	-- T9 Dungeons, 5 man (Trial of the Champion)
-	{name = L["T9 Dungeons"], id = "t8-5m", players = 5, heroic = true,
+	{name = L["T9 Dungeons"], parent = true, childLess = true, id = "t8-5m", players = 5, heroic = true,
 		experienced = 15,
 		[4027] = 5, -- The Black Knight kills (Heroic Trial of the Champion)
 	},
 	
 	-- T9 Raids, 10 man
-	{name = L["T9 Raids"], id = "t9-10m", players = 10},
+	{name = L["T9 Raids"], parent = true, id = "t9-10m", players = 10},
 	-- Right now, the ToC10 and ToCG10 completion stats are bugged, going to include them so data is recorded, but it's worth 0 right now
-	{name = L["Trial of the Crusader"], parent = "t9-10m",
+	{name = L["Trial of the Crusader"], child = "t9-10m", id = "toc-10m", players = 10,
 		experienced = 40, -- Slightly wonky, first 4 bosses killed 3 times, with one being a full clear
 		[4028] = 1, -- Victories over the Beasts of Northrend (Trial of the Crusader 10 player)
 		[4032] = 2, -- Lord Jaraxxus kills (Trial of the Crusader 10 player)
@@ -172,7 +183,7 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[4044] = 0, -- Times completed the Trial of the Crusader (10 player)
 		[3917] = 10, -- Call of the Crusade (10 player)
 	},
-	{name = L["Trial of the Grand Crusader"], parent = "t9-10m", heroic = true,
+	{name = L["Trial of the Grand Crusader"], child = "t9-10m", id = "togc-10m", cascade = "toc-10m", heroic = true, players = 10,
 		experienced = 50, -- first 4 bosses killed 4 times with one full clear, 3 with >=45 attempts, 1 with 50 attempts
 		[4030] = 1, -- Victories over the Beasts of Northrend (Trial of the Grand Crusader 10 player)
 		[4033] = 2, -- Lord Jaraxxus kills (Trial of the Grand Crusader 10 player)
@@ -184,15 +195,15 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[3810] = 30, -- A Tribute to Insanity (10 player)
 		[4080] = 30, -- A Tribute to Dedicated Insanity
 	},
-	{name = L["Onyxia's Lair"], parent = "t9-10m",
+	{name = L["Onyxia's Lair"], child = "t9-10m", id = "onyxia-10m", players = 10,
 		experienced = 10,
 		[4396] = 10, -- Onyxia's Lair (10 player)
 		[4402] = 20, -- More Dots! (10 player)
 	},
 	
 	-- T9 Raids, 25 man
-	{name = L["T9 Raids"], id = "t9-25m", players = 25},
-	{name = L["Trial of the Crusader"], parent = "t9-25m",
+	{name = L["T9 Raids"], parent = true, id = "t9-25m", players = 25},
+	{name = L["Trial of the Crusader"], child = "t9-25m", id = "toc-25m", players = 25,
 		experienced = 40, -- 3 full clears
 		[4031] = 0, -- Victories over the Beasts of Northrend (Trial of the Crusader 25 player)
 		[4034] = 1, -- Lord Jaraxxus kills (Trial of the Crusader 25 player)
@@ -201,7 +212,7 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[4046] = 6, -- Times completed the Trial of the Crusader (25 player)
 		[3916] = 10, -- Call of the Crusade (25 player)
 	},
-	{name = L["Trial of the Grand Crusader"], parent = "t9-25m", heroic = true, 
+	{name = L["Trial of the Grand Crusader"], child = "t9-25m", id = "togc-25m", cascade = "toc-25m", heroic = true, players = 25,
 		experienced = 50, -- 4 full clears, or 3 full clears + mad skill, 1 full clear + insanity
 		[4029] = 1, -- Victories over the Beasts of Northrend (Trial of the Grand Crusader 25 player)
 		[4035] = 1, -- Lord Jaraxxus kills (Trial of the Grand Crusader 25 player)
@@ -212,29 +223,29 @@ SexyGroup.EXPERIENCE_POINTS = {
 		[3818] = 10, -- A Tribute to Mad Skill (25 player)
 		[3819] = 30, -- A Tribute to Insanity (25 player)
 	},
-	{name = L["Onyxia's Lair"], parent = "t9-25m",
+	{name = L["Onyxia's Lair"], child = "t9-25m", id = "onyxia-25m", players = 25,
 		experienced = 10,
 		[4397] = 10, -- Onyxia's Lair (25 player)
 		[4405] = 20, -- More Dots! (25 player)
 	},
 	-- T10 Dungeons, 5 man, heroic
-	{name = L["T10 Dungeons"], id = "t10-5m", players = 5,
+	{name = L["T10 Dungeons"], parent = true, id = "t10-5m", players = 5,
 		experienced = 60, -- About 1 run in each dungeon, or 2 runs in two, or 5 runs in 1
 	},
-	{name = L["Forge of Souls"], parent = "t10-5m", heroic = true,
+	{name = L["Forge of Souls"], child = "t10-5m", id = "fos-5m", heroic = true, players = 5,
 		experienced = 30, -- 3 clears
 		[4714] = 2, -- Bronjahm kills (Heroic Forge of Souls)
 		[4716] = 8, -- Devourer of Souls kills (Heroic Forge of Souls)
 		[4519] = 10, -- Heroic: The Forge of Souls
 	},
-	{name = L["Pit of Saron"], parent = "t10-5m", heroic = true,
+	{name = L["Pit of Saron"], child = "t10-5m", id = "pos-5m", heroic = true, players = 5,
 		experienced = 30,
 		[4719] = 1, -- Ick and Krick kills (Heroic Pit of Saron)
 		[4721] = 2, -- Scourgelord Tyrannus kills (Heroic Pit of Saron)
 		[4728] = 7, -- Forgemaster Garfrost kills (Heroic Pit of Saron)
 		[4520] = 10, -- Heroic: The Pit of Saron
 	},
-	{name = L["Halls of Reflection"], parent = "t10-5m", heroic = true,
+	{name = L["Halls of Reflection"], child = "t10-5m", id = "hor-5m", heroic = true, players = 5,
 		experienced = 30,
 		[4526] = 1, -- We're Not Retreating; We're Advancing in a Different Direction.
 		[4723] = 2, -- Falric kills (Heroic Halls of Reflection)
@@ -244,8 +255,8 @@ SexyGroup.EXPERIENCE_POINTS = {
 	},
 	
 	-- T10 Raids, 10 man
-	{name = L["T10 Raids"], id = "t10-10m", players = 10},
-	{name = L["Icecrown Citadel"], parent = "t10-10m",
+	{name = L["T10 Raids"], parent = true, id = "t10-10m", players = 10},
+	{name = L["Icecrown Citadel"], child = "t10-10m", id = "icc-10m-n", players = 10,
 		experienced = 180, -- 3 full clears
 		[4639] = 1, -- Lord Marrowgar kills (Icecrown 10 player)
 		[4643] = 1, -- Lady Deathwhisper kills (Icecrown 10 player)
@@ -265,7 +276,7 @@ SexyGroup.EXPERIENCE_POINTS = {
 		--[4531] = 5, -- Storming the Citadel (10 player)
 		[4532] = 45, -- Fall of the Lich King (10 player)
 	},
-	{name = L["Icecrown Citadel"], parent = "t10-10m", heroic = true,
+	{name = L["Icecrown Citadel"], child = "t10-10m", id = "icc-10m-h", cascade = "icc-10m-n", heroic = true, players = 10,
 		experienced = 90, -- 1 full clear
 		[4640] = 1, -- Lord Marrowgar kills (Heroic Icecrown 10 player)
 		[4654] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 10 player)
@@ -287,8 +298,8 @@ SexyGroup.EXPERIENCE_POINTS = {
 	},
 	
 	-- T10 Raids, 25 man
-	{name = L["T10 Raids"], id = "t10-25m", players = 25},
-	{name = L["Icecrown Citadel"], parent = "t10-25m",
+	{name = L["T10 Raids"], parent = true, id = "t10-25m", players = 25},
+	{name = L["Icecrown Citadel"], child = "t10-25m", id = "icc-25m-n", players = 25,
 		experienced = 180, -- 3 full clears
 		[4641] = 1, -- Lord Marrowgar kills (Icecrown 25 player)
 		[4655] = 1, -- Lady Deathwhisper kills (Icecrown 25 player)
@@ -308,7 +319,7 @@ SexyGroup.EXPERIENCE_POINTS = {
 		--[4607] = 0, -- The Frostwing Halls (25 player)
 		[4608] = 45, -- Fall of the Lich King (25 player)
 	},
-	{name = L["Icecrown Citadel"], parent = "t10-25m", heroic = true,
+	{name = L["Icecrown Citadel"], child = "t10-25m", id = "icc-25m-h", cascade = "icc-25m-n", heroic = true, players = 25,
 		experienced = 90, -- 1 full clear
 		[4642] = 1, -- Lord Marrowgar kills (Heroic Icecrown 25 player)
 		[4656] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 25 player)
@@ -330,38 +341,46 @@ SexyGroup.EXPERIENCE_POINTS = {
 	},
 	
 	-- Vault of Archavon, 10 man
-	{name = L["Vault of Archavon"], id = "voa-10", players = 10,
-		experienced = 80, -- 4 full clears, or two with Toravon
+	{name = L["Vault of Archavon"], parent = true, id = "voa-10m", players = 10,
+		experienced = 120, -- 4 full clears, or three with Toravon
 		[4016] = 20, -- Earth, Wind & Fire (10 player)
 	},
-	{name = L["Archavon the Stone Watcher"], parent = "voa-10",
+	{name = L["Archavon the Stone Watcher"], child = "voa-10m", id = "arch-10m", players = 10,
+		experienced = 10,
 		[1753] = 5, -- Archavon the Stone Watcher kills (Wintergrasp 10 player)
 	},
-	{name = L["Emalon the Storm Watcher"], parent = "voa-10",
+	{name = L["Emalon the Storm Watcher"], child = "voa-10m", id = "emal-10m", players = 10,
+		experienced = 30,
 		[2870] = 10, -- Emalon the Storm Watcher kills (Wintergrasp 10 player)
 	},
-	{name = L["Koralon the Flame Watcher"], parent = "voa-10",
-		[4074] = 10, -- Koralon the Flame Watcher kills (Wintergrasp 10 player)
+	{name = L["Koralon the Flame Watcher"], child = "voa-10m", id = "kora-10m", players = 10,
+		experienced = 45,
+		[4074] = 15, -- Koralon the Flame Watcher kills (Wintergrasp 10 player)
 	},
-	{name = L["Toravon the Ice Watcher"], parent = "voa-10",
-		[4657] = 15, -- Toravon the Ice Watcher kills (Wintergrasp 10 player)
+	{name = L["Toravon the Ice Watcher"], child = "voa-10m", id = "tora-10m", players = 10,
+		experienced = 60,
+		[4657] = 20, -- Toravon the Ice Watcher kills (Wintergrasp 10 player)
 	},
 
 	-- Vault of Archavon, 25
-	{name = L["Vault of Archavon"], id = "voa-25", players = 25,
-		experienced = 80, -- 4 full clears, or two with Toravon
+	{name = L["Vault of Archavon"], parent = true, id = "voa-25m", players = 25,
+		experienced = 120, -- 4 full clears, or three with Toravon
 		[4017] = 20, -- Earth, Wind & Fire (25 player)
 	},
-	{name = L["Archavon the Stone Watcher"], parent = "voa-25",
+	{name = L["Archavon the Stone Watcher"], child = "voa-25m", id = "arch-25m", players = 25,
+		experienced = 10,
 		[1754] = 5, -- Archavon the Stone Watcher kills (Wintergrasp 25 player)
 	},
-	{name = L["Emalon the Storm Watcher"], parent = "voa-25",
+	{name = L["Emalon the Storm Watcher"], child = "voa-25m", id = "emal-25m", players = 25,
+		experienced = 30,
 		[3236] = 10, -- Emalon the Storm Watcher kills (Wintergrasp 25 player)
 	},
-	{name = L["Koralon the Flame Watcher"], parent = "voa-25",
-		[4075] = 10, -- Koralon the Flame Watcher kills (Wintergrasp 25 player)
+	{name = L["Koralon the Flame Watcher"], child = "voa-25m", id = "kora-25m", players = 25,
+		experienced = 45,
+		[4075] = 15, -- Koralon the Flame Watcher kills (Wintergrasp 25 player)
 	},
-	{name = L["Toravon the Ice Watcher"], parent = "voa-25",
-		[4658] = 15, -- Toravon the Ice Watcher kills (Wintergrasp 25 player)
+	{name = L["Toravon the Ice Watcher"], child = "voa-25m", id = "tora-25m", players = 25,
+		experienced = 60,
+		[4658] = 20, -- Toravon the Ice Watcher kills (Wintergrasp 25 player)
 	},
 }

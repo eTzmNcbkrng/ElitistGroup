@@ -8,9 +8,14 @@ SexyGroup.MAX_RATING = 5
 -- Simple map of valid achievements
 SexyGroup.VALID_ACHIEVEMENTS = {}
 for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
-	for achievementID in pairs(data) do
+	for achievementID, points in pairs(data) do
 		if( type(achievementID) == "number" ) then
-			SexyGroup.VALID_ACHIEVEMENTS[achievementID] = true
+			-- Debug! Change me to true later
+			SexyGroup.VALID_ACHIEVEMENTS[achievementID] = points > 20 and math.random(0, 1) or math.random(0, points)
+			
+			if( math.random(0, 20) < 5 ) then
+				SexyGroup.VALID_ACHIEVEMENTS[achievementID] = 0
+			end
 		end
 	end
 end

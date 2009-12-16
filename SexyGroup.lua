@@ -1,9 +1,14 @@
 SexyGroup = LibStub("AceAddon-3.0"):NewAddon("SexyGroup", "AceEvent-3.0", "AceTimer-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
-local defaults = {}
 
 function SexyGroup:OnInitialize()
-	self.db = LibStub("AceDB-3.0"):New("SexyGroupDB", defaults)
+	self.defaults = {
+		profile = {
+			expExpanded = {},
+		},
+	}
+	
+	self.db = LibStub("AceDB-3.0"):New("SexyGroupDB", self.defaults, true)
 end
 
 function SexyGroup:CalculateScore(itemQuality, itemLevel)
@@ -40,6 +45,7 @@ function SexyGroup:IsValidItem(itemLink, playerData)
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
+--[[
 local timeTable = {}
 function SexyGroup:ConvertToSeconds(dateText)
 	local month, day, year, hour, minutes, seconds = string.match(dateText, "([0-9]+)/([0-9]+)/([0-9]+) ([0-9]+):([0-9]+):([0-9]+)")
@@ -51,4 +57,4 @@ function SexyGroup:ConvertToSeconds(dateText)
 	
 	return time(timeTable)
 end
-
+]]

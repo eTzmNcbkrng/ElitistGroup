@@ -2,7 +2,7 @@ local Users = SexyGroup:NewModule("Users", "AceEvent-3.0")
 
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
-local MAX_ACHIEVEMENT_ROWS = 12
+local MAX_ACHIEVEMENT_ROWS = 20
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 
 local TEST_DATA = {
@@ -16,7 +16,8 @@ local TEST_DATA = {
 	specRole = nil,
 	from = "Selari",
 	trusted = false,
-	scanned = "12/14/2009 0:10:20", -- MM/DD/YYYY HH:MM:SS
+	scanned = 1260940351, -- time()
+	achievements = CopyTable(SexyGroup.VALID_ACHIEVEMENTS),
 	items = {
 		["WristSlot"] = "item:40323:2332:3520:0:0:0:0:1909562656:80",
 		["BackSlot"] = "item:45493:3831:0:0:0:0:0:1071947136:80",
@@ -82,14 +83,12 @@ local TEST_DATA = {
 	},
 }
 
---[[
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function(self)
 	self:UnregisterAllEvents()
 	Users:LoadData(TEST_DATA)
 end)	
-]]
 
 function Users:LoadData(playerData)
 	self:CreateUI()
@@ -172,7 +171,7 @@ function Users:LoadData(playerData)
 	local scoreIcon = totalScore >= 240 and "INV_Shield_72" or totalScore >= 220 and "INV_Shield_61" or totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
 	frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, totalScore, L["score"])
 
-	local scanAge = (time() - SexyGroup:ConvertToSeconds(playerData.scanned)) / 3600
+	local scanAge = (time() - playerData.scanned) / 3600
 	local scanIcon = scanAge >= 5 and 37 or scanAge >= 2 and 39 or scanAge >= 1 and 38 or 41
 	if( scanAge == 0 ) then
 		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, L["Scanned today"])
@@ -188,6 +187,28 @@ function Users:LoadData(playerData)
 	else
 		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, playerData.from, L["Untrusted"])
 		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed."]
+	end
+	
+	-- Build the necessary experience data based on the players achievements, this is fun!
+	self.experienceData = {}
+	for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+		self.experienceData[data.id] = self.experienceData[data.id] or 0
+				
+		for id, points in pairs(data) do
+			if( type(id) == "number" and playerData.achievements[id] ) then
+				self.experienceData[data.id] = self.experienceData[data.id] + (points * playerData.achievements[id])
+			end
+		end
+		
+		-- Add the childs score to the parents
+		if( not data.parent ) then
+			self.experienceData[data.child] = (self.experienceData[data.child] or 0) + self.experienceData[data.id]
+		end
+		
+		-- Cascade the scores from this one to whatever it's supposed to
+		if( data.cascade ) then
+			self.experienceData[data.cascade] = (self.experienceData[data.cascade] or 0) + self.experienceData[data.id]
+		end
 	end
 	
 	-- Setup dungeon info
@@ -211,6 +232,7 @@ end
 
 function Users:UpdateTabPage()
 	self.frame.tabFrame.notesButton:SetFormattedText(L["Notes (%d)"], #(self.activeData.notes))
+	self.frame.tabFrame.selectedTab = "achievements"
 	if( #(self.activeData.notes) == 0 ) then
 		self.frame.tabFrame.selectedTab = "achievements"
 		self.frame.tabFrame.notesButton:Disable()
@@ -238,7 +260,66 @@ function Users:UpdateTabPage()
 end
 
 function Users:UpdateAchievementInfo()
+	local self = Users
+	local totalEntries = 0
+	for id, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+		if( not data.child or data.child and SexyGroup.db.profile.expExpanded[data.child] ) then
+			totalEntries = totalEntries + 1
+		end
+	end
+	
+	FauxScrollFrame_Update(self.frame.achievementFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS, 18)
+	
+	for _, row in pairs(self.frame.achievementFrame.rows) do row.tooltip = nil; row.toggle:Hide(); row:Hide() end
 
+	local rowID, rowOffset = 1, 0
+	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
+	
+	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
+	for id, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+		if( id >= offset and ( not data.child or data.child and SexyGroup.db.profile.expExpanded[data.child] ) ) then
+			local row = self.frame.achievementFrame.rows[rowID]
+			local rowOffset = not data.child and 16 or 4
+			
+			-- Setup toggle button
+			if( not data.child and not data.childLess ) then
+				local type = not SexyGroup.db.profile.expExpanded[data.id] and "Minus" or "Plus"
+				row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
+				row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
+				row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
+				row.toggle.id = data.id
+				row.toggle:Show()
+			end
+			
+			-- Children categories without experience requirements should be shown in the experienceText so we don't get an off looking gap
+			local heroicIcon = data.heroic and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-2:32:32:0:16:0:20|t" or ""
+			if( not data.child and not data.experienced ) then
+				row.nameText:SetFormattedText(L["%s%s (%d-man)"], heroicIcon, data.name, data.players)
+			-- Anything with an experience requirement obviously should show it
+			elseif( data.experienced ) then
+				local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
+				local experienceText = percent >= 1 and L["Experienced"] or percent >= 0.8 and L["Nearly-experienced"] or percent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
+				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+				
+				if( data.child ) then
+					row.nameText:SetFormattedText(L["- [|cff%02x%02x00%d%%|r] %s%s"], r, g, percent * 100, heroicIcon, data.name)
+				else
+					row.nameText:SetFormattedText(L["[|cff%02x%02x00%d%%|r] %s%s (%d-man)"], r, g, percent * 100, heroicIcon, data.name, data.players)
+				end
+				
+				row.tooltip = string.format(L["%s: %d/%d in %d-man %s (%s)"], experienceText, self.experienceData[data.id], data.experienced, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
+			end
+			
+			row:SetWidth(rowWidth - rowOffset)
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", self.frame.achievementFrame, "TOPLEFT", 4 + rowOffset, -3 - 17 * (rowID - 1))
+			row:Show()
+			
+			rowID = rowID + 1
+			if( rowID > MAX_ACHIEVEMENT_ROWS ) then break end
+		end
+	end
 end
 
 function Users:UpdateNoteInfo()
@@ -254,9 +335,9 @@ function Users:UpdateNoteInfo()
 		if( id >= offset ) then
 			local row = self.frame.noteFrame.rows[rowID]
 
-			local ratingPercent = note.rating / SexyGroup.MAX_RATING
-			local r = (ratingPercent > 0.5 and (1.0 - ratingPercent) * 2 or 1.0) * 255
-			local g = (ratingPercent > 0.5 and 1.0 or ratingPercent * 2) * 255
+			local percent = note.rating / SexyGroup.MAX_RATING
+			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, note.from)
 			row.commentText:SetText(note.comment)
@@ -291,9 +372,9 @@ function Users:UpdateDungeonInfo()
 			local row = self.frame.dungeonFrame.rows[rowID]
 			
 			local name, score, players, type = SexyGroup.DUNGEON_DATA[dataID], SexyGroup.DUNGEON_DATA[dataID + 1], SexyGroup.DUNGEON_DATA[dataID + 2], SexyGroup.DUNGEON_DATA[dataID + 3]
-			local difficulty = 1.0 - ((score - SexyGroup.DUNGEON_MIN) / SexyGroup.DUNGEON_DIFF)
-			local r = (difficulty > 0.5 and (1.0 - difficulty) * 2 or 1.0) * 255
-			local g = (difficulty > 0.5 and 1.0 or difficulty * 2) * 255
+			local percent = 1.0 - ((score - SexyGroup.DUNGEON_MIN) / SexyGroup.DUNGEON_DIFF)
+			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local heroicIcon = type == "heroic" and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
 			
 			row.dungeonName:SetFormattedText("%s|cff%02x%02x00%s|r", heroicIcon, r, g, name)
@@ -560,32 +641,31 @@ function Users:CreateUI()
 	frame.achievementFrame.scroll:SetPoint("BOTTOMRIGHT", frame.achievementFrame, "BOTTOMRIGHT", -24, 1)
 	frame.achievementFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 46, Users.UpdateAchievementInfo) end)
 
+	local function toggleCategory(self)
+		local id = self.toggle and self.toggle.id or self.id
+		SexyGroup.db.profile.expExpanded[id] = not SexyGroup.db.profile.expExpanded[id]
+		Users:UpdateAchievementInfo()
+	end
+	
 	frame.achievementFrame.rows = {}
 	for i=1, MAX_ACHIEVEMENT_ROWS do
-		local button = CreateFrame("Frame", nil, frame.achievementFrame)
+		local button = CreateFrame("Button", nil, frame.achievementFrame)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
-		button:EnableMouse(true)
-		button:SetHeight(16)
-		button:SetWidth(frame.achievementFrame:GetWidth() - 24)
-		button.infoText = button:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		button.infoText:SetHeight(16)
-		button.infoText:SetJustifyH("LEFT")
-		button.infoText:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
-		button.infoText:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
+		button:SetScript("OnClick", toggleCategory)
+		button:SetHeight(14)
+		button.nameText = button:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		button.nameText:SetHeight(14)
+		button.nameText:SetJustifyH("LEFT")
+		button.nameText:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+		button.nameText:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
 
-		button.detailsText = button:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		button.detailsText:SetHeight(16)
-		button.detailsText:SetJustifyH("LEFT")
-		button.detailsText:SetJustifyV("TOP")
-		button.detailsText:SetPoint("TOPLEFT", button.infoText, "BOTTOMLEFT", 0, 0)
-		button.detailsText:SetPoint("TOPRIGHT", button.infoText, "BOTTOMRIGHT", 0, 0)
+		button.toggle = CreateFrame("Button", nil, button)
+		button.toggle:SetScript("OnClick", toggleCategory)
+		button.toggle:SetPoint("TOPRIGHT", button, "TOPLEFT", -2, 0)
+		button.toggle:SetHeight(14)
+		button.toggle:SetWidth(14)
 
-		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.achievementFrame.rows[i - 1], "BOTTOMLEFT", 0, -4)
-		else
-			button:SetPoint("TOPLEFT", frame.achievementFrame, "TOPLEFT", 4, -2)
-		end
 		frame.achievementFrame.rows[i] = button
 	end
 
