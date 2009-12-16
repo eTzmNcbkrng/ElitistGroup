@@ -87,7 +87,7 @@ local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function(self)
 	self:UnregisterAllEvents()
-	Users:LoadData(TEST_DATA)
+	--Users:LoadData(TEST_DATA)
 end)	
 
 function Users:LoadData(playerData)
