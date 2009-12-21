@@ -5,89 +5,11 @@ local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 
-local TEST_DATA = {
-	name = "Mayen",
-	realm = "Mal'Ganis",
-	level = 80,
-	classToken = "DRUID",
-	talentTree1 = 10,
-	talentTree2 = 0,
-	talentTree3 = 61,
-	specRole = nil,
-	from = "Selari",
-	trusted = false,
-	scanned = 1260940351, -- time()
-	achievements = CopyTable(SexyGroup.VALID_ACHIEVEMENTS),
-	items = {
-		["WristSlot"] = "item:40323:2332:3520:0:0:0:0:1909562656:80",
-		["BackSlot"] = "item:45493:3831:0:0:0:0:0:1071947136:80",
-		["Trinket0Slot"] = "item:37835:0:0:0:0:0:0:2104852352:80",
-		["FeetSlot"] = "item:45565:3232:3545:3520:0:0:0:140590272:80",
-		["LegsSlot"] = "item:45847:3719:3520:3734:0:0:0:0:80",
-		["Finger1Slot"] = "item:49486:0:0:0:0:0:0:1347394432:80",
-		["RangedSlot"] = "item:40342:0:0:0:0:0:0:0:80",
-		["Trinket1Slot"] = "item:45929:0:0:0:0:0:0:-2054043520:80",
-		["HeadSlot"] = "item:45346:3819:3627:3734:0:0:0:0:80",
-		["MainHandSlot"] = "item:40488:3834:0:0:0:0:0:-1988596908:80",
-		["SecondaryHandSlot"] = "item:40192:0:0:0:0:0:0:2005934728:80",
-		["WaistSlot"] = "item:45556:0:3520:3520:3866:0:0:1962653440:80",
-		["ChestSlot"] = "item:46186:3832:3734:3558:0:0:0:0:80",
-		["ShoulderSlot"] = "item:40594:3809:0:0:0:0:0:-1469749462:80",
-		["Finger0Slot"] = "item:51558:0:0:0:0:0:0:0:80",
-		["NeckSlot"] = "item:45822:0:0:0:0:0:0:0:80",
-		["HandsSlot"] = "item:45345:3246:3545:0:0:0:0:0:80",
-	},
-	notes = {
-		{
-			rating = 5,
-			from = "Mayen",
-			comment = "The quick brown fox, happens to be quick enough when it's jumping over a very lazy dog.",
-			role = bit.bor(SexyGroup.ROLE_HEALER, SexyGroup.ROLE_TANK), -- Tank, Healer
-			dungeon = "Halls of Reflection",
-		},
-		{
-			rating = 4,
-			from = "Mayen",
-			comment = "Amazing, best there's ever been!",
-			role = bit.bor(SexyGroup.ROLE_HEALER, SexyGroup.ROLE_TANK), -- Tank, Healer
-			dungeon = "Halls of Reflection",
-		},
-		{
-			rating = 3,
-			from = "Jerkface",
-			comment = "Feh!",
-			role = SexyGroup.ROLE_DAMAGE, -- DPS
-			dungeon = "Halls of Reflection",
-		},
-		{
-			rating = 2,
-			from = "Jerkface",
-			comment = "Feh!",
-			role = SexyGroup.ROLE_DAMAGE, -- DPS
-			dungeon = "Halls of Reflection",
-		},
-		{
-			rating = 1,
-			from = "Jerkface",
-			comment = "Feh!",
-			role = SexyGroup.ROLE_DAMAGE, -- DPS
-			dungeon = "Halls of Reflection",
-		},
-		{
-			rating = 0,
-			from = "Jerkface",
-			comment = "Feh!",
-			role = SexyGroup.ROLE_DAMAGE, -- DPS
-			dungeon = "Halls of Reflection",
-		},
-	},
-}
-
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:SetScript("OnEvent", function(self)
 	self:UnregisterAllEvents()
-	--Users:LoadData(TEST_DATA)
+	--Users:LoadData(SexyGroup.userData["Shadow-Mal'Ganis"])
 end)	
 
 function Users:LoadData(playerData)
@@ -97,8 +19,8 @@ function Users:LoadData(playerData)
 	-- Build score as well as figure out their score
 	local totalEquipped, totalScore, mainLevel, offLevel = 0, 0, 0, 0
 	for _, slot in pairs(frame.gearFrame.equipSlots) do
-		if( slot.inventoryID and playerData.items[slot.inventorySlot] ) then
-			local itemLink = playerData.items[slot.inventorySlot]
+		if( slot.inventoryID and playerData.equipment[slot.inventoryID] ) then
+			local itemLink = playerData.equipment[slot.inventoryID]
 			local itemQuality, itemLevel, _, _, _, _, _, itemIcon = select(3, GetItemInfo(itemLink))
 			if( itemQuality and itemLevel ) then
 				local itemScore = SexyGroup:CalculateScore(itemQuality, itemLevel)
