@@ -1,8 +1,8 @@
-local modname = "GroupHistory"
+local SexyGroup = select(2, ...)
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local AceGUI = LibStub("AceGUI-3.0")
 local parent = SexyGroup
-local mod = parent:NewModule(modname, "AceEvent-3.0")
+local mod = parent:NewModule("GroupHistory", "AceEvent-3.0")
 local surveyFrame
 local SpecialFrame = CreateFrame("Frame", "SexyGroupHistoryHider")
 SpecialFrame:SetScript("OnHide", function()
@@ -17,7 +17,7 @@ local chars
 
 mod.lastRun = {}
 function mod:OnInitialize()
-	self.db = parent.db:RegisterNamespace(modname, defaults)
+	self.db = parent.db:RegisterNamespace("GroupHistory", defaults)
 	chars = self.db.global.characters
 	f = AceGUI:Create("Frame")	
 	tinsert(UISpecialFrames,"SexyGroupHistoryHider")
