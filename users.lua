@@ -1,9 +1,11 @@
+local SexyGroup = select(2, ...)
 local Users = SexyGroup:NewModule("Users", "AceEvent-3.0")
 
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
+local gemList = {}
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -12,12 +14,20 @@ frame:SetScript("OnEvent", function(self)
 	--Users:LoadData(SexyGroup.userData["Shadow-Mal'Ganis"])
 end)	
 
+local function sortGems(a, b)
+	return gemList[a] > gemList[b]
+end
+
 function Users:LoadData(playerData)
 	self:CreateUI()
-	
 	local frame = self.frame
+
+	table.wipe(gemList)
+
 	-- Build score as well as figure out their score
-	local totalEquipped, totalScore, mainLevel, offLevel = 0, 0, 0, 0
+	local tempList = {}
+	local totalEquipped, totalSockets, totalUsedSockets, totalScore, mainLevel, offLevel = 0, 0, 0, 0, 0, 0
+
 	for _, slot in pairs(frame.gearFrame.equipSlots) do
 		if( slot.inventoryID and playerData.equipment[slot.inventoryID] ) then
 			local itemLink = playerData.equipment[slot.inventoryID]
@@ -31,6 +41,15 @@ function Users:LoadData(playerData)
 				else
 					totalEquipped = totalEquipped + 1
 					totalScore = totalScore + itemScore
+				end
+				
+				totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
+				for socketID=1, MAX_NUM_SOCKETS do
+					local gemLink = select(2, GetItemGem(itemLink, socketID))
+					if( gemLink ) then
+						totalUsedSockets = totalUsedSockets + 1
+						gemList[gemLink] = (gemList[gemLink] or 0) + 1
+					end
 				end
 				
 				slot.icon:SetTexture(itemIcon)
@@ -61,10 +80,41 @@ function Users:LoadData(playerData)
 		end
 	end
 	
-	-- Not sure how this will be implemented yet
+	-- Figure out if gems and enchants are valid
+	local enchantTooltip, gemTooltip = L["|cfffed000Enchants:|r All good"], L["|cfffed000Gems:|r All good"]
+	local passEnchants, passGems = true, true
+	if( totalUsedSockets < totalSockets ) then
+		passGems = false
+		gemTooltip = string.format(L["|cfffed000Gems:|r %d empty gem sockets"], totalSockets - totalUsedSockets)
+	else
+		for gemLink, total in pairs(gemList) do
+			if( not SexyGroup:IsValidGem(gemLink, playerData) ) then
+				table.insert(tempList, gemLink)
+			end
+		end
+		
+		if( #(tempList) > 0 ) then
+			passGems = false
+			table.sort(tempList, sortGems)
+			
+			local gems = ""
+			for _, gemLink in pairs(tempList) do
+				if( gems ~= "" ) then gems = gems .. "\n" end
+				gems = gems .. string.format("%d x %s - %s", gemList[gemLink], select(2, GetItemInfo(gemLink)), SexyGroup.TALENT_TYPES[SexyGroup.GEM_TALENTTYPE[gemLink]])
+			end
+			
+			gemTooltip = string.format(L["|cfffed000Gems:|r Found |cffff2020%d|r bad gems\n%s"], #(tempList), gems)
+		end
+	end
+	
 	frame.gearFrame.equipSlots[18].icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
-	frame.gearFrame.equipSlots[18].levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], READY_CHECK_READY_TEXTURE)
-	frame.gearFrame.equipSlots[18].typeText:SetFormattedText(L["|T%s:14:14|t Gems"], READY_CHECK_NOT_READY_TEXTURE)
+	frame.gearFrame.equipSlots[18].levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], passEnchants and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+	frame.gearFrame.equipSlots[18].typeText:SetFormattedText(L["|T%s:14:14|t Gems"], passGems and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+	frame.gearFrame.equipSlots[18].tooltip = enchantTooltip .. "\n" .. gemTooltip
+	frame.gearFrame.equipSlots[18].disableWrap = true
+	frame.gearFrame.equipSlots[18].tooltipR = 1
+	frame.gearFrame.equipSlots[18].tooltipG = 1
+	frame.gearFrame.equipSlots[18].tooltipB = 1
 	
 	-- If the player is using both a mainhand and an offhand, average the two as if they were a single item
 	if( mainLevel and offLevel ) then
@@ -154,7 +204,6 @@ end
 
 function Users:UpdateTabPage()
 	self.frame.tabFrame.notesButton:SetFormattedText(L["Notes (%d)"], #(self.activeData.notes))
-	self.frame.tabFrame.selectedTab = "achievements"
 	if( #(self.activeData.notes) == 0 ) then
 		self.frame.tabFrame.selectedTab = "achievements"
 		self.frame.tabFrame.notesButton:Disable()
@@ -190,56 +239,59 @@ function Users:UpdateAchievementInfo()
 		end
 	end
 	
-	FauxScrollFrame_Update(self.frame.achievementFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS, 18)
+	FauxScrollFrame_Update(self.frame.achievementFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS - 1, 14)
 	
 	for _, row in pairs(self.frame.achievementFrame.rows) do row.tooltip = nil; row.toggle:Hide(); row:Hide() end
 
-	local rowID, rowOffset = 1, 0
+	local rowID, rowOffset, id = 1, 0, 0
 	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
 	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
-	for id, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
-		if( id >= offset and ( not data.child or data.child and SexyGroup.db.profile.expExpanded[data.child] ) ) then
-			local row = self.frame.achievementFrame.rows[rowID]
-			local rowOffset = not data.child and 16 or 4
-			
-			-- Setup toggle button
-			if( not data.child and not data.childLess ) then
-				local type = not SexyGroup.db.profile.expExpanded[data.id] and "Minus" or "Plus"
-				row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
-				row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
-				row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
-				row.toggle.id = data.id
-				row.toggle:Show()
-			end
-			
-			-- Children categories without experience requirements should be shown in the experienceText so we don't get an off looking gap
-			local heroicIcon = data.heroic and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-2:32:32:0:16:0:20|t" or ""
-			if( not data.child and not data.experienced ) then
-				row.nameText:SetFormattedText(L["%s%s (%d-man)"], heroicIcon, data.name, data.players)
-			-- Anything with an experience requirement obviously should show it
-			elseif( data.experienced ) then
-				local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
-				local experienceText = percent >= 1 and L["Experienced"] or percent >= 0.8 and L["Nearly-experienced"] or percent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
-				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
-				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+	for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+		if( not data.child or data.child and SexyGroup.db.profile.expExpanded[data.child] ) then
+			id = id + 1
+			if( id >= offset ) then
+				local row = self.frame.achievementFrame.rows[rowID]
+				local rowOffset = not data.child and 16 or 4
 				
-				if( data.child ) then
-					row.nameText:SetFormattedText(L["- [|cff%02x%02x00%d%%|r] %s%s"], r, g, percent * 100, heroicIcon, data.name)
-				else
-					row.nameText:SetFormattedText(L["[|cff%02x%02x00%d%%|r] %s%s (%d-man)"], r, g, percent * 100, heroicIcon, data.name, data.players)
+				-- Setup toggle button
+				if( not data.child and not data.childLess ) then
+					local type = not SexyGroup.db.profile.expExpanded[data.id] and "Minus" or "Plus"
+					row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
+					row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
+					row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
+					row.toggle.id = data.id
+					row.toggle:Show()
 				end
 				
-				row.tooltip = string.format(L["%s: %d/%d in %d-man %s (%s)"], experienceText, self.experienceData[data.id], data.experienced, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
+				-- Children categories without experience requirements should be shown in the experienceText so we don't get an off looking gap
+				local heroicIcon = data.heroic and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-2:32:32:0:16:0:20|t" or ""
+				if( not data.child and not data.experienced ) then
+					row.nameText:SetFormattedText(L["%s%s (%d-man)"], heroicIcon, data.name, data.players)
+				-- Anything with an experience requirement obviously should show it
+				elseif( data.experienced ) then
+					local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
+					local experienceText = percent >= 1 and L["Experienced"] or percent >= 0.8 and L["Nearly-experienced"] or percent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
+					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+					
+					if( data.child ) then
+						row.nameText:SetFormattedText(L["- [|cff%02x%02x00%d%%|r] %s%s"], r, g, percent * 100, heroicIcon, data.name)
+					else
+						row.nameText:SetFormattedText(L["[|cff%02x%02x00%d%%|r] %s%s (%d-man)"], r, g, percent * 100, heroicIcon, data.name, data.players)
+					end
+					
+					row.tooltip = string.format(L["%s: %d/%d in %d-man %s (%s)"], experienceText, self.experienceData[data.id], data.experienced, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
+				end
+				
+				row:SetWidth(rowWidth - rowOffset)
+				row:ClearAllPoints()
+				row:SetPoint("TOPLEFT", self.frame.achievementFrame, "TOPLEFT", 4 + rowOffset, -3 - 17 * (rowID - 1))
+				row:Show()
+				
+				rowID = rowID + 1
+				if( rowID > MAX_ACHIEVEMENT_ROWS ) then break end
 			end
-			
-			row:SetWidth(rowWidth - rowOffset)
-			row:ClearAllPoints()
-			row:SetPoint("TOPLEFT", self.frame.achievementFrame, "TOPLEFT", 4 + rowOffset, -3 - 17 * (rowID - 1))
-			row:Show()
-			
-			rowID = rowID + 1
-			if( rowID > MAX_ACHIEVEMENT_ROWS ) then break end
 		end
 	end
 end
@@ -320,7 +372,7 @@ function Users:CreateUI()
 	local function OnEnter(self)
 		if( self.tooltip ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, true)
+			GameTooltip:SetText(self.tooltip, self.tooltipR, self.tooltipG, self.tooltipB, nil, self.disableWrap == nil and true)
 			GameTooltip:Show()
 		elseif( self.equippedItem ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -561,7 +613,7 @@ function Users:CreateUI()
 	frame.achievementFrame.scroll.bar = SexyGroupUserFrameAchievementsScrollBar
 	frame.achievementFrame.scroll:SetPoint("TOPLEFT", frame.achievementFrame, "TOPLEFT", 0, -2)
 	frame.achievementFrame.scroll:SetPoint("BOTTOMRIGHT", frame.achievementFrame, "BOTTOMRIGHT", -24, 1)
-	frame.achievementFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 46, Users.UpdateAchievementInfo) end)
+	frame.achievementFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateAchievementInfo) end)
 
 	local function toggleCategory(self)
 		local id = self.toggle and self.toggle.id or self.id
