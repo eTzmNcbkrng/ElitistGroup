@@ -19,8 +19,11 @@ Libs\AceComm-3.0\AceComm-3.0.xml
 #@end-no-lib-strip@
 
 Localization\enUS.lua
+
+Data\data.lua
+Data\dungeon_data.lua
+Data\item_data.lua
+
 SexyGroup.lua
-experience_data.lua
-data.lua
 users.lua
 group_history.lua
