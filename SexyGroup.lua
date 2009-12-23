@@ -1,4 +1,5 @@
-SexyGroup = LibStub("AceAddon-3.0"):NewAddon("SexyGroup", "AceEvent-3.0", "AceTimer-3.0")
+local SexyGroup = select(2, ...)
+SexyGroup = LibStub("AceAddon-3.0"):NewAddon(SexyGroup, "SexyGroup", "AceEvent-3.0", "AceTimer-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 
 function SexyGroup:OnInitialize()
@@ -174,6 +175,12 @@ function SexyGroup:IsValidItem(itemLink, playerData)
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
+function SexyGroup:IsValidGem(itemLink, playerData)
+	local spec = self:GetPlayerSpec(playerData)
+	local itemType = self.GEM_TALENTTYPE[itemLink]
+	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
+end
+
 local function writeTable(tbl)
 	local data = ""
 
@@ -224,3 +231,163 @@ function SexyGroup:OnDatabaseShutdown()
 		self.db.faction.users[name] = writeTable(self.userData[name])
 	end
 end
+
+-- General cache functions that handle figuring out item data
+-- Yay metatable caching, can only get gem totals via tooltip scanning, GetItemStats won't return a prismatic socketed item
+local statCache = {}
+local tooltip = CreateFrame("GameTooltip")
+tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+tooltip.TextLeft = {}
+tooltip.TextRight = {}
+
+for i=1, 30 do
+	tooltip.TextLeft[i] = tooltip:CreateFontString()
+	tooltip.TextRight[i] = tooltip:CreateFontString()
+	tooltip:AddFontStrings(tooltip.TextLeft[i], tooltip.TextRight[i])
+end
+
+SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, {
+	__index = function(tbl, link)
+		tooltip:SetHyperlink("item:" .. string.match(link, "item:(%d+)"))
+
+		local total = 0
+		for i=1, tooltip:NumLines() do
+			local text = tooltip.TextLeft[i]:GetText()
+			if( text == EMPTY_SOCKET_BLUE or text == EMPTY_SOCKET_META or text == EMPTY_SOCKET_NO_COLOR or text == EMPTY_SOCKET_RED or text == EMPTY_SOCKET_YELLOW ) then
+				total = total + 1
+			end
+		end
+		
+		rawset(tbl, link, total)
+		return total
+	end,
+})
+
+SexyGroup.GEM_TALENTTYPE = setmetatable({}, {
+	__index = function(tbl, link)
+		local itemID = link and tonumber(string.match(link, "item:(%d+)"))
+		if( itemID and SexyGroup.OVERRIDE_ITEMS[itemID] ) then
+			rawset(tbl, link, SexyGroup.OVERRIDE_ITEMS[itemID])
+			return SexyGroup.OVERRIDE_ITEMS[itemID]
+		elseif( not itemID or not GetItemInfo(itemID) ) then
+			rawset(tbl, link, "unknown")
+			return "unknown"
+		end
+		
+		local foundData
+		table.wipe(statCache)
+
+		tooltip:SetHyperlink(link)
+		for i=1, tooltip:NumLines() do
+			local text = string.lower(tooltip.TextLeft[i]:GetText())
+			for key, stat in pairs(SexyGroup.STAT_MAP) do
+				if( string.match(text, string.lower(stat)) ) then
+					foundData = true
+					statCache[key] = true
+				end
+			end
+			
+			if( foundData ) then break end
+		end
+		
+		if( not foundData ) then
+			rawset(tbl, link, "unknown")
+			return "unknown"
+		end
+
+		for _, data in pairs(SexyGroup.STAT_DATA) do
+			local statString = (data.default or "") .. (data.gems or "")
+			if( statString ) then
+				for statKey in string.gmatch(statString, "(.-)@") do
+					if( statCache[statKey] ) then
+						rawset(tbl, link, data.type)
+						return data.type
+					end
+				end
+			end
+		end
+			
+		rawset(tbl, link, "unknown")
+		return "unknown"
+	end,
+})
+
+SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
+	__index = function(tbl, link)
+		local itemID = link and tonumber(string.match(link, "item:(%d+)"))
+		if( itemID and SexyGroup.OVERRIDE_ITEMS[itemID] ) then
+			rawset(tbl, link, SexyGroup.OVERRIDE_ITEMS[itemID])
+			return SexyGroup.OVERRIDE_ITEMS[itemID]
+		end
+		
+		local inventoryType = select(9, GetItemInfo(itemID))
+		local equipType = inventoryType and SexyGroup.EQUIP_TO_TYPE[inventoryType]
+		if( not equipType ) then 
+			rawset(tbl, link, "unknown")
+			return "unknown"
+		end
+	
+		-- Yes yes, I could just store everything in the STAT_DATA using the full key, but I'm lazy and it's ugly
+		table.wipe(statCache)
+		statCache = GetItemStats(link, statCache)
+		for statKey, amount in pairs(statCache) do
+			statKey = string.gsub(statKey, "^ITEM_MOD_", "")
+			statKey = string.gsub(statKey, "_SHORT$", "")
+			statKey = string.gsub(statKey, "_NAME$", "")
+			statCache[string.trim(statKey)] = amount
+		end
+
+		for _, data in pairs(SexyGroup.STAT_DATA) do
+			local statString = data[equipType] or data.default
+			if( statString ) then
+				for statKey in string.gmatch(statString, "(.-)@") do
+					if( statCache[statKey] ) then
+						rawset(tbl, link, data.type)
+						return data.type
+					end
+				end
+			end
+		end
+			
+		rawset(tbl, link, "unknown")
+		return "unknown"
+	end,
+})
+
+function SexyGroup:Print(msg)
+	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Sexy Group|r: " .. msg)
+end
+
+SLASH_SEXYGROUP1 = "/sexygroup"
+SLASH_SEXYGROUP2 = "/sg"
+SLASH_SEXYGROUP3 = "/sexygroups"
+SlashCmdList["SEXYGROUP"] = function(msg)
+	local arg = string.trim(string.lower(msg or ""))
+	if( arg == "config" ) then
+		print("Nothing to see here yet.")
+		return
+	end
+	
+	if( arg == "" ) then arg = string.format("%s-%s", UnitName("player"), GetRealmName()) end
+	
+	local data
+	local search = not string.match(arg, "%-") and string.format("^%s%%-", arg)
+	for name in pairs(SexyGroup.db.faction.users) do
+		if( ( search and string.match(string.lower(name), search) ) or ( string.lower(name) == arg ) ) then
+			data = SexyGroup.userData[name]
+			break
+		end
+	end
+	
+	if( not data ) then
+		SexyGroup:Print(string.format(L["Cannot find record of %s in your saved database."], msg))
+		return
+	end
+	
+	SexyGroup.modules.Users:LoadData(data)
+	
+end
+
+--@debug@
+_G.SexyGroup = SexyGroup
+--@end-debug@
