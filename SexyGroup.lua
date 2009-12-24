@@ -20,6 +20,8 @@ function SexyGroup:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileShutdown", "OnProfileShutdown")
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 	
+	self.playerName = string.format("%s-%s", UnitName("player"), GetRealmName())
+	
 	-- Data is old enough that we want to remove extra data to save space
 	if( self.db.profile.pruneAfter > 0 ) then
 		local pruneBefore = time() - (self.db.profile.pruneAfter * 86400)
@@ -27,13 +29,14 @@ function SexyGroup:OnInitialize()
 			if( modified <= pruneBefore ) then
 				self.db.faction.lastModified[name] = time()
 				
-				local name, server, level, classToken, notes = self.userData[name].name, self.userData[name].server, self.userData[name].level, self.userData[name].classToken, self.userData[name].notes
+				local name, server, level, classToken, specRole, notes = self.userData[name].name, self.userData[name].server, self.userData[name].level, self.userData[name].classToken, self.userData[name].specRole, self.userData[name].notes
 				table.wipe(self.userData[name])
 				self.userData[name].name = name
 				self.userData[name].server = server
 				self.userData[name].level = level
 				self.userData[name].classToken = classToken
 				self.userData[name].notes = notes
+				self.userData[name].specRole = specRole
 				self.userData[name].pruned = true
 			end
 		end
@@ -141,20 +144,18 @@ function test()
 	print("Wrote test data for Shadow - Mal'Ganis")
 end
 
-function SexyGroup:CalculateScore(itemQuality, itemLevel)
-	if( not itemLevel and itemQuality ) then
-		itemQuality, itemLevel = select(3, GetItemInfo(itemLevel))
+function SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
+	-- Quality 7 is heirloom, apply our modifier based on the item level
+	if( itemQuality == 7 ) then
+		itemLevel = (tonumber(string.match(itemLink, "(%d+)|h")) or 1) * SexyGroup.HEIRLOOM_ILEVEL
 	end
 	
-	if( not itemQuality and not itemLevel ) then return 0 end
 	return itemLevel * (self.QUALITY_MODIFIERS[itemQuality] or 1)
 end
 
 --Protector of the Pack, Natural Reaction
 --Bladed Armor, Blade Barrier, Toughness, Anticipation
 function SexyGroup:GetPlayerSpec(playerData)
-	if( not playerData ) then return "unknown", L["Unknown"], "Interface\\Icons\\INV_Misc_QuestionMark" end
-
 	local treeOffset
 	if( playerData.talentTree1 > playerData.talentTree2 and playerData.talentTree1 > playerData.talentTree3 ) then
 		treeOffset = 1
@@ -178,6 +179,12 @@ end
 function SexyGroup:IsValidGem(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.GEM_TALENTTYPE[itemLink]
+	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
+end
+
+function SexyGroup:IsValidEnchant(itemLink, playerData)
+	local spec = self:GetPlayerSpec(playerData)
+	local itemType = self.ENCHANT_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
@@ -235,7 +242,7 @@ end
 -- General cache functions that handle figuring out item data
 -- Yay metatable caching, can only get gem totals via tooltip scanning, GetItemStats won't return a prismatic socketed item
 local statCache = {}
-local tooltip = CreateFrame("GameTooltip")
+local tooltip = CreateFrame("GameTooltip", nil, UIParent)
 tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 tooltip.TextLeft = {}
 tooltip.TextRight = {}
@@ -248,6 +255,7 @@ end
 
 SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, {
 	__index = function(tbl, link)
+		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 		tooltip:SetHyperlink("item:" .. string.match(link, "item:(%d+)"))
 
 		local total = 0
@@ -276,8 +284,10 @@ SexyGroup.GEM_TALENTTYPE = setmetatable({}, {
 		
 		local foundData
 		table.wipe(statCache)
-
+		
+		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 		tooltip:SetHyperlink(link)
+
 		for i=1, tooltip:NumLines() do
 			local text = string.lower(tooltip.TextLeft[i]:GetText())
 			for key, stat in pairs(SexyGroup.STAT_MAP) do
@@ -297,6 +307,92 @@ SexyGroup.GEM_TALENTTYPE = setmetatable({}, {
 
 		for _, data in pairs(SexyGroup.STAT_DATA) do
 			local statString = (data.default or "") .. (data.gems or "")
+			if( statString ) then
+				for statKey in string.gmatch(statString, "(.-)@") do
+					if( statCache[statKey] ) then
+						rawset(tbl, link, data.type)
+						return data.type
+					end
+				end
+			end
+		end
+			
+		rawset(tbl, link, "unknown")
+		return "unknown"
+	end,
+})
+
+local function parseText(text)
+	text = string.gsub(text, "%%d", "%%d+")
+	text = string.gsub(text, "%%s", ".+")
+	return string.lower(text)
+end
+
+-- Note: Regular enchants show up above sockets and below the items base stats. Engineering enchants are at the very bottom :|
+local ARMOR_MATCH = parseText(ARMOR_TEMPLATE)
+local SOCKET_MATCH = parseText(ITEM_SOCKET_BONUS)
+local ENCHANT_ITEM_REQ_SKILL = parseText(ENCHANT_ITEM_REQ_LEVEL)
+local ITEM_HEROIC = parseText(ITEM_HEROIC)
+local ITEM_HEROIC_EPIC = parseText(ITEM_HEROIC_EPIC)
+local ITEM_LEVEL_RANGE_CURRENT = parseText(ITEM_LEVEL_RANGE_CURRENT)
+local ITEM_LEVEL_RANGE = parseText(ITEM_LEVEL_RANGE)
+local ITEM_MIN_LEVEL = parseText(ITEM_MIN_LEVEL)
+local ITEM_CLASSES_ALLOWED = parseText(ITEM_CLASSES_ALLOWED)
+
+SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
+	__index = function(tbl, link)
+		local enchantID = link and tonumber(string.match(link, "item:%d+:(%d+)"))
+		local type = not enchantID and "unknown" or enchantID == 0 and "none" or SexyGroup.OVERRIDE_ENCHANTS[enchantID]
+		if( type ) then
+			rawset(tbl, link, type)
+			return type
+		end
+		
+		-- Sadly, we cannot find enchant info without tooltip scanning, so we have to find the first green text that is not armor :(
+		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+		tooltip:SetHyperlink(link)
+
+		local enchantText
+		for i=1, tooltip:NumLines() do
+			local text = string.lower(tooltip.TextLeft[i]:GetText())
+			local r, g, b = tooltip.TextLeft[i]:GetTextColor()
+
+			-- The person viewing this item is not high enough to use the enchant, the text will be red but we know it's going to be right above us
+			if( string.match(text, ENCHANT_ITEM_REQ_SKILL) ) then
+				enchantText = string.lower(tooltip.TextLeft[i - 1]:GetText())
+				break
+			-- Socket, or level we went too far
+			elseif( string.match(text, SOCKET_MATCH) or string.match(text, ITEM_MIN_LEVEL) or string.match(text, ITEM_LEVEL_RANGE_CURRENT) or string.match(text, ITEM_LEVEL_RANGE) ) then
+				break
+			-- Valid enchant
+			elseif( r == 0 and g >= 0.97 and b == 0 and not string.match(text, ARMOR_MATCH) and text ~= ITEM_HEROIC_EPIC and text ~= ITEM_HEROIC ) then
+				enchantText = text
+				break
+			end	
+		end
+		
+		if( not enchantText ) then
+			rawset(tbl, link, "unknown")
+			return "unknown"
+		end
+
+		-- Parse out the stats
+		table.wipe(statCache)
+		for key, stat in pairs(SexyGroup.STAT_MAP) do
+			if( string.match(enchantText, string.lower(stat)) ) then
+				foundData = true
+				statCache[key] = true
+			end
+		end
+		
+		if( not foundData ) then
+			rawset(tbl, link, "unknown")
+			return "unknown"
+		end
+		
+		-- Now figure out wehat spec type
+		for _, data in pairs(SexyGroup.STAT_DATA) do
+			local statString = (data.default or "") .. (data.enchants or "")
 			if( statString ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
 					if( statCache[statKey] ) then
