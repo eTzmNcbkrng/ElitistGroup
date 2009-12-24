@@ -26,4 +26,5 @@ Data\item_data.lua
 
 SexyGroup.lua
 users.lua
+scan.lua
 group_history.lua
