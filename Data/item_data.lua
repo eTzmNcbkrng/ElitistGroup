@@ -4,12 +4,16 @@ local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 -- While it's true that we could apply additional modifiers like 1.05 for legendaries, it's not really necessary because legendaries aren't items
 -- that people have 70% of their equipment as that need a modifier to separate them.
 SexyGroup.QUALITY_MODIFIERS = {
-	[ITEM_QUALITY_POOR] = 0.70,
-	[ITEM_QUALITY_COMMON] = 0.75,
-	[ITEM_QUALITY_UNCOMMON] = 0.80,
+	[ITEM_QUALITY_POOR] = 0.50,
+	[ITEM_QUALITY_COMMON] = 0.60,
+	[ITEM_QUALITY_UNCOMMON] = 0.90,
 	[ITEM_QUALITY_RARE] = 0.95,
 	[ITEM_QUALITY_EPIC] = 1,
 }
+
+-- Item level of heirlooms based on the player's level. Currently this is ~2.22/per player level, meaning they work out to 187 item level blues at 80
+-- This will have to change come Cataclysm, not quite sure how Blizzard is going to handle heirlooms then
+SexyGroup.HEIRLOOM_ILEVEL = (187 / 80) * SexyGroup.QUALITY_MODIFIERS[ITEM_QUALITY_RARE]
 
 SexyGroup.INVENTORY_TO_TYPE = {
 	["HeadSlot"] = "head", ["ChestSlot"] = "chest", ["RangedSlot"] = "ranged",
@@ -18,6 +22,10 @@ SexyGroup.INVENTORY_TO_TYPE = {
 	["Finger1Slot"] = "rings", ["NeckSlot"] = "neck", ["FeetSlot"] = "boots", ["LegsSlot"] = "legs",
 	["WaistSlot"] = "waist", ["HandsSlot"] = "hands", ["BackSlot"] = "cloak", ["ShoulderSlot"] = "shoulders",
 }
+
+-- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
+-- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
+SexyGroup.EQUIP_UNECHANTABLE = {["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true}
 
 SexyGroup.EQUIP_TO_TYPE = {
 	["INVTYPE_RANGEDRIGHT"] = "ranged", ["INVTYPE_SHIELD"] = "weapons", ["INVTYPE_WEAPONOFFHAND"] = "weapons",
@@ -39,6 +47,46 @@ SexyGroup.VALID_SPECTYPES = {
 	["melee-dps"] = {["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
 	["range-dps"] = {["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
 	["tank"] = {["all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
+}
+
+
+-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
+SexyGroup.OVERRIDE_ENCHANTS = {
+	[3870] = "pvp", -- Blood Draining
+	[3869] = "tank", -- Blade Ward
+	[3232] = "all", -- Tuskarr's Vitality
+	[3296] = nil, -- Enhant Cloak - Wisdom, not sure if we want to flag this as a never. Really you should always use cloak - haste
+	[3789] = "meleedps", -- Berserking 
+	[3790] = "never", -- Black Magic 
+	[3247] = "never", -- Scourgebane 
+	[3251] = "never", -- Giant Slayer 
+	[3239] = "never", -- Icebreaker
+	[3241] = "never", -- Lifeward
+	[3244] = "caster", -- Greater Vitality
+	[846] = "never", -- Angler 
+	[3238] = "never", -- Gatherer 
+	[2940] = "all", -- Boar's Speed 
+	[2939] = "physical-dps", -- Cat's Swiftness 
+	[2675] = "never", -- Battlemaster 
+	[2674] = "never", -- Spellsurge 
+	[910] = "pvp", -- Enchant Cloak - Stealth
+	[2621] = "never", -- Enchant Cloak - Subtlety 
+	[2613] = "never", -- Enchant Gloves - Threat 
+	[1900] = "melee-dps", -- Crusader
+	[1896] = "never", -- Lifestealing
+	[930] = "never", -- Riding Skill
+	[803] = "melee-dps", -- Fiery Weapon
+	[3731] = "pvp", -- Titanium Weapon Chain
+	[3728] = "caster", -- Darkglow Embroidery
+	[3730] = "physical-dps", -- Swordguard Embroidery
+	[3748] = "tank", -- Titanium Spike
+	[3849] = "tank", -- Titanium plating
+	[3878] = "tank", -- Mind Amplification Dish, it is higher STA than the other one, going for the safe flagging for now. Perhaps flag as never?
+	[3603] = "tank/dps", -- Hand-Mounted Pyro Rocket
+	[3604] = "dps", -- Hyperspeed Accelerators
+	[3599] = "never", -- Personal Electromagnetic Pulse Generator
+	[3605] = "physical-dps", -- Flexweave Underlay
+	[3601] = "never", -- Frag Belt
 }
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
@@ -93,7 +141,7 @@ SexyGroup.STAT_MAP = {
 
 -- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
 SexyGroup.STAT_DATA = {
-	{type = "all",			gems = "SPELL_STATALL@"},
+	{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 	-- This is my favorite category out of them all
 	{type = "never",		gems = "RESIST@"},
 	-- Resilience or spell penetration is always a pvp item
@@ -105,7 +153,7 @@ SexyGroup.STAT_DATA = {
 	-- Ranged AP, ranged crit, ranged hit are always ranged
 	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
-	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", gems = "STAMINA@", trinkets = "RESISTANCE0@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
+	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", gems = "STAMINA@", enchants = "STAMINA@", trinkets = "RESISTANCE0@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
 	{type = "melee",		default = "EXPERTISE_RATING@"},
 	-- Hit melee rating, melee AP, melee crit rating are always melee dps items
