@@ -4,125 +4,176 @@ local Users = SexyGroup:NewModule("Users", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
+local MAX_DATABASE_ROWS = 18
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local gemList = {}
+local gemList, enchantList = {}, {}
 
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:SetScript("OnEvent", function(self)
-	self:UnregisterAllEvents()
-	--Users:LoadData(SexyGroup.userData["Shadow-Mal'Ganis"])
-end)	
-
-local function sortGems(a, b)
-	return gemList[a] > gemList[b]
-end
+local function sortGems(a, b) return gemList[a] > gemList[b] end
+local function sortItemNames(a, b) return GetItemInfo(a) < GetItemInfo(b) end
+local function sortNames(a, b) return a < b end
 
 function Users:LoadData(playerData)
 	self:CreateUI()
 	local frame = self.frame
 
 	table.wipe(gemList)
+	table.wipe(enchantList)
 
 	-- Build score as well as figure out their score
 	local tempList = {}
-	local totalEquipped, totalSockets, totalUsedSockets, totalScore, mainLevel, offLevel = 0, 0, 0, 0, 0, 0
+	local totalEquipped, totalSockets, totalEnchants, totalUsedEnchants, totalUsedSockets, totalScore, mainLevel, offLevel = 0, 0, 0, 0, 0, 0, 0, 0
 
-	for _, slot in pairs(frame.gearFrame.equipSlots) do
-		if( slot.inventoryID and playerData.equipment[slot.inventoryID] ) then
-			local itemLink = playerData.equipment[slot.inventoryID]
-			local itemQuality, itemLevel, _, _, _, _, _, itemIcon = select(3, GetItemInfo(itemLink))
-			if( itemQuality and itemLevel ) then
-				local itemScore = SexyGroup:CalculateScore(itemQuality, itemLevel)
-				if( slot.inventorySlot == "MainHandSlot" ) then
-					mainLevel = itemScore
-				elseif( slot.inventorySlot == "SecondaryHandSlot" ) then
-					offLevel = itemScore
-				else
-					totalEquipped = totalEquipped + 1
-					totalScore = totalScore + itemScore
-				end
-				
-				totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
-				for socketID=1, MAX_NUM_SOCKETS do
-					local gemLink = select(2, GetItemGem(itemLink, socketID))
-					if( gemLink ) then
-						totalUsedSockets = totalUsedSockets + 1
-						gemList[gemLink] = (gemList[gemLink] or 0) + 1
+	if( not playerData.pruned ) then
+		frame.pruneInfo:Hide()
+		
+		for _, slot in pairs(frame.gearFrame.equipSlots) do
+			if( slot.inventoryID and playerData.equipment[slot.inventoryID] ) then
+				local itemLink = playerData.equipment[slot.inventoryID]
+				local itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(3, GetItemInfo(itemLink))
+				if( itemQuality and itemLevel ) then
+					-- Record gem info
+					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
+					for socketID=1, MAX_NUM_SOCKETS do
+						local gemLink = select(2, GetItemGem(itemLink, socketID))
+						if( gemLink ) then
+							totalUsedSockets = totalUsedSockets + 1
+							gemList[gemLink] = (gemList[gemLink] or 0) + 1
+						end
 					end
+					
+					-- Record enchant info
+					local enchantID = SexyGroup.ENCHANT_TALENTTYPE[itemLink]
+					if( enchantID ~= "none" ) then
+						enchantList[itemLink] = _G[itemEquipType] or itemEquipType
+					end
+					
+					if( not SexyGroup.EQUIP_UNECHANTABLE[itemEquipType] ) then
+						totalEnchants = totalEnchants + 1
+						if( enchantID ~= "none" ) then
+							totalUsedEnchants = totalUsedEnchants + 1
+						end
+					end
+					
+					-- Calculate score
+					local itemScore = SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
+					if( slot.inventorySlot == "MainHandSlot" ) then
+						mainLevel = itemScore
+					elseif( slot.inventorySlot == "SecondaryHandSlot" ) then
+						offLevel = itemScore
+					else
+						totalEquipped = totalEquipped + 1
+						totalScore = totalScore + itemScore
+					end
+					
+					-- Build icon
+					slot.icon:SetTexture(itemIcon)
+					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", itemScore)
+					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(itemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]])
+					slot.equippedItem = itemLink
+					slot.tooltip = nil
+					slot:Enable()
+					slot:Show()
+				else
+					slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+					slot.levelText:SetText("----")
+					slot.typeText:SetText("----")
+					slot.equippedItem = nil
+					slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
+					slot:Disable()
+					slot:Show()
+				end
+			elseif( slot.inventoryID ) then
+				local texture = slot.emptyTexture
+				if( slot.checkRelic and ( playerData.classToken == "PALADIN" or playerData.classToken == "DRUID" or playerData.classToken == "SHAMAN" ) ) then
+					texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
 				end
 				
-				slot.icon:SetTexture(itemIcon)
-				slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", itemScore)
-				slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(itemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]])
-				slot.equippedItem = itemLink
-				slot.tooltip = nil
-				slot:Enable()
-			else
-				slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-				slot.levelText:SetText("----")
-				slot.typeText:SetText("----")
-				slot.equippedItem = nil
-				slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
+				slot.icon:SetTexture(texture)
+				slot.levelText:SetText("---")
+				slot.typeText:SetText("---")
+				slot.tooltip = L["No item equipped"]
 				slot:Disable()
-			end
-		elseif( slot.inventoryID ) then
-			local texture = slot.emptyTexture
-			if( slot.checkRelic and ( playerData.classToken == "PALADIN" or playerData.classToken == "DRUID" or playerData.classToken == "SHAMAN" ) ) then
-				texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
-			end
-			
-			slot.icon:SetTexture(texture)
-			slot.levelText:SetText("---")
-			slot.typeText:SetText("---")
-			slot.tooltip = L["No item equipped"]
-			slot:Disable()
-		end
-	end
-	
-	-- Figure out if gems and enchants are valid
-	local enchantTooltip, gemTooltip = L["|cfffed000Enchants:|r All good"], L["|cfffed000Gems:|r All good"]
-	local passEnchants, passGems = true, true
-	if( totalUsedSockets < totalSockets ) then
-		passGems = false
-		gemTooltip = string.format(L["|cfffed000Gems:|r %d empty gem sockets"], totalSockets - totalUsedSockets)
-	else
-		for gemLink, total in pairs(gemList) do
-			if( not SexyGroup:IsValidGem(gemLink, playerData) ) then
-				table.insert(tempList, gemLink)
+				slot:Show()
 			end
 		end
 		
-		if( #(tempList) > 0 ) then
+		local enchantTooltip, gemTooltip = L["|cfffed000Enchants:|r All good"], L["|cfffed000Gems:|r All good"]
+		local passEnchants, passGems = true, true
+
+		-- Figure out if gems
+		if( totalUsedSockets < totalSockets ) then
 			passGems = false
-			table.sort(tempList, sortGems)
-			
-			local gems = ""
-			for _, gemLink in pairs(tempList) do
-				if( gems ~= "" ) then gems = gems .. "\n" end
-				gems = gems .. string.format("%d x %s - %s", gemList[gemLink], select(2, GetItemInfo(gemLink)), SexyGroup.TALENT_TYPES[SexyGroup.GEM_TALENTTYPE[gemLink]])
+			gemTooltip = string.format(L["|cfffed000Gems:|r %d empty gem sockets"], totalSockets - totalUsedSockets)
+		else
+			for gemLink, total in pairs(gemList) do
+				if( not SexyGroup:IsValidGem(gemLink, playerData) ) then
+					table.insert(tempList, gemLink)
+				end
 			end
 			
-			gemTooltip = string.format(L["|cfffed000Gems:|r Found |cffff2020%d|r bad gems\n%s"], #(tempList), gems)
+			if( #(tempList) > 0 ) then
+				passGems = false
+				table.sort(tempList, sortGems)
+				
+				local gems = ""
+				for _, gemLink in pairs(tempList) do
+					if( gems ~= "" ) then gems = gems .. "\n" end
+					gems = gems .. string.format("%d x %s - %s", gemList[gemLink], select(2, GetItemInfo(gemLink)), SexyGroup.TALENT_TYPES[SexyGroup.GEM_TALENTTYPE[gemLink]])
+				end
+				
+				gemTooltip = string.format(L["|cfffed000Gems:|r Found |cffff2020%d|r bad gems\n%s"], #(tempList), gems)
+			end
 		end
-	end
-	
-	frame.gearFrame.equipSlots[18].icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
-	frame.gearFrame.equipSlots[18].levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], passEnchants and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-	frame.gearFrame.equipSlots[18].typeText:SetFormattedText(L["|T%s:14:14|t Gems"], passGems and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-	frame.gearFrame.equipSlots[18].tooltip = enchantTooltip .. "\n" .. gemTooltip
-	frame.gearFrame.equipSlots[18].disableWrap = true
-	frame.gearFrame.equipSlots[18].tooltipR = 1
-	frame.gearFrame.equipSlots[18].tooltipG = 1
-	frame.gearFrame.equipSlots[18].tooltipB = 1
-	
-	-- If the player is using both a mainhand and an offhand, average the two as if they were a single item
-	if( mainLevel and offLevel ) then
-		totalEquipped = totalEquipped + 1
-		totalScore = math.floor((totalScore + ((mainLevel + offLevel) / 2)) / totalEquipped)
+		
+		-- Figure out enchants
+		if( totalUsedEnchants < totalEnchants ) then
+			passEnchants = false
+			enchantTooltip = string.format(L["|cfffed000Enchants:|r |cffff2020%d|r missing enchants"], totalEnchants - totalUsedEnchants)
+		else
+			table.wipe(tempList)
+			
+			for itemLink in pairs(enchantList) do
+				if( not SexyGroup:IsValidEnchant(itemLink, playerData) ) then
+					table.insert(tempList, itemLink)
+				end
+			end
+			
+			if( #(tempList) > 0 ) then
+				passEnchants = false
+				table.sort(tempList, sortItemNames)
+				
+				local enchants = ""
+				for _, itemLink in pairs(tempList) do
+					if( enchants ~= "" ) then enchants = enchants .. "\n" end
+					enchants = enchants .. string.format(L["%s enchant - %s"], enchantList[itemLink], SexyGroup.TALENT_TYPES[SexyGroup.ENCHANT_TALENTTYPE[itemLink]])
+				end
+				
+				enchantTooltip = string.format(L["|cfffed000Enchants:|r Found |cffff2020%d|r bad enchants\n%s\n"], #(tempList), enchants)
+			end
+		end
+		
+		-- Now combine these too, in the same way you combine to make a better and more powerful robot
+		frame.gearFrame.equipSlots[18].icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
+		frame.gearFrame.equipSlots[18].levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], passEnchants and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+		frame.gearFrame.equipSlots[18].typeText:SetFormattedText(L["|T%s:14:14|t Gems"], passGems and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+		frame.gearFrame.equipSlots[18].tooltip = enchantTooltip .. "\n" .. gemTooltip
+		frame.gearFrame.equipSlots[18].disableWrap = true
+		frame.gearFrame.equipSlots[18].tooltipR = 1
+		frame.gearFrame.equipSlots[18].tooltipG = 1
+		frame.gearFrame.equipSlots[18].tooltipB = 1
+		frame.gearFrame.equipSlots[18]:Show()
+		
+		-- If the player is using both a mainhand and an offhand, average the two as if they were a single item
+		if( mainLevel and offLevel ) then
+			totalEquipped = totalEquipped + 1
+			totalScore = math.floor((totalScore + ((mainLevel + offLevel) / 2)) / totalEquipped)
+		else
+			totalEquipped = totalEquipped + 1
+			totalScore = math.floor((totalScore + (mainLevel or 0) + (offLevel or 0)) / totalEquipped)
+		end
 	else
-		totalEquipped = totalEquipped + 1
-		totalScore = math.floor((totalScore + (mainLevel or 0) + (offLevel or 0)) / totalEquipped)
+		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
+		frame.pruneInfo:Show()
 	end
 
 	-- Build the players info
@@ -136,13 +187,16 @@ function Users:LoadData(playerData)
 	end
 	
 	local specType, specName, specIcon = SexyGroup:GetPlayerSpec(playerData)
-	
 	frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, playerData.talentTree1, playerData.talentTree2, playerData.talentTree3, specName)
 	frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
 	
-	local scoreIcon = totalScore >= 240 and "INV_Shield_72" or totalScore >= 220 and "INV_Shield_61" or totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
-	frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, totalScore, L["score"])
-
+	if( not playerData.pruned ) then
+		local scoreIcon = totalScore >= 240 and "INV_Shield_72" or totalScore >= 220 and "INV_Shield_61" or totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
+		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, totalScore, L["score"])
+	else
+		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\INV_Shield_36:16:16:-1:0|t %s", L["Score unavailable"])
+	end
+		
 	local scanAge = (time() - playerData.scanned) / 3600
 	local scanIcon = scanAge >= 5 and 37 or scanAge >= 2 and 39 or scanAge >= 1 and 38 or 41
 	if( scanAge == 0 ) then
@@ -198,33 +252,106 @@ function Users:LoadData(playerData)
 	end
 
 	self.activeData = playerData
+	self.activeUserID = string.format("%s-%s", playerData.name, playerData.realm)
+	self:UpdateDatabasePage()
 	self:UpdateDungeonInfo()
 	self:UpdateTabPage()
 end
 
-function Users:UpdateTabPage()
-	self.frame.tabFrame.notesButton:SetFormattedText(L["Notes (%d)"], #(self.activeData.notes))
-	if( #(self.activeData.notes) == 0 ) then
-		self.frame.tabFrame.selectedTab = "achievements"
-		self.frame.tabFrame.notesButton:Disable()
-	else
-		self.frame.tabFrame.notesButton:Enable()
+local userList = {}
+function Users:UpdateDatabasePage()
+	self = Users
+	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
+	
+	if( not self.scrollUpdate ) then
+		if( self.frame.dataTabFrame.selectedTab ~= "database" ) then
+			self.frame.gearFrame:Show()
+			self.frame.databaseFrame:Hide()
+
+			self.frame.dataTabFrame.gearButton:LockHighlight()
+			self.frame.dataTabFrame.databaseButton:UnlockHighlight()
+			return
+		end
+		
+		self.frame.gearFrame:Hide()
+		self.frame.databaseFrame:Show()
+		self.frame.dataTabFrame.gearButton:UnlockHighlight()
+		self.frame.dataTabFrame.databaseButton:LockHighlight()
+
+		-- Cause we don't immediately cache data, we have to merge everything. Also, we want to be able to sort anywa!
+		table.wipe(userList)
+		for name in pairs(SexyGroup.userData) do
+			userList[name] = true
+			table.insert(userList, name)
+		end
+
+		for name in pairs(SexyGroup.db.faction.users) do
+			if( not userList[name] ) then
+				userList[name] = true
+				table.insert(userList, name)
+			end
+		end
+		
+		table.sort(userList, sortNames)
 	end
 	
-	if( self.frame.tabFrame.selectedTab == "notes" ) then
+	self.scrollUpdate = nil
+	
+	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS - 1, 14)
+	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
+	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 26 or 10)
+	
+	local rowID = 1
+	for id=1, #(userList) do
+		if( id >= offset ) then
+			local row = self.frame.databaseFrame.rows[rowID]
+			row.userID = userList[id]
+			row:SetText(userList[id])
+			row:SetWidth(rowWidth)
+			row:Show()
+			
+			if( self.activeData and row.userID == self.activeUserID ) then
+				row:LockHighlight()
+			else
+				row:UnlockHighlight()
+			end
+			
+			rowID = rowID + 1
+			if( rowID > MAX_DATABASE_ROWS ) then break end
+		end
+		
+		id = id + 1
+	end
+end
+
+function Users:UpdateTabPage()
+	self.frame.userTabFrame.notesButton:SetFormattedText(L["Notes (%d)"], #(self.activeData.notes))
+	if( self.activeData.pruned ) then
+		self.frame.userTabFrame.selectedTab = "notes"
+		self.frame.userTabFrame.achievementsButton:Disable()
+	elseif( #(self.activeData.notes) == 0 ) then
+		self.frame.userTabFrame.selectedTab = "achievements"
+		self.frame.userTabFrame.notesButton:Disable()
+		self.frame.userTabFrame.achievementsButton:Enable()
+	else
+		self.frame.userTabFrame.notesButton:Enable()
+		self.frame.userTabFrame.achievementsButton:Enable()
+	end
+	
+	if( self.frame.userTabFrame.selectedTab == "notes" ) then
 		self.frame.noteFrame:Show()
 		self.frame.achievementFrame:Hide()
 
-		self.frame.tabFrame.notesButton:LockHighlight()
-		self.frame.tabFrame.achievementsButton:UnlockHighlight()
+		self.frame.userTabFrame.notesButton:LockHighlight()
+		self.frame.userTabFrame.achievementsButton:UnlockHighlight()
 		
 		self:UpdateNoteInfo()
 	else
 		self.frame.noteFrame:Hide()
 		self.frame.achievementFrame:Show()
 
-		self.frame.tabFrame.notesButton:UnlockHighlight()
-		self.frame.tabFrame.achievementsButton:LockHighlight()
+		self.frame.userTabFrame.notesButton:UnlockHighlight()
+		self.frame.userTabFrame.achievementsButton:LockHighlight()
 
 		self:UpdateAchievementInfo()
 	end
@@ -423,28 +550,97 @@ function Users:CreateUI()
 		frame:Hide()
 	end)
 		
-	-- Create the equipment frame
-	frame.gearFrame = CreateFrame("Frame", nil, frame)
-	frame.gearFrame:SetWidth(230)
-	frame.gearFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
-	frame.gearFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 10)
+	-- Parent container
+	frame.dataTabFrame = CreateFrame("Frame", nil, frame)   
+	frame.dataTabFrame:SetBackdrop(backdrop)
+	frame.dataTabFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	frame.dataTabFrame:SetBackdropColor(0, 0, 0, 0)
+	frame.dataTabFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
+	frame.dataTabFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 15)
+	frame.dataTabFrame:SetWidth(225)
+	
+	frame.dataTabFrame.selectedTab = "gear"
+	local function tabClicked(self)
+		frame.dataTabFrame.selectedTab = self.tabID
+		Users:UpdateDatabasePage()
+	end
+	
+	frame.dataTabFrame.gearButton = CreateFrame("Button", nil, frame.dataTabFrame)
+	frame.dataTabFrame.gearButton:SetNormalFontObject(GameFontNormal)
+	frame.dataTabFrame.gearButton:SetHighlightFontObject(GameFontHighlight)
+	frame.dataTabFrame.gearButton:SetDisabledFontObject(GameFontDisable)
+	frame.dataTabFrame.gearButton:SetPoint("BOTTOMLEFT", frame.dataTabFrame, "TOPLEFT", 0, -1)
+	frame.dataTabFrame.gearButton:SetScript("OnClick", tabClicked)
+	frame.dataTabFrame.gearButton:SetText(L["Equipped items"])
+	frame.dataTabFrame.gearButton:GetFontString():SetPoint("LEFT", 3, 0)
+	frame.dataTabFrame.gearButton:SetHeight(22)
+	frame.dataTabFrame.gearButton:SetWidth(110)
+	frame.dataTabFrame.gearButton:SetBackdrop(backdrop)
+	frame.dataTabFrame.gearButton:SetBackdropColor(0, 0, 0, 0)
+	frame.dataTabFrame.gearButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	frame.dataTabFrame.gearButton.tabID = "gear"
 
-	frame.gearFrame.headerText = frame.gearFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-	frame.gearFrame.headerText:SetHeight(14)
-	frame.gearFrame.headerText:SetText(L["Items equipped"])
-	frame.gearFrame.headerText:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 0, 0)
-	frame.gearFrame:SetBackdrop(backdrop)
-	frame.gearFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.gearFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.gearFrame:ClearAllPoints()
-	frame.gearFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
-	frame.gearFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 15)
-	frame.gearFrame:SetWidth(225)
-	frame.gearFrame.headerText:ClearAllPoints()
-	frame.gearFrame.headerText:SetPoint("BOTTOMLEFT", frame.gearFrame, "TOPLEFT", 0, 5)
+	frame.dataTabFrame.databaseButton = CreateFrame("Button", nil, frame.dataTabFrame)
+	frame.dataTabFrame.databaseButton:SetNormalFontObject(GameFontNormal)
+	frame.dataTabFrame.databaseButton:SetHighlightFontObject(GameFontHighlight)
+	frame.dataTabFrame.databaseButton:SetDisabledFontObject(GameFontDisable)
+	frame.dataTabFrame.databaseButton:SetPoint("TOPLEFT", frame.dataTabFrame.gearButton, "TOPRIGHT", 4, 0)
+	frame.dataTabFrame.databaseButton:SetScript("OnClick", tabClicked)
+	frame.dataTabFrame.databaseButton:SetText(L["Database"])
+	frame.dataTabFrame.databaseButton:GetFontString():SetPoint("LEFT", 3, 0)
+	frame.dataTabFrame.databaseButton:SetHeight(22)
+	frame.dataTabFrame.databaseButton:SetWidth(90)
+	frame.dataTabFrame.databaseButton:SetBackdrop(backdrop)
+	frame.dataTabFrame.databaseButton:SetBackdropColor(0, 0, 0, 0)
+	frame.dataTabFrame.databaseButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	frame.dataTabFrame.databaseButton.tabID = "database"
+	
+	-- Database frame
+	frame.databaseFrame = CreateFrame("Frame", nil, frame.dataTabFrame)   
+	frame.databaseFrame:SetAllPoints(frame.dataTabFrame)
+
+	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameDatabase", frame.databaseFrame, "FauxScrollFrameTemplate")
+	frame.databaseFrame.scroll.bar = SexyGroupUserFrameDatabase
+	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -2)
+	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -24, 1)
+	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage) end)
+	
+	local function viewUserData(self)
+		Users:LoadData(SexyGroup.userData[self.userID])
+	end
+	
+	frame.databaseFrame.rows = {}
+	for i=1, MAX_DATABASE_ROWS do
+		local button = CreateFrame("Button", nil, frame.databaseFrame)
+		button:SetScript("OnClick", viewUserData)
+		button:SetHeight(14)
+		button:SetNormalFontObject(GameFontHighlight)
+		button:SetHighlightFontObject(GameFontNormal)
+		button:SetText("*")
+		button:GetFontString():SetPoint("LEFT", button, "LEFT")
+		button:GetFontString():SetJustifyV("CENTER")
+
+		if( i > 1 ) then
+			button:SetPoint("TOPLEFT", frame.databaseFrame.rows[i - 1], "BOTTOMLEFT", 0, -6)
+		else
+			button:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 3, -1)
+		end
+
+		frame.databaseFrame.rows[i] = button
+	end
+	
+	-- Equipment frame
+	frame.gearFrame = CreateFrame("Frame", nil, frame.dataTabFrame)
+	frame.gearFrame:SetAllPoints(frame.dataTabFrame)
+		
+	frame.pruneInfo = frame.gearFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+	frame.pruneInfo:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 4, -4)
+	frame.pruneInfo:SetPoint("BOTTOMRIGHT", frame.gearFrame, "BOTTOMRIGHT", -4, 4)
+	frame.pruneInfo:SetJustifyH("LEFT")
+	frame.pruneInfo:SetJustifyV("TOP")
+	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /sexygroup and change the value."])
 
 	local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
-	
 	frame.gearFrame.equipSlots = {}
 	for i=1, 18 do
 	   local slot = CreateFrame("Button", nil, frame.gearFrame)
@@ -473,6 +669,7 @@ function Users:CreateUI()
 
 		if( inventoryMap[i] ) then
 			slot.inventorySlot = inventoryMap[i]
+			slot.inventoryType = SexyGroup.INVENTORY_TO_TYPE[inventoryMap[i]]
 			slot.inventoryID, slot.emptyTexture, slot.checkRelic = GetInventorySlotInfo(inventoryMap[i])
 		end
 		
@@ -486,7 +683,7 @@ function Users:CreateUI()
 	frame.userFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.userFrame:SetWidth(175)
 	frame.userFrame:SetHeight(100)
-	frame.userFrame:SetPoint("TOPLEFT", frame.gearFrame, "TOPRIGHT", 10, -8)
+	frame.userFrame:SetPoint("TOPLEFT", frame.dataTabFrame, "TOPRIGHT", 10, -8)
 
 	frame.userFrame.headerText = frame.userFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
 	frame.userFrame.headerText:SetPoint("BOTTOMLEFT", frame.userFrame, "TOPLEFT", 0, 5)
@@ -561,53 +758,53 @@ function Users:CreateUI()
 	end
 	
 	-- Parent container
-	frame.tabFrame = CreateFrame("Frame", nil, frame)   
-	frame.tabFrame:SetBackdrop(backdrop)
-	frame.tabFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.tabFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.tabFrame:SetWidth(235)
-	frame.tabFrame:SetHeight(347)
-	frame.tabFrame:SetPoint("TOPLEFT", frame.userFrame, "TOPRIGHT", 10, 0)
+	frame.userTabFrame = CreateFrame("Frame", nil, frame)   
+	frame.userTabFrame:SetBackdrop(backdrop)
+	frame.userTabFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	frame.userTabFrame:SetBackdropColor(0, 0, 0, 0)
+	frame.userTabFrame:SetWidth(235)
+	frame.userTabFrame:SetHeight(347)
+	frame.userTabFrame:SetPoint("TOPLEFT", frame.userFrame, "TOPRIGHT", 10, 0)
 	
-	frame.tabFrame.selectedTab = "notes"
+	frame.userTabFrame.selectedTab = "notes"
 	local function tabClicked(self)
-		frame.tabFrame.selectedTab = self.tabID
+		frame.userTabFrame.selectedTab = self.tabID
 		Users:UpdateTabPage()
 	end
 	
-	frame.tabFrame.notesButton = CreateFrame("Button", nil, frame.tabFrame)
-	frame.tabFrame.notesButton:SetNormalFontObject(GameFontNormal)
-	frame.tabFrame.notesButton:SetHighlightFontObject(GameFontHighlight)
-	frame.tabFrame.notesButton:SetDisabledFontObject(GameFontDisable)
-	frame.tabFrame.notesButton:SetPoint("BOTTOMLEFT", frame.tabFrame, "TOPLEFT", 0, -1)
-	frame.tabFrame.notesButton:SetScript("OnClick", tabClicked)
-	frame.tabFrame.notesButton:SetText("*")
-	frame.tabFrame.notesButton:GetFontString():SetPoint("LEFT", 3, 0)
-	frame.tabFrame.notesButton:SetHeight(22)
-	frame.tabFrame.notesButton:SetWidth(90)
-	frame.tabFrame.notesButton:SetBackdrop(backdrop)
-	frame.tabFrame.notesButton:SetBackdropColor(0, 0, 0, 0)
-	frame.tabFrame.notesButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
-	frame.tabFrame.notesButton.tabID = "notes"
+	frame.userTabFrame.notesButton = CreateFrame("Button", nil, frame.userTabFrame)
+	frame.userTabFrame.notesButton:SetNormalFontObject(GameFontNormal)
+	frame.userTabFrame.notesButton:SetHighlightFontObject(GameFontHighlight)
+	frame.userTabFrame.notesButton:SetDisabledFontObject(GameFontDisable)
+	frame.userTabFrame.notesButton:SetPoint("BOTTOMLEFT", frame.userTabFrame, "TOPLEFT", 0, -1)
+	frame.userTabFrame.notesButton:SetScript("OnClick", tabClicked)
+	frame.userTabFrame.notesButton:SetText("*")
+	frame.userTabFrame.notesButton:GetFontString():SetPoint("LEFT", 3, 0)
+	frame.userTabFrame.notesButton:SetHeight(22)
+	frame.userTabFrame.notesButton:SetWidth(90)
+	frame.userTabFrame.notesButton:SetBackdrop(backdrop)
+	frame.userTabFrame.notesButton:SetBackdropColor(0, 0, 0, 0)
+	frame.userTabFrame.notesButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	frame.userTabFrame.notesButton.tabID = "notes"
 
-	frame.tabFrame.achievementsButton = CreateFrame("Button", nil, frame.tabFrame)
-	frame.tabFrame.achievementsButton:SetNormalFontObject(GameFontNormal)
-	frame.tabFrame.achievementsButton:SetHighlightFontObject(GameFontHighlight)
-	frame.tabFrame.achievementsButton:SetDisabledFontObject(GameFontDisable)
-	frame.tabFrame.achievementsButton:SetPoint("TOPLEFT", frame.tabFrame.notesButton, "TOPRIGHT", 4, 0)
-	frame.tabFrame.achievementsButton:SetScript("OnClick", tabClicked)
-	frame.tabFrame.achievementsButton:SetText(L["Experience"])
-	frame.tabFrame.achievementsButton:GetFontString():SetPoint("LEFT", 3, 0)
-	frame.tabFrame.achievementsButton:SetHeight(22)
-	frame.tabFrame.achievementsButton:SetWidth(90)
-	frame.tabFrame.achievementsButton:SetBackdrop(backdrop)
-	frame.tabFrame.achievementsButton:SetBackdropColor(0, 0, 0, 0)
-	frame.tabFrame.achievementsButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
-	frame.tabFrame.achievementsButton.tabID = "achievements"
+	frame.userTabFrame.achievementsButton = CreateFrame("Button", nil, frame.userTabFrame)
+	frame.userTabFrame.achievementsButton:SetNormalFontObject(GameFontNormal)
+	frame.userTabFrame.achievementsButton:SetHighlightFontObject(GameFontHighlight)
+	frame.userTabFrame.achievementsButton:SetDisabledFontObject(GameFontDisable)
+	frame.userTabFrame.achievementsButton:SetPoint("TOPLEFT", frame.userTabFrame.notesButton, "TOPRIGHT", 4, 0)
+	frame.userTabFrame.achievementsButton:SetScript("OnClick", tabClicked)
+	frame.userTabFrame.achievementsButton:SetText(L["Experience"])
+	frame.userTabFrame.achievementsButton:GetFontString():SetPoint("LEFT", 3, 0)
+	frame.userTabFrame.achievementsButton:SetHeight(22)
+	frame.userTabFrame.achievementsButton:SetWidth(90)
+	frame.userTabFrame.achievementsButton:SetBackdrop(backdrop)
+	frame.userTabFrame.achievementsButton:SetBackdropColor(0, 0, 0, 0)
+	frame.userTabFrame.achievementsButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	frame.userTabFrame.achievementsButton.tabID = "achievements"
 
 	-- Achievement container
-	frame.achievementFrame = CreateFrame("Frame", nil, frame.tabFrame)   
-	frame.achievementFrame:SetAllPoints(frame.tabFrame)
+	frame.achievementFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
+	frame.achievementFrame:SetAllPoints(frame.userTabFrame)
 
 	frame.achievementFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameAchievements", frame.achievementFrame, "FauxScrollFrameTemplate")
 	frame.achievementFrame.scroll.bar = SexyGroupUserFrameAchievementsScrollBar
@@ -644,8 +841,8 @@ function Users:CreateUI()
 	end
 
 	-- Notes container
-	frame.noteFrame = CreateFrame("Frame", nil, frame.tabFrame)   
-	frame.noteFrame:SetAllPoints(frame.tabFrame)
+	frame.noteFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
+	frame.noteFrame:SetAllPoints(frame.userTabFrame)
 	
 	frame.noteFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameNotes", frame.noteFrame, "FauxScrollFrameTemplate")
 	frame.noteFrame.scroll.bar = SexyGroupUserFrameNotesScrollBar
