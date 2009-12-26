@@ -156,7 +156,7 @@ SexyGroup.STAT_DATA = {
 	-- Spell hit rating is always a caster dps
 	{type = "caster-dps",	default = "HIT_SPELL_RATING@"},
 	-- Items with agility are useful for all physical classes really
-	{type = "physical-all",	enchants = "AGILITY@"},
+	{type = "physical-all",	default = "AGILITY@"},
 	-- Ranged AP, ranged crit, ranged hit are always ranged
 	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
