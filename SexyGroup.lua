@@ -8,6 +8,10 @@ function SexyGroup:OnInitialize()
 			expExpanded = {},
 			pruneAfter = 30,
 			autoPopup = true,
+			comm = {
+				enabled = true,
+				areas = {GUILD = true, WHISPER = true, RAID = true, PARTY = true, BATTLEGROUND = false},
+			},
 		},
 		faction = {
 			lastModified = {},

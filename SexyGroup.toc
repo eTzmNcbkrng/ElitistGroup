@@ -28,3 +28,5 @@ SexyGroup.lua
 users.lua
 scan.lua
 group_history.lua
+sync.lua
+config.lua
