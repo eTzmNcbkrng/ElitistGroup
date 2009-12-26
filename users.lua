@@ -213,10 +213,10 @@ function Users:LoadData(playerData)
 	
 	if( playerData.trusted ) then
 		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, playerData.from, L["Trusted"])
-		frame.userFrame.trustedInfo.tooltip = L["Player data is from a verified source and is accurate!"]
+		frame.userFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
 	else
 		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, playerData.from, L["Untrusted"])
-		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed."]
+		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
 	end
 	
 	-- Build the necessary experience data based on the players achievements, this is fun!
