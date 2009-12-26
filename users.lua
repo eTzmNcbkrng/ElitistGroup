@@ -70,6 +70,7 @@ function Users:LoadData(playerData)
 					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", itemScore)
 					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(itemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]])
 					slot.equippedItem = itemLink
+					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]]
 					slot.tooltip = nil
 					slot:Enable()
 					slot:Show()
@@ -180,10 +181,10 @@ function Users:LoadData(playerData)
 	local coords = CLASS_BUTTONS[playerData.classToken]
 	if( coords ) then
 		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes:16:16:-1:0:%s:%s:%s:%s:%s:%s|t %s (%s)", 256, 256, coords[1] * 256, coords[2] * 256, coords[3] * 256, coords[4] * 256, playerData.name, playerData.level)
-		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], playerData.name, playerData.realm, playerData.level, LOCALIZED_CLASS_NAMES_MALE[playerData.classToken])
+		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], playerData.name, playerData.server, playerData.level, LOCALIZED_CLASS_NAMES_MALE[playerData.classToken])
 	else
 		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s (%s)", playerData.name, playerData.level)
-		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], playerData.name, playerData.realm, playerData.level)
+		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], playerData.name, playerData.server, playerData.level)
 	end
 	
 	local specType, specName, specIcon = SexyGroup:GetPlayerSpec(playerData)
@@ -199,12 +200,15 @@ function Users:LoadData(playerData)
 		
 	local scanAge = (time() - playerData.scanned) / 3600
 	local scanIcon = scanAge >= 5 and 37 or scanAge >= 2 and 39 or scanAge >= 1 and 38 or 41
-	if( scanAge == 0 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, L["Scanned today"])
-	elseif( scanAge >= 24 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d days old"], scanAge / 24))
-	else
+	
+	if( scanAge < 0.02 ) then
+		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, L["Just now"])
+	elseif( scanAge < 1 ) then
+		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d minutes old"], scanAge * 3600))
+	elseif( scanAge < 24 ) then
 		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d hours old"], scanAge))
+	else
+		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d days old"], scanAge / 24))
 	end
 	
 	if( playerData.trusted ) then
@@ -252,7 +256,7 @@ function Users:LoadData(playerData)
 	end
 
 	self.activeData = playerData
-	self.activeUserID = string.format("%s-%s", playerData.name, playerData.realm)
+	self.activeUserID = string.format("%s-%s", playerData.name, playerData.server)
 	self:UpdateDatabasePage()
 	self:UpdateDungeonInfo()
 	self:UpdateTabPage()
@@ -280,17 +284,7 @@ function Users:UpdateDatabasePage()
 
 		-- Cause we don't immediately cache data, we have to merge everything. Also, we want to be able to sort anywa!
 		table.wipe(userList)
-		for name in pairs(SexyGroup.userData) do
-			userList[name] = true
-			table.insert(userList, name)
-		end
-
-		for name in pairs(SexyGroup.db.faction.users) do
-			if( not userList[name] ) then
-				userList[name] = true
-				table.insert(userList, name)
-			end
-		end
+		for name in pairs(SexyGroup.db.faction.users) do table.insert(userList, name) end
 		
 		table.sort(userList, sortNames)
 	end
@@ -436,7 +430,7 @@ function Users:UpdateNoteInfo()
 		if( id >= offset ) then
 			local row = self.frame.noteFrame.rows[rowID]
 
-			local percent = note.rating / SexyGroup.MAX_RATING
+			local percent = (note.rating - 1) / (SexyGroup.MAX_RATING - 1)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			
@@ -504,6 +498,12 @@ function Users:CreateUI()
 		elseif( self.equippedItem ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetHyperlink(self.equippedItem)
+			
+			if( self.itemTalentType ) then
+				GameTooltip:AddLine(" ")
+				GameTooltip:AddLine(string.format(L["|cfffed000Item type:|r %s"], self.itemTalentType), 1, 1, 1, 1, true)
+				GameTooltip:Show()
+			end
 		end
 	end
 
@@ -656,9 +656,18 @@ function Users:CreateUI()
 	   
 	   slot.levelText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	   slot.levelText:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", 2, -3)
+	   slot.levelText:SetJustifyV("CENTER")
+	   slot.levelText:SetJustifyH("LEFT")
+	   slot.levelText:SetWidth(75)
+	   slot.levelText:SetHeight(11)
+
 	   slot.typeText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
 	   slot.typeText:SetPoint("BOTTOMLEFT", slot.icon, "BOTTOMRIGHT", 2, 3)
-		  
+	   slot.typeText:SetJustifyV("CENTER")
+	   slot.typeText:SetJustifyH("LEFT")
+	   slot.typeText:SetWidth(75)
+	   slot.typeText:SetHeight(11)
+	   
 	   if( i == 10 ) then
 		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 40, 0)    
 	   elseif( i > 1 ) then
@@ -814,6 +823,8 @@ function Users:CreateUI()
 
 	local function toggleCategory(self)
 		local id = self.toggle and self.toggle.id or self.id
+		if( not id ) then return end
+		
 		SexyGroup.db.profile.expExpanded[id] = not SexyGroup.db.profile.expExpanded[id]
 		Users:UpdateAchievementInfo()
 	end
