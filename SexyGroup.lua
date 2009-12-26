@@ -7,6 +7,7 @@ function SexyGroup:OnInitialize()
 		profile = {
 			expExpanded = {},
 			pruneAfter = 30,
+			autoPopup = true,
 		},
 		faction = {
 			lastModified = {},
@@ -66,82 +67,8 @@ function SexyGroup:OnInitialize()
 	})
 end
 
-function test()
-	local testTable = {
-		name = "Shadow",
-		realm = "Mal'Ganis",
-		level = 80,
-		classToken = "DRUID",
-		talentTree1 = 10,
-		talentTree2 = 0,
-		talentTree3 = 61,
-		specRole = nil,
-		from = "Selari",
-		trusted = false,
-		scanned = 1260940351, -- time()
-		achievements = {},
-		equipment = {
-			[9] = "item:40323:2332:3520:0:0:0:0:1909562656:80",
-			[15] = "item:45493:3831:0:0:0:0:0:1071947136:80",
-			[13] = "item:37835:0:0:0:0:0:0:2104852352:80",
-			[8] = "item:45565:3232:3545:3520:0:0:0:140590272:80",
-			[7] = "item:45847:3719:3520:3734:0:0:0:0:80",
-			[11] = "item:49486:0:0:0:0:0:0:1347394432:80",
-			[18] = "item:40342:0:0:0:0:0:0:0:80",
-			[14] = "item:45929:0:0:0:0:0:0:-2054043520:80",
-			[1] = "item:45346:3819:3627:3734:0:0:0:0:80",
-			[16] = "item:40488:3834:0:0:0:0:0:-1988596908:80",
-			[17] = "item:40192:0:0:0:0:0:0:2005934728:80",
-			[6] = "item:45556:0:3520:3520:3866:0:0:1962653440:80",
-			[5] = "item:46186:3832:3734:3558:0:0:0:0:80",
-			[3] = "item:40594:3809:0:0:0:0:0:-1469749462:80",
-			[12] = "item:51558:0:0:0:0:0:0:0:80",
-			[2] = "item:45822:0:0:0:0:0:0:0:80",
-			[10] = "item:45345:3246:3545:0:0:0:0:0:80",
-		},
-		notes = {
-			{
-				rating = 5,
-				from = "Mayen",
-				comment = "The quick brown fox, happens to be quick enough when it's jumping over a very lazy dog.",
-				role = bit.bor(SexyGroup.ROLE_HEALER, SexyGroup.ROLE_TANK),
-			},
-			{
-				rating = 4,
-				from = "Mayen",
-				comment = "Amazing, best there's ever been!",
-				role = bit.bor(SexyGroup.ROLE_HEALER, SexyGroup.ROLE_TANK),
-			},
-			{
-				rating = 3,
-				from = "Jerkface",
-				comment = "Feh!",
-				role = SexyGroup.ROLE_DAMAGE,
-			},
-			{
-				rating = 2,
-				from = "Jerkface",
-				comment = "Feh!",
-				role = SexyGroup.ROLE_DAMAGE,
-			},
-			{
-				rating = 1,
-				from = "Jerkface",
-				comment = "Feh!",
-				role = SexyGroup.ROLE_DAMAGE,
-			},
-			{
-				rating = 0,
-				from = "Jerkface",
-				comment = "Feh!",
-				role = SexyGroup.ROLE_DAMAGE, 
-			},
-		}
-	}
-
-	SexyGroup.userData["Shadow-Mal'Ganis"] = CopyTable(testTable)
-	SexyGroup.writeQueue["Shadow-Mal'Ganis"] = true
-	print("Wrote test data for Shadow - Mal'Ganis")
+function SexyGroup:GetItemLink(link)
+	return link and string.match(link, "|H(.-)|h")
 end
 
 function SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
@@ -291,7 +218,7 @@ SexyGroup.GEM_TALENTTYPE = setmetatable({}, {
 		for i=1, tooltip:NumLines() do
 			local text = string.lower(tooltip.TextLeft[i]:GetText())
 			for key, stat in pairs(SexyGroup.STAT_MAP) do
-				if( string.match(text, string.lower(stat)) ) then
+				if( string.match(text, string.lower(_G[stat])) ) then
 					foundData = true
 					statCache[key] = true
 				end
@@ -305,9 +232,10 @@ SexyGroup.GEM_TALENTTYPE = setmetatable({}, {
 			return "unknown"
 		end
 
-		for _, data in pairs(SexyGroup.STAT_DATA) do
+		for i=1, #(SexyGroup.STAT_DATA) do
+			local data = SexyGroup.STAT_DATA[i]
 			local statString = (data.default or "") .. (data.gems or "")
-			if( statString ) then
+			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
 					if( statCache[statKey] ) then
 						rawset(tbl, link, data.type)
@@ -379,7 +307,7 @@ SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
 		-- Parse out the stats
 		table.wipe(statCache)
 		for key, stat in pairs(SexyGroup.STAT_MAP) do
-			if( string.match(enchantText, string.lower(stat)) ) then
+			if( string.match(enchantText, string.lower(_G[stat])) ) then
 				foundData = true
 				statCache[key] = true
 			end
@@ -391,9 +319,10 @@ SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
 		end
 		
 		-- Now figure out wehat spec type
-		for _, data in pairs(SexyGroup.STAT_DATA) do
+		for i=1, #(SexyGroup.STAT_DATA) do
+			local data = SexyGroup.STAT_DATA[i]
 			local statString = (data.default or "") .. (data.enchants or "")
-			if( statString ) then
+			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
 					if( statCache[statKey] ) then
 						rawset(tbl, link, data.type)
@@ -422,22 +351,16 @@ SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 			rawset(tbl, link, "unknown")
 			return "unknown"
 		end
-	
-		-- Yes yes, I could just store everything in the STAT_DATA using the full key, but I'm lazy and it's ugly
+		
 		table.wipe(statCache)
-		statCache = GetItemStats(link, statCache)
-		for statKey, amount in pairs(statCache) do
-			statKey = string.gsub(statKey, "^ITEM_MOD_", "")
-			statKey = string.gsub(statKey, "_SHORT$", "")
-			statKey = string.gsub(statKey, "_NAME$", "")
-			statCache[string.trim(statKey)] = amount
-		end
+		GetItemStats(link, statCache)
 
-		for _, data in pairs(SexyGroup.STAT_DATA) do
-			local statString = data[equipType] or data.default
-			if( statString ) then
+		for i=1, #(SexyGroup.STAT_DATA) do
+			local data = SexyGroup.STAT_DATA[i]
+			local statString = (data.default or "") .. (data[equipType] or "")
+			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[statKey] ) then
+					if( statCache[SexyGroup.STAT_MAP[statKey]] ) then
 						rawset(tbl, link, data.type)
 						return data.type
 					end
@@ -464,7 +387,12 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 		return
 	end
 	
-	if( arg == "" ) then arg = string.format("%s-%s", UnitName("player"), GetRealmName()) end
+	-- Show the players data
+	if( arg == "" ) then
+		SexyGroup.modules.Scan:UpdatePlayerData()
+		SexyGroup.modules.Users:LoadData(SexyGroup.userData[SexyGroup.playerName])
+		return
+	end
 	
 	local data
 	local search = not string.match(arg, "%-") and string.format("^%s%%-", arg)
