@@ -6,6 +6,30 @@ SexyGroup.ROLE_HEALER = 0x02
 SexyGroup.ROLE_DAMAGE = 0x01
 SexyGroup.MAX_RATING = 5
 
+-- required = How many of the talents the DK needs
+-- the number set for the talent is how many they need
+-- Death Knights for example need capped Blade Barrier, Anticipation or Toughness, any 2 to be a tank
+-- This isn't really perfect, if a Druid tries to hybrid it up then it's hard for us to figure out what spec they are
+-- a good idea might be to force set their role based on the assignment they chose when possible, and use this as a fallback
+SexyGroup.FORCE_SPECROLE = {
+	["DEATHKNIGHT"] = {
+		["required"] = 2,
+		["role"] = "tank",
+		
+		[GetSpellInfo(16271)] = 5, -- Anticipation
+		[GetSpellInfo(40079)] = 5, -- Toughness
+		[GetSpellInfo(55225)] = 5, -- Blade Barrier
+	},
+	["DRUID"] = {
+		["required"] = 2,
+		["role"] = "feral-tank",
+		
+		[GetSpellInfo(57881)] = 2, -- Natural Reaction
+		[GetSpellInfo(16929)] = 3, -- Thick Hide
+		[GetSpellInfo(61336)] = 1, -- Survival Instincts
+	},
+}
+
 -- Tree names
 SexyGroup.TREE_DATA = {
 	["SHAMAN"] = {
