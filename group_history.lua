@@ -2,7 +2,7 @@ local SexyGroup = select(2, ...)
 local History = SexyGroup:NewModule("GroupHistory", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local AceGUI = LibStub("AceGUI-3.0")
-local surveyFrame, SpecialFrame
+local surveyFrame, SpecialFrame, totalPartyMembers
 local groupRatings, groupNotes, groupList = {}, {}, {}
 
 function History:LFG_COMPLETION_REWARD()
@@ -50,7 +50,7 @@ local function OnValueChanged(self, event, value)
 end
 			
 local function OnHide(self)
-	for partyID, role in pairs(groupList) do
+	for partyID, data in pairs(groupList) do
 		if( groupRatings[partyID] and groupNotes[partyID] ) then
 			local userData = SexyGroup.userData[partyID]
 			local note
@@ -64,7 +64,7 @@ local function OnHide(self)
 			
 			note = note or {}
 			note.from = SexyGroup.playerName
-			note.role = note.role and bit.bor(note.role, role) or role
+			note.role = note.role and bit.bor(note.role, data.role) or data.role
 			note.rating = groupRatings[partyID]
 			note.comment = groupNotes[partyID]
 			note.time = time()
@@ -83,7 +83,7 @@ function History:InitFrame()
 	surveyFrame:SetStatusText("")
 	surveyFrame:SetLayout("Flow")
 	surveyFrame:SetWidth(495)
-	surveyFrame:SetHeight(245 + (GetNumPartyMembers() > 2 and 155 or 0))
+	surveyFrame:SetHeight(245 + (totalPartyMembers > 2 and 155 or 0))
 	surveyFrame:Show()
 
 	-- Be do be do be dooooo
@@ -95,22 +95,15 @@ function History:InitFrame()
 	header.width = "fill"
 	surveyFrame:AddChild(header)
 	
-	for i = 1, GetNumPartyMembers() do
-		local unit = "party" .. i
-		local isTank, isHealer, isDamage = UnitGroupRolesAssigned(unit)
-		local role = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
-		local classToken = select(2, UnitClass(unit))
-		local name, server = UnitName(unit)
-		local partyID = string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
-
+	for partyID, data in pairs(groupList) do
 		local group = AceGUI:Create("InlineGroup")
 		group:SetWidth(230)			
 		
 		local label = AceGUI:Create("Label")
 		label:SetWidth(300)
-		label:SetText(name)
-		if( classToken ) then
-			label:SetImage("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes", CLASS_ICON_TCOORDS[classToken][1], CLASS_ICON_TCOORDS[classToken][2], CLASS_ICON_TCOORDS[classToken][3], CLASS_ICON_TCOORDS[classToken][4])
+		label:SetText(data.name)
+		if( data.classToken ) then
+			label:SetImage("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes", CLASS_ICON_TCOORDS[data.classToken][1], CLASS_ICON_TCOORDS[data.classToken][2], CLASS_ICON_TCOORDS[data.classToken][3], CLASS_ICON_TCOORDS[data.classToken][4])
 			label:SetImageSize(24, 24)
 		else
 			label:SetImage("")
@@ -129,7 +122,7 @@ function History:InitFrame()
 
 		local notes = AceGUI:Create("EditBox")
 		notes:SetLabel(L["Notes"])
-		notes:SetText(groupNotes[partyID] or string.format("%s - ", role))
+		notes:SetText(groupNotes[partyID] or string.format("%s - ", data.roleText))
 		notes:SetCallback("OnEnterPressed", OnEnterPressed)
 		notes:SetUserData("partyID", partyID)
 		group:AddChild(notes)
@@ -152,13 +145,18 @@ function History:LogGroup()
 		table.wipe(groupNotes)
 		table.wipe(groupRatings)
 		
+		totalPartyMembers = GetNumPartyMembers()
 		for i=1, GetNumPartyMembers() do
 			SexyGroup.modules.Scan:CreateCoreTable("party" .. i)
 			
 			local name, server = UnitName("party" .. i)
 			local partyID = string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
-			local isTank, isHealer, isDamage = UnitGroupRolesAssigned(unit)
-			groupList[partyID] = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
+			local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. i)
+			local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
+			local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
+			local classToken = select(2, UnitClass("party" .. i))
+			
+			groupList[partyID] = {role = role, roleText = roleText, name = name, classToken = classToken}
 		end
 
 		self.activeGroupID = groupID
