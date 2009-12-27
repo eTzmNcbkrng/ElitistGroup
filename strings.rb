@@ -12,7 +12,7 @@ if not L then return end
 EOF
  
 usedStrings = [] 
-EXCLUDE_DIRS = ["Localization", "Libs"] 
+EXCLUDE_DIRS = ["localization", "libs"] 
 Dir.glob("#{ARGV[0].gsub(/\/$/, "")}/**/*.lua").each do |filename| 
 		valid = true 
 		EXCLUDE_DIRS.each {|d| if filename.match d then valid = false; break end } 
