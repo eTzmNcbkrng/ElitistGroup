@@ -83,6 +83,14 @@ function SexyGroup:OnInitialize()
 			return tbl[name]
 		end
 	})
+	
+	if( not SexyGroup.db.profile.helped ) then
+		self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
+			SexyGroup.db.profile.helped = true
+			SexyGroup:Print(L["Welcome! Type /sexygroup help to see a list of available slash commands."])
+			SexyGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
+		end)
+	end
 end
 
 function SexyGroup:GetItemLink(link)
