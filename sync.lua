@@ -48,6 +48,14 @@ function Sync:VerifyTable(tbl, checkTbl)
 	return tbl
 end
 
+function Sync:SendGearRequest(gearFor)
+
+end
+
+function Sync:SendNoteRequest(notesOn)
+
+end
+
 function Sync:ParseGearRequest(sender)
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
@@ -101,7 +109,7 @@ function Sync:ParseSentGear(sender, data)
 	
 	-- Verify gear
 	for key, value in pairs(sentData.equipment) do
-		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > SexyGroup.MAX_LINK_LENGTH ) then
+		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > SexyGroup.MAX_LINK_LENGTH or not SexyGroup.VALID_INVENTORY_SLOTS ) then
 			sentData.equipment[key] = nil
 		end
 	end
@@ -120,6 +128,8 @@ function Sync:ParseSentGear(sender, data)
 	table.wipe(userData)
 
 	for key, value in pairs(sentData) do userData[key] = value end
+	userData.name = string.match(senderName, "(.-)%-")
+	userData.server = string.match(senderName, "%-(.+)")
 	userData.notes = notes
 	userData.scanned = time()
 	userData.from = sender
@@ -146,16 +156,21 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	-- time() can differ between players, will have the player send their time so it can be calibrated
 	-- this is still maybe 2-3 seconds off, but better 2-3 seconds off than hours
 	local timeDrift = senderTime - currentTime
-
+	local senderName = getName(sender)
+	
 	for noteFor, note in pairs(sentNotes()) do
 		note = self:VerifyTable(note, SexyGroup.VALID_NOTE_FIELDS)
 		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and note.comment ) then
 			local name, server = string.split("-", noteFor, 2)
 			local userData = SexyGroup.userData[noteFor] or {}
 			
-			note.time = note.time + timeDrift
+			-- If the time drift is over a day, reset the time of the comment to right now
+			note.time = timeDrift > 86400 and time() or note.time + timeDrift
 			note.comment = SexyGroup:SafeEncode(note.comment)
-			userData.notes[getName(sender)] = note
+			note.from = senderName
+			note.rating = math.max(math.min(5, note.rating), 0)
+			
+			userData.notes[senderName] = note
 			
 			SexyGroup.userData[noteFor] = userData
 			SexyGroup.db.faction.users[noteFor] = SexyGroup.db.faction.users[noteFor] or ""
