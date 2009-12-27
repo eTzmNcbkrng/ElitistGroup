@@ -78,6 +78,14 @@ local function loadOptions()
 						get = get,
 						disabled = false,
 					},
+					gearRequests = {
+						order = 2,
+						type = "toggle",
+						name = L["Allow gear requests"],
+						desc = L["Unchecking this disables other Sexy Group users from requesting your gear without inspecting."],
+						set = set,
+						get = get,
+					},
 					header = {
 						order = 2,
 						type = "header",
@@ -86,7 +94,7 @@ local function loadOptions()
 					description = {
 						order = 3,
 						type = "description",
-						name = L["You can choose which channels communication is accepted over. As long as communications are enabled, whisper is accepted."],
+						name = L["You can choose which channels communication is accepted over. As long as communications are enabled, whisper is accepted. Communications are queued while in combat regardless."],
 					},
 					GUILD = {
 						order = 4,
@@ -118,24 +126,39 @@ SLASH_SEXYGROUP1 = "/sexygroup"
 SLASH_SEXYGROUP2 = "/sexygroups"
 SLASH_SEXYGROUP3 = "/sg"
 SlashCmdList["SEXYGROUP"] = function(msg)
-	local arg = string.trim(string.lower(msg or ""))
-	if( arg == "config" ) then
+	local cmd, arg = string.split(" ", msg or "", 2)
+	cmd = string.lower(cmd or "")
+
+	if( cmd == "config" or cmd == "ui" ) then
 		InterfaceOptionsFrame:Show()
 		InterfaceOptionsFrame_OpenToCategory("Sexy Group")
+		return
+	elseif( cmd == "gear" and arg ) then
+		SexyGroup.modules.Sync:SendGearRequest(arg)
+		return
+	elseif( cmd == "notes" and arg ) then
+		SexyGroup.modules.Sync:SendNoteRequest(arg)
+		return
+	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" ) then
+		SexyGroup:Print(L["Slash commands"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup config - Opens the configuration"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup gear <name> - Requests gear from another Sexy Group user without inspecting"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup notes <for> - Requests all notes that people have for the name entered"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
 		return
 	end
 	
 	-- Show the players data
-	if( arg == "" ) then
+	if( cmd == "" ) then
 		SexyGroup.modules.Scan:UpdatePlayerData()
 		SexyGroup.modules.Users:LoadData(SexyGroup.userData[SexyGroup.playerName])
 		return
 	end
 	
 	local data
-	local search = not string.match(arg, "%-") and string.format("^%s%%-", arg)
+	local search = not string.match(cmd, "%-") and string.format("^%s%%-", cmd)
 	for name in pairs(SexyGroup.db.faction.users) do
-		if( ( search and string.match(string.lower(name), search) ) or ( string.lower(name) == arg ) ) then
+		if( ( search and string.match(string.lower(name), search) ) or ( string.lower(name) == cmd ) ) then
 			data = SexyGroup.userData[name]
 			break
 		end
