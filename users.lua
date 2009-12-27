@@ -12,9 +12,20 @@ local function sortGems(a, b) return gemList[a] > gemList[b] end
 local function sortItemNames(a, b) return GetItemInfo(a) < GetItemInfo(b) end
 local function sortNames(a, b) return a < b end
 
+function Users:OnInitialize()
+	self:RegisterMessage("SG_DATA_UPDATED", function(event, user)
+		if( self.activeUserID and user == self.activeUserID ) then
+			self:LoadData(SexyGroup.userData[user])
+		end
+	end)
+end
+
 function Users:LoadData(playerData)
 	self:CreateUI()
 	local frame = self.frame
+
+	self.activeData = playerData
+	self.activeUserID = string.format("%s-%s", playerData.name, playerData.server)
 
 	table.wipe(gemList)
 	table.wipe(enchantList)
@@ -254,9 +265,13 @@ function Users:LoadData(playerData)
 			self.forceOffset = math.ceil((i + 1) / 4)
 		end
 	end
+	
+	self.activeDataNotes = 0
+	for _ in pairs(playerData.notes) do 
+		self.activeDataNotes = self.activeDataNotes + 1
+		break
+	end
 
-	self.activeData = playerData
-	self.activeUserID = string.format("%s-%s", playerData.name, playerData.server)
 	self:UpdateDatabasePage()
 	self:UpdateDungeonInfo()
 	self:UpdateTabPage()
@@ -319,11 +334,11 @@ function Users:UpdateDatabasePage()
 end
 
 function Users:UpdateTabPage()
-	self.frame.userTabFrame.notesButton:SetFormattedText(L["Notes (%d)"], #(self.activeData.notes))
+	self.frame.userTabFrame.notesButton:SetFormattedText(L["Notes (%d)"], self.activeDataNotes)
 	if( self.activeData.pruned ) then
 		self.frame.userTabFrame.selectedTab = "notes"
 		self.frame.userTabFrame.achievementsButton:Disable()
-	elseif( #(self.activeData.notes) == 0 ) then
+	elseif( self.activeDataNotes == 0 ) then
 		self.frame.userTabFrame.selectedTab = "achievements"
 		self.frame.userTabFrame.notesButton:Disable()
 		self.frame.userTabFrame.achievementsButton:Enable()
@@ -419,14 +434,14 @@ end
 
 function Users:UpdateNoteInfo()
 	local self = Users
-	FauxScrollFrame_Update(self.frame.noteFrame.scroll, #(self.activeData.notes), MAX_NOTE_ROWS - 1, 48)
+	FauxScrollFrame_Update(self.frame.noteFrame.scroll, self.activeDataNotes, MAX_NOTE_ROWS - 1, 48)
 	
 	for _, row in pairs(self.frame.noteFrame.rows) do row:Hide() end
 	local rowWidth = self.frame.noteFrame:GetWidth() - (self.frame.noteFrame.scroll:IsVisible() and 24 or 10)
 	
-	local rowID = 1
+	local id, rowID = 1, 1
 	local offset = FauxScrollFrame_GetOffset(self.frame.noteFrame.scroll)
-	for id, note in pairs(self.activeData.notes) do
+	for from, note in pairs(self.activeData.notes) do
 		if( id >= offset ) then
 			local row = self.frame.noteFrame.rows[rowID]
 
@@ -434,15 +449,17 @@ function Users:UpdateNoteInfo()
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			
-			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, note.from)
+			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment)
-			row.tooltip = string.format(L["%s wrote: %s"], note.from, note.comment)
+			row.tooltip = string.format(L["%s wrote: %s"], from, note.comment)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
 			rowID = rowID + 1
 			if( rowID > MAX_NOTE_ROWS ) then break end
 		end
+		
+		id = id + 1
 	end
 end
 
@@ -706,9 +723,11 @@ function Users:CreateUI()
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
-		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetPoint("LEFT", button, "LEFT", 0, 0)
+		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
+		button:GetFontString():SetWidth(frame.userFrame:GetWidth() - 5)
+		button:GetFontString():SetHeight(15)
 		
 		if( i > 1 ) then
 			button:SetPoint("TOPLEFT", frame.userFrame[buttonList[i - 1]], "BOTTOMLEFT", 0, -4)
