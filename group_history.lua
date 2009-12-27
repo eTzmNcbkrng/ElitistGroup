@@ -52,23 +52,13 @@ end
 local function OnHide(self)
 	for partyID, data in pairs(groupList) do
 		if( groupRatings[partyID] and groupNotes[partyID] ) then
-			local userData = SexyGroup.userData[partyID]
-			local note
-			for i=1, #(userData.notes) do
-				if( userData.notes[i].from == SexyGroup.playerName ) then
-					note = userData.notes[i]
-					table.remove(userData.notes, i)
-					break
-				end
-			end
-			
-			note = note or {}
-			note.from = SexyGroup.playerName
+			local note = SexyGroup.userData[partyID].notes[SexyGroup.playerName] or {}
 			note.role = note.role and bit.bor(note.role, data.role) or data.role
 			note.rating = groupRatings[partyID]
-			note.comment = groupNotes[partyID]
+			note.comment = SexyGroup:SafeEncode(groupNotes[partyID])
 			note.time = time()
-			table.insert(userData.notes, note)
+			
+			SexyGroup.userData[partyID].notes[SexyGroup.playerName] = note
 		end
 	end
 	
