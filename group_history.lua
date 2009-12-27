@@ -6,7 +6,7 @@ local surveyFrame, SpecialFrame, totalPartyMembers
 local groupRatings, groupNotes, groupList = {}, {}, {}
 
 function History:LFG_COMPLETION_REWARD()
-	if( SexyGroup.db.profile.autoPopup ) then
+	if( SexyGroup.db.profile.general.autoPopup ) then
 		self:LogGroup()
 	else
 		local name, typeID = GetLFGCompletionReward()
