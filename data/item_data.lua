@@ -23,6 +23,11 @@ SexyGroup.INVENTORY_TO_TYPE = {
 	["WaistSlot"] = "waist", ["HandsSlot"] = "hands", ["BackSlot"] = "cloak", ["ShoulderSlot"] = "shoulders",
 }
 
+SexyGroup.VALID_INVENTORY_SLOTS = {}
+for slotType in pairs(SexyGroup.INVENTORY_TO_TYPE) do
+	SexyGroup.VALID_INVENTORY_SLOTS[GetInventorySlotInfo(slotType)] = true
+end
+
 -- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
 -- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
 SexyGroup.EQUIP_UNECHANTABLE = {["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true}
@@ -50,10 +55,9 @@ SexyGroup.VALID_SPECTYPES = {
 	["feral-tank"] = {},
 }
 
--- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for htem
+-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
 for type in pairs(SexyGroup.VALID_SPECTYPES["melee-dps"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
 for type in pairs(SexyGroup.VALID_SPECTYPES["tank"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
-
 
 -- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 SexyGroup.OVERRIDE_ENCHANTS = {
