@@ -6,8 +6,13 @@ function SexyGroup:OnInitialize()
 	self.defaults = {
 		profile = {
 			expExpanded = {},
-			pruneAfter = 30,
-			autoPopup = true,
+			general = {
+				autoPopup = true,
+			},
+			database = {
+				pruneBasic = 30,
+				pruneFull = 120,
+			},
 			comm = {
 				enabled = true,
 				areas = {GUILD = true, WHISPER = true, RAID = true, PARTY = true, BATTLEGROUND = false},
@@ -29,21 +34,29 @@ function SexyGroup:OnInitialize()
 	self.modules.Sync:Setup()
 	
 	-- Data is old enough that we want to remove extra data to save space
-	if( self.db.profile.pruneAfter > 0 ) then
-		local pruneBefore = time() - (self.db.profile.pruneAfter * 86400)
+	if( self.db.profile.database.pruneBasic > 0 or self.db.database.pruneFull > 0 ) then
+		local pruneBasic = time() - (self.db.profile.database.pruneBasic * 86400)
+		local pruneFull = time() - (self.db.profile.database.pruneFull * 86400)
+		
 		for name, modified in pairs(self.db.faction.lastModified) do
-			if( modified <= pruneBefore ) then
+			-- Basic pruning, we wipe out any volatile data
+			if( self.db.profile.database.pruneBasic > 0 and modified <= pruneBasic ) then
 				self.db.faction.lastModified[name] = time()
 				
-				local name, server, level, classToken, specRole, notes = self.userData[name].name, self.userData[name].server, self.userData[name].level, self.userData[name].classToken, self.userData[name].specRole, self.userData[name].notes
+				local name, server, level, classToken, notes = self.userData[name].name, self.userData[name].server, self.userData[name].level, self.userData[name].classToken, self.userData[name].notes
 				table.wipe(self.userData[name])
 				self.userData[name].name = name
 				self.userData[name].server = server
 				self.userData[name].level = level
 				self.userData[name].classToken = classToken
 				self.userData[name].notes = notes
-				self.userData[name].specRole = specRole
 				self.userData[name].pruned = true
+			-- Full pruning, all data gets removed
+			elseif( self.db.profile.database.pruneFull > 0 and modified <= pruneFull ) then
+				self.db.faction.lastModified[name] = nil
+				self.db.faction.users[name] = nil
+				self.writeQueue[name] = nil
+				self.userData[name] = nil
 			end
 		end
 	end
@@ -394,41 +407,6 @@ SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 
 function SexyGroup:Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Sexy Group|r: " .. msg)
-end
-
-SLASH_SEXYGROUP1 = "/sexygroup"
-SLASH_SEXYGROUP2 = "/sexygroups"
-SLASH_SEXYGROUP3 = "/sg"
-SlashCmdList["SEXYGROUP"] = function(msg)
-	local arg = string.trim(string.lower(msg or ""))
-	if( arg == "config" ) then
-		print("Nothing to see here yet.")
-		return
-	end
-	
-	-- Show the players data
-	if( arg == "" ) then
-		SexyGroup.modules.Scan:UpdatePlayerData()
-		SexyGroup.modules.Users:LoadData(SexyGroup.userData[SexyGroup.playerName])
-		return
-	end
-	
-	local data
-	local search = not string.match(arg, "%-") and string.format("^%s%%-", arg)
-	for name in pairs(SexyGroup.db.faction.users) do
-		if( ( search and string.match(string.lower(name), search) ) or ( string.lower(name) == arg ) ) then
-			data = SexyGroup.userData[name]
-			break
-		end
-	end
-	
-	if( not data ) then
-		SexyGroup:Print(string.format(L["Cannot find record of %s in your saved database."], msg))
-		return
-	end
-	
-	SexyGroup.modules.Users:LoadData(data)
-	
 end
 
 --@debug@
