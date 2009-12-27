@@ -2,6 +2,11 @@ local SexyGroup = select(2, ...)
 local Scan = SexyGroup:NewModule("Scan", "AceEvent-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 
+-- These are the fields that comm are allowed to send, this is used so people don't try and make super complex tables to send to the user and either crash or lag them.
+SexyGroup.VALID_DB_FIELDS = { ["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string"}
+SexyGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
+SexyGroup.MAX_LINK_LENGTH = 80
+
 function Scan:CreateCoreTable(unit)
 	local name, server = UnitName(unit)
 	server = server and server ~= "" and server or GetRealmName()
