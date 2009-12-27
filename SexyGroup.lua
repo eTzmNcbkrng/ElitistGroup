@@ -26,6 +26,7 @@ function SexyGroup:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 	
 	self.playerName = string.format("%s-%s", UnitName("player"), GetRealmName())
+	self.modules.Sync:Setup()
 	
 	-- Data is old enough that we want to remove extra data to save space
 	if( self.db.profile.pruneAfter > 0 ) then
@@ -119,29 +120,43 @@ function SexyGroup:IsValidEnchant(itemLink, playerData)
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
-local function writeTable(tbl)
-	local data = ""
+-- Encodes text in a way that it won't interfere with the table being loaded
+local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}"),
+				['"'] = "\\" .. string.byte('"'), [";"] = "\\" .. string.byte(";"),
+				["%["] = "\\" .. string.byte("["), ["%]"] = "\\" .. string.byte("]"),
+				["@"] = "\\" .. string.byte("@")}
+function SexyGroup:SafeEncode(text)
+	for find, replace in pairs(map) do
+		text = string.gsub(text, find, replace)
+	end
+	
+	return text
+end
 
+function SexyGroup:WriteTable(tbl, skipNotes)
+	local data = ""
 	for key, value in pairs(tbl) do
-		local valueType = type(value)
-		
-		-- Wrap the key in brackets if it's a number
-		if( type(key) == "number" ) then
-			key = string.format("[%s]", key)
-		-- Wrap the string with quotes if it has a space in it
-		elseif( string.match(key, " ") ) then
-			key = string.format("[\"%s\"]", key)
-		end
-		
-		-- foo = {bar = 5}
-		if( valueType == "table" ) then
-			data = string.format("%s%s=%s;", data, key, writeTable(value))
-		-- foo = true / foo = 5
-		elseif( valueType == "number" or valueType == "boolean" ) then
-			data = string.format("%s%s=%s;", data, key, tostring(value))
-		-- foo = "bar"
-		else
-			data = string.format("%s%s=\"%s\";", data, key, tostring(value))
+		if( not skipNotes or key ~= "notes" ) then
+			local valueType = type(value)
+			
+			-- Wrap the key in brackets if it's a number
+			if( type(key) == "number" ) then
+				key = string.format("[%s]", key)
+			-- This will match any punctuation, spacing or control characters, basically anything that requires wrapping around them
+			elseif( string.match(key, "[%p%s%c]") ) then
+				key = string.format("[\"%s\"]", key)
+			end
+			
+			-- foo = {bar = 5}
+			if( valueType == "table" ) then
+				data = string.format("%s%s=%s;", data, key, self:WriteTable(value))
+			-- foo = true / foo = 5
+			elseif( valueType == "number" or valueType == "boolean" ) then
+				data = string.format("%s%s=%s;", data, key, tostring(value))
+			-- foo = "bar"
+			else
+				data = string.format("%s%s=\"%s\";", data, key, tostring(value))
+			end
 		end
 	end
 	
@@ -166,7 +181,7 @@ end
 function SexyGroup:OnDatabaseShutdown()
 	for name in pairs(self.writeQueue) do
 		self.db.faction.lastModified[name] = time()
-		self.db.faction.users[name] = writeTable(self.userData[name])
+		self.db.faction.users[name] = self:WriteTable(self.userData[name])
 	end
 end
 
@@ -382,8 +397,8 @@ function SexyGroup:Print(msg)
 end
 
 SLASH_SEXYGROUP1 = "/sexygroup"
-SLASH_SEXYGROUP2 = "/sg"
-SLASH_SEXYGROUP3 = "/sexygroups"
+SLASH_SEXYGROUP2 = "/sexygroups"
+SLASH_SEXYGROUP3 = "/sg"
 SlashCmdList["SEXYGROUP"] = function(msg)
 	local arg = string.trim(string.lower(msg or ""))
 	if( arg == "config" ) then
