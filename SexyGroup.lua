@@ -12,6 +12,7 @@ function SexyGroup:OnInitialize()
 			database = {
 				pruneBasic = 30,
 				pruneFull = 120,
+				ignoreBelow = 80,
 			},
 			comm = {
 				enabled = true,
@@ -96,6 +97,11 @@ end
 
 function SexyGroup:GetItemLink(link)
 	return link and string.match(link, "|H(.-)|h")
+end
+
+function SexyGroup:GetPlayerID(unit)
+	local name, server = UnitName(unit)
+	return name and string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
 end
 
 function SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
@@ -200,24 +206,32 @@ end
 -- Player is logging out, write the cache
 function SexyGroup:OnDatabaseShutdown()
 	for name in pairs(self.writeQueue) do
-		self.db.faction.lastModified[name] = time()
-		self.db.faction.users[name] = self:WriteTable(self.userData[name])
+		-- We need to make sure what we are writing has data, for example if we inspect scan someone we create the template
+		-- if we fail to find talent data for them, and we don't have notes then will just throw out their data and not bother writing it
+		local userData = self.userData[name]
+		local hasData = userData.talentTree1 ~= 0 or userData.talentTree2 ~= 0 or userData.talentTree3 ~= 0
+		if( not hasData ) then
+			for _, note in pairs(userData.notes) do
+				hasData = true
+				break
+			end
+		end
+		
+		if( hasData and userData.level and userData.level >= self.db.profile.database.ignoreBelow ) then
+			self.db.faction.lastModified[name] = time()
+			self.db.faction.users[name] = self:WriteTable(userData)
+		else
+			self.db.faction.lastModified[name] = nil
+			self.db.faction.users[name] = nil
+		end
 	end
 end
 
 -- General cache functions that handle figuring out item data
 -- Yay metatable caching, can only get gem totals via tooltip scanning, GetItemStats won't return a prismatic socketed item
 local statCache = {}
-local tooltip = CreateFrame("GameTooltip", nil, UIParent)
+local tooltip = CreateFrame("GameTooltip", "SexyGroupTooltip", UIParent, "GameTooltipTemplate")
 tooltip:SetOwner(UIParent, "ANCHOR_NONE")
-tooltip.TextLeft = {}
-tooltip.TextRight = {}
-
-for i=1, 30 do
-	tooltip.TextLeft[i] = tooltip:CreateFontString()
-	tooltip.TextRight[i] = tooltip:CreateFontString()
-	tooltip:AddFontStrings(tooltip.TextLeft[i], tooltip.TextRight[i])
-end
 
 SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, {
 	__index = function(tbl, link)
@@ -226,7 +240,7 @@ SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, {
 
 		local total = 0
 		for i=1, tooltip:NumLines() do
-			local text = tooltip.TextLeft[i]:GetText()
+			local text = _G["SexyGroupTooltipTextLeft" .. i]:GetText()
 			if( text == EMPTY_SOCKET_BLUE or text == EMPTY_SOCKET_META or text == EMPTY_SOCKET_NO_COLOR or text == EMPTY_SOCKET_RED or text == EMPTY_SOCKET_YELLOW ) then
 				total = total + 1
 			end
@@ -255,7 +269,7 @@ SexyGroup.GEM_TALENTTYPE = setmetatable({}, {
 		tooltip:SetHyperlink(link)
 
 		for i=1, tooltip:NumLines() do
-			local text = string.lower(tooltip.TextLeft[i]:GetText())
+			local text = string.lower(_G["SexyGroupTooltipTextLeft" .. i]:GetText())
 			for key, stat in pairs(SexyGroup.STAT_MAP) do
 				if( string.match(text, string.lower(_G[stat])) ) then
 					foundData = true
@@ -296,15 +310,15 @@ local function parseText(text)
 end
 
 -- Note: Regular enchants show up above sockets and below the items base stats. Engineering enchants are at the very bottom :|
+-- Because of how engineering enchants are done, we cannot scan for them. They have to be manually overridden cause Blizzard are jerks.
 local ARMOR_MATCH = parseText(ARMOR_TEMPLATE)
-local SOCKET_MATCH = parseText(ITEM_SOCKET_BONUS)
-local ENCHANT_ITEM_REQ_SKILL = parseText(ENCHANT_ITEM_REQ_LEVEL)
+local ITEM_SPELL_TRIGGER_ONEQUIP = parseText(ITEM_SPELL_TRIGGER_ONEQUIP)
+local ITEM_SPELL_TRIGGER_ONPROC = parseText(ITEM_SPELL_TRIGGER_ONPROC)
+local ITEM_SPELL_TRIGGER_ONUSE = parseText(ITEM_SPELL_TRIGGER_ONUSE)
+local ITEM_SET_BONUS = parseText(ITEM_SET_BONUS)
 local ITEM_HEROIC = parseText(ITEM_HEROIC)
 local ITEM_HEROIC_EPIC = parseText(ITEM_HEROIC_EPIC)
-local ITEM_LEVEL_RANGE_CURRENT = parseText(ITEM_LEVEL_RANGE_CURRENT)
-local ITEM_LEVEL_RANGE = parseText(ITEM_LEVEL_RANGE)
-local ITEM_MIN_LEVEL = parseText(ITEM_MIN_LEVEL)
-local ITEM_CLASSES_ALLOWED = parseText(ITEM_CLASSES_ALLOWED)
+local ITEM_REQUIRES_ENGINEERING = string.lower(string.format(ENCHANT_ITEM_REQ_SKILL, (GetSpellInfo(4036))))
 
 SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
 	__index = function(tbl, link)
@@ -319,30 +333,36 @@ SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
 		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 		tooltip:SetHyperlink(link)
 
+		-- The first check is we hit the row with an icon anchored to it, this is where gems start
+		local stopAt = SexyGroupTooltipTexture1:IsVisible() and select(2, SexyGroupTooltipTexture1:GetPoint())
 		local enchantText
 		for i=1, tooltip:NumLines() do
-			local text = string.lower(tooltip.TextLeft[i]:GetText())
-			local r, g, b = tooltip.TextLeft[i]:GetTextColor()
+			local row = _G["SexyGroupTooltipTextLeft" .. i]
+			if( row == stopAt ) then break end
 
-			-- The person viewing this item is not high enough to use the enchant, the text will be red but we know it's going to be right above us
-			if( string.match(text, ENCHANT_ITEM_REQ_SKILL) ) then
-				enchantText = string.lower(tooltip.TextLeft[i - 1]:GetText())
-				break
-			-- Socket, or level we went too far
-			elseif( string.match(text, SOCKET_MATCH) or string.match(text, ITEM_MIN_LEVEL) or string.match(text, ITEM_LEVEL_RANGE_CURRENT) or string.match(text, ITEM_LEVEL_RANGE) ) then
-				break
-			-- Valid enchant
-			elseif( r == 0 and g >= 0.97 and b == 0 and not string.match(text, ARMOR_MATCH) and text ~= ITEM_HEROIC_EPIC and text ~= ITEM_HEROIC ) then
-				enchantText = text
-				break
-			end	
+			-- Don't scan anything with right text, this fixes issues where "Main-Hand" is red for the weapon type line
+			if( not _G["SexyGroupTooltipTextRight" .. i]:GetText() ) then
+				local text = string.lower(row:GetText())
+				local r, g, b = row:GetTextColor()
+										
+				-- If we hit these we're out of stuff
+				if( string.match(text, ITEM_SPELL_TRIGGER_ONEQUIP) or string.match(text, ITEM_SPELL_TRIGGER_ONPROC) or string.match(text, ITEM_SPELL_TRIGGER_ONUSE) or string.match(text, ITEM_SET_BONUS) ) then
+					break
+				-- Should be a valid line, or at least god I hope it is
+				elseif( ( r >= 0.97 and g < 0.15 and b < 0.15 ) or ( r == 0 and g >= 0.97 and b == 0 ) ) then
+					if( not string.match(text, ARMOR_MATCH) and text ~= ITEM_HEROIC_EPIC and text ~= ITEM_HEROIC ) then
+						enchantText = text
+						break
+					end
+				end	
+			end
 		end
 		
 		if( not enchantText ) then
 			rawset(tbl, link, "unknown")
 			return "unknown"
 		end
-
+		
 		-- Parse out the stats
 		table.wipe(statCache)
 		for key, stat in pairs(SexyGroup.STAT_MAP) do
@@ -384,7 +404,7 @@ local function getRelicSpecType(link)
 		
 	local equipText
 	for i=tooltip:NumLines(), 1, -1 do
-		local text = string.lower(tooltip.TextLeft[i]:GetText())
+		local text = string.lower(_G["SexyGroupTooltipTextLeft" .. i]:GetText())
 		if( string.match(text, ITEM_ONEQUIP) ) then
 			equipText = text
 			break
@@ -450,12 +470,6 @@ SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 		return "unknown"
 	end,
 })
-
-function SexyGroup.GetPlayerID(unit)
-	local name, server = UnitName(unit)
-	server = server and server ~= "" and server or GetRealmName()
-	return string.format("%s-%s", name, server), name, server
-end
 
 function SexyGroup:Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Sexy Group|r: " .. msg)
