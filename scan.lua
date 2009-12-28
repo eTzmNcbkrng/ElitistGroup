@@ -15,7 +15,7 @@ function Scan:CreateCoreTable(unit)
 	local classToken = select(2, UnitClass(unit))
 	local level = UnitLevel(unit)
 	
-	local data = SexyGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = UnitName("player"), trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	local data = SexyGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = SexyGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
 	data.name = name
 	data.server = server
 	data.level = level
@@ -34,7 +34,7 @@ function Scan:GetTalentData(classToken, inspect)
 	if( forceData ) then
 		local talentMatches = 0
 		for tabIndex=1, GetNumTalentTabs(inspect) do
-			for talentID=1, GetNumTalents(tabIndex) do
+			for talentID=1, GetNumTalents(tabIndex, inspect) do
 				local name, _, _, _, spent = GetTalentInfo(tabIndex, talentID, inspect)
 				if( forceData[name] and spent >= forceData[name] ) then
 					talentMatches = talentMatches + 1
