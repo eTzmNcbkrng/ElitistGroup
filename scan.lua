@@ -12,47 +12,50 @@ local pending = {}
 function Scan:OnInitialize()
 	self:RegisterEvent("INSPECT_TALENT_READY")
 	self:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
-	
-	-- Queue flushing is a possibility - if we want to scan and cache the whole raid in the background or something?
-	-- We can stick with active scanning via inspect for now.
-	-- self:ScheduleRepeatingTimer("FlushQueue", 3.0)
 end
 
---[[
 do
 	local inspectQueue = {}
-	local pushInspectQueue, popInspectQueue
 
-	function pushInspectQueue(token)
+	function Scan:PushQueue(unit)
 		for i = 1, #inspectQueue do
-			if inspectQueue[i] == token then return end		
+			if inspectQueue[i] == unit then return end		
 		end
-		tinsert(inspectQueue, 1, token)
-		popInspectQueue()
+		
+		table.insert(inspectQueue, 1, unit)
 	end
-
-	function popInspectQueue()
-		if pendingUnit ~= nil then return end		
-		local token = tremove(inspectQueue)
-		if token then
-			if UnitPlayerControlled("target") and CheckInteractDistance("target", 1) and CanInspect(token, false) then
-				NotifyInspect(token)
-			else
-				tinsert(inspectQueue, 1, token)
+	
+	function Scan:RemoveQueue(unit)
+		for i=#(inspectQueue), 1, -1 do
+			if( inspectQueue[i] == unit ) then
+				table.remove(inspectQueue, 1, unit)
 			end
 		end
 	end
 	
+	function popInspectQueue()
+		Scan:ScheduleTimer("FlushQueue", 3)
+		if pending.activeInspect then return end		
+
+		local unit = table.remove(inspectQueue)
+		if UnitPlayerControlled(unit) and CheckInteractDistance(unit, 1) and CanInspect(unit, false) then
+			NotifyInspect(unit)
+		elseif( not CheckInteractDistance(unit, 1) ) then
+			table.insert(inspectQueue, 1, unit)
+		end
+	end
+	
 	function Scan:FlushQueue()
-		 if #inspectQueue > 0 then
+		if #inspectQueue > 0 then
 			popInspectQueue()
+		else
+			self:CancelTimer("FlushQueue", true)
 		end
 	end
 end
-]]
 
 hooksecurefunc("NotifyInspect", function(unit)
-	if( UnitIsFriend(unit, "player") and CanInspect(unit) and not pendingID ) then
+	if( UnitIsFriend(unit, "player") and CanInspect(unit) and not pending.playerID ) then
 		table.wipe(pending)
 		pending.playerID = SexyGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
@@ -62,9 +65,18 @@ hooksecurefunc("NotifyInspect", function(unit)
 		pending.unit = unit
 		pending.guid = UnitGUID(unit)
 
+		if( not Scan.isValidInspect ) then
+			Scan:UpdateUnitData(unit)
+		end
+		
 		SetAchievementComparisonUnit(unit)
-		Scan:ScheduleTimer("ResetPendingInspect", 3)
 		Scan:ScheduleRepeatingTimer("CheckInspectGear", 0.30)
+	end
+
+	if( CanInspect(unit) ) then
+		pending.activeInspect = true
+		Scan:CancelTimer("ResetPendingInspect", true)
+		Scan:ScheduleTimer("ResetPendingInspect", 3)
 	end
 end)
 
@@ -72,8 +84,9 @@ hooksecurefunc("SetAchievementComparisonUnit", function(unit) pending.achievemen
 hooksecurefunc("ClearAchievementComparisonUnit", function(unit) pending.achievements = nil end)
 
 function Scan:ResetPendingInspect()
-	self:CancelTimer("CheckInspectGear", true)
 	table.wipe(pending)
+
+	self:CancelTimer("CheckInspectGear", true)
 end
 
 function Scan:CheckInspectGear()
@@ -219,7 +232,9 @@ function Scan:InspectUnit(unit)
 	if( UnitIsUnit(unit, "player") ) then
 		self:UpdatePlayerData()
 	else
+		self.isValidInspect = true
 		NotifyInspect(unit)
 		self:UpdateUnitData(unit)
+		self.isValidInspect = nil
 	end
 end
