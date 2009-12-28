@@ -153,6 +153,7 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup gear <name> - Requests gear from another Sexy Group user without inspecting"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup notes <for> - Requests all notes that people have for the name entered"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/rate - Opens the rating panel for your group"])
 		return
 	end
 	
