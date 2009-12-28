@@ -72,11 +72,12 @@ hooksecurefunc("SetAchievementComparisonUnit", function(unit) pending.achievemen
 hooksecurefunc("ClearAchievementComparisonUnit", function(unit) pending.achievements = nil end)
 
 function Scan:ResetPendingInspect()
+	self:CancelTimer("CheckInspectGear", true)
 	table.wipe(pending)
 end
 
 function Scan:CheckInspectGear()
-	if( not pending.gear or pending.totalChecks > 20 or UnitGUID(pending.unit) ~= pending.guid ) then
+	if( not pending.playerID or not pending.gear or pending.totalChecks > 10 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self:CancelTimer("CheckInspectGear", true)
 		return
 	end
