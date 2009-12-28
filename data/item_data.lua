@@ -55,6 +55,70 @@ SexyGroup.VALID_SPECTYPES = {
 	["feral-tank"] = {},
 }
 
+local function getSpell(id)
+	local name = GetSpellInfo(id)
+	--@debug@
+	if( not name ) then
+		print(string.format("Failed to find spell id #%d in Sexy Group.", id or 0))
+		return "<error>"
+	end
+	--@end-debug@
+	
+	return string.lower(name)
+end
+
+-- Hybrid relics should be listed in OVERRIDE_ITEMS
+SexyGroup.RELIC_SPELLTYPES = {
+	[getSpell(24974)] = "caster-dps", -- Insect Swarm
+	[getSpell(8921)] = "caster-dps", -- Moonfire
+	[getSpell(2912)] = "caster-dps", -- Starfire
+	[getSpell(5176)] = "caster-dps", -- Wrath
+	[getSpell(6807)] = "feral-tank", -- Maul
+	[getSpell(50256)] = "tank/dps", -- Swipe
+	[getSpell(33917)] = "tank/dps", -- Mangle
+	[getSpell(1079)] = "melee-dps", -- Rip
+	[getSpell(5221)] = "melee-dps", -- Shred
+	[getSpell(774)] = "healer", -- Rejuvenation
+	[getSpell(8936)] = "healer", -- Regrowth
+	[getSpell(33763)] = "healer", -- Lifebloom
+	[getSpell(48438)] = "healer", -- Wild Growth
+	[getSpell(50464)] = "healer", -- Nourish
+	[getSpell(5185)] = "healer", -- Healing Touch
+	
+	[getSpell(635)] = "healer", -- Holy Light
+	[getSpell(19750)] = "healer", -- Flash of Light
+	[getSpell(20929)] = "healer", -- Holy Shock
+	[getSpell(35395)] = "melee-dps", -- Crusader Strike
+	[getSpell(53385)] = "melee-dps", -- Divine Storm
+	[getSpell(53600)] = "tank", -- Shield of Righteousness
+	[getSpell(53595)] = "tank", -- Hammer of the Rightousness
+	[getSpell(31801)] = "tank", -- Seal of Vengeance
+	[getSpell(53736)] = "tank", -- Seal of Corruption
+	[getSpell(20925)] = "tank", -- Holy Shield
+	[getSpell(26573)] = "tank/dps", -- Consecration
+	
+	[getSpell(61295)] = "healer", -- Riptide
+	[getSpell(1064)] = "healer", -- Chain Heal
+	[getSpell(331)] = "healer", -- Healing Wave
+	[getSpell(8004)] = "healer", -- Lesser Healing Wave
+	[getSpell(8050)] = "caster-dps", -- Flame Shock
+	[getSpell(17364)] = "melee-dps", -- Stormstrike
+	[getSpell(60103)] = "melee-dps", -- Lava Lash
+	[getSpell(403)] = "caster-dps", -- Lightning Bolt
+	[getSpell(421)] = "caster-dps", -- Chain Lightning
+	[getSpell(51505)] = "caster-dps", -- Lava Burst
+	[getSpell(8232)] = "melee-dps", -- Windfury Weapon
+		
+	[getSpell(56815)] = "tank", -- Rune Strike
+	[getSpell(45477)] = "melee-dps", -- Icy Touch
+	[getSpell(45462)] = "melee-dps", -- Plague Strike
+	[getSpell(66198)] = "melee-dps", -- Obliterate
+	[getSpell(49998)] = "melee-dps", -- Death Strike
+	[getSpell(49892)] = "melee-dps", -- Death Coil
+	[getSpell(55265)] = "melee-dps", -- Scourge Strike
+	
+}
+
 -- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
 for type in pairs(SexyGroup.VALID_SPECTYPES["melee-dps"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
 for type in pairs(SexyGroup.VALID_SPECTYPES["tank"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
@@ -65,7 +129,7 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 	[3869] = "tank", -- Blade Ward
 	[3232] = "all", -- Tuskarr's Vitality
 	[3296] = nil, -- Enhant Cloak - Wisdom, not sure if we want to flag this as a never. Really you should always use cloak - haste
-	[3789] = "meleedps", -- Berserking 
+	[3789] = "melee-dps", -- Berserking 
 	[3790] = "never", -- Black Magic 
 	[3247] = "never", -- Scourgebane 
 	[3251] = "never", -- Giant Slayer 
@@ -100,6 +164,16 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 SexyGroup.OVERRIDE_ITEMS = {
+	[47668] = "tank/dps", -- Idol of Mutilation
+	[50456] = "tank/dps", -- Idol of the Crying Moon
+	[38365] = "tank/dps", -- Idol of Perspicacious Attacks
+	[42604] = "caster-dps", -- Relentless Gladiator's Totem of Survival
+	[42603] = "caster-dps", -- Furious Gladiator's Totem of Survival
+	[42602] = "caster-dps", -- Deadly Gladiator's Totem of Survival
+	[42601] = "caster-dps", -- Hateful Gladiator's Totme of Survival
+	[42594] = "caster-dps", -- Savage Gladiator's Totem of Survival
+	[40322] = "melee-dps", -- Totem of Dueling, uses "Storm Strike" when it's "Stormstrike" why do you hate me so Blizard
+	[40714] = "tank", -- Sigil of the Unfaltering Knight
 	[25899] = "never", -- Brutal Earthstorm Diamond
 	[34220] = "dps", -- Chaotic Skyfire Diamond
 	[41285] = "dps", -- Chaotic Skyflare Diamond
@@ -163,6 +237,8 @@ SexyGroup.STAT_DATA = {
 	{type = "physical-all",	default = "AGILITY@"},
 	-- Ranged AP, ranged crit, ranged hit are always ranged
 	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@"},
+	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
+	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
 	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", gems = "STAMINA@", enchants = "STAMINA@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
@@ -171,8 +247,6 @@ SexyGroup.STAT_DATA = {
 	{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@"},
 	-- Agility, armor pen, general AP are physical DPS
 	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@"},
-	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
-	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
 	-- Hybrid, works for DPS and Healers
 	{type = "healer/dps",	default = "CRIT_RATING@HASTE_RATING@"},
 	-- Hybrid, works for DPS and Tanks
