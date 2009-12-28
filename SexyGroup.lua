@@ -236,12 +236,12 @@ tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, {
 	__index = function(tbl, link)
 		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
-		tooltip:SetHyperlink("item:" .. string.match(link, "item:(%d+)"))
+		tooltip:SetHyperlink(link)
 
 		local total = 0
-		for i=1, tooltip:NumLines() do
-			local text = _G["SexyGroupTooltipTextLeft" .. i]:GetText()
-			if( text == EMPTY_SOCKET_BLUE or text == EMPTY_SOCKET_META or text == EMPTY_SOCKET_NO_COLOR or text == EMPTY_SOCKET_RED or text == EMPTY_SOCKET_YELLOW ) then
+		for i=1, MAX_NUM_SOCKETS do
+			local texture = _G["SexyGroupTooltipTexture" .. i]
+			if( texture and texture:IsVisible() ) then
 				total = total + 1
 			end
 		end
