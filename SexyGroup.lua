@@ -15,6 +15,7 @@ function SexyGroup:OnInitialize()
 			},
 			comm = {
 				enabled = true,
+				gearRequests = true,
 				areas = {GUILD = true, WHISPER = true, RAID = true, PARTY = true, BATTLEGROUND = false},
 			},
 		},
@@ -106,8 +107,6 @@ function SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 	return itemLevel * (self.QUALITY_MODIFIERS[itemQuality] or 1)
 end
 
---Protector of the Pack, Natural Reaction
---Bladed Armor, Blade Barrier, Toughness, Anticipation
 function SexyGroup:GetPlayerSpec(playerData)
 	local treeOffset
 	if( playerData.talentTree1 > playerData.talentTree2 and playerData.talentTree1 > playerData.talentTree3 ) then
@@ -377,6 +376,39 @@ SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
 	end,
 })
 
+local ITEM_ONEQUIP = "^" .. string.lower(ITEM_SPELL_TRIGGER_ONEQUIP)
+local RESILIENCE_MATCH = string.lower(ITEM_MOD_RESILIENCE_RATING_SHORT)
+local function getRelicSpecType(link)
+	tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+	tooltip:SetHyperlink(link)
+		
+	local equipText
+	for i=tooltip:NumLines(), 1, -1 do
+		local text = string.lower(tooltip.TextLeft[i]:GetText())
+		if( string.match(text, ITEM_ONEQUIP) ) then
+			equipText = text
+			break
+		end
+	end
+	
+	if( not equipText ) then
+		return "unknown"
+	elseif( string.match(equipText, RESILIENCE_MATCH) ) then
+		return "pvp"
+	end
+
+	-- Some relics can be forced into a type by spell, eg Rejuvenation means it's obviously for healers
+	-- some relics... actually realy only ferals, are classified as hybrid by doing two things which
+	-- is where the stat scanning comes into play
+	for spell, type in pairs(SexyGroup.RELIC_SPELLTYPES) do
+		if( string.match(equipText, spell) ) then
+			return type
+		end
+	end
+
+	return "unknown"
+end
+
 SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 	__index = function(tbl, link)
 		local itemID = link and tonumber(string.match(link, "item:(%d+)"))
@@ -390,6 +422,12 @@ SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 		if( not equipType ) then 
 			rawset(tbl, link, "unknown")
 			return "unknown"
+		-- Relics need special handling, because they do not have passive stats :(
+		elseif( inventoryType == "INVTYPE_RELIC" ) then
+			local itemType = getRelicSpecType(link)
+			
+			rawset(tbl, link, itemType)
+			return itemType
 		end
 		
 		table.wipe(statCache)
