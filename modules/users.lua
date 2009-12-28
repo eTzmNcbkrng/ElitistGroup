@@ -48,7 +48,7 @@ function Users:LoadData(playerData)
 					-- Record gem info
 					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[baseItemLink]
 					for socketID=1, MAX_NUM_SOCKETS do
-						local gemLink = select(2, GetItemGem(itemLink, socketID))
+						local gemLink = SexyGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
 						
 						if( gemLink ) then
 							totalUsedSockets = totalUsedSockets + 1
