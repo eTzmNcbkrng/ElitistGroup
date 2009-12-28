@@ -81,8 +81,8 @@ function Sync:SendGearRequest(gearFor)
 		return
 	elseif( gearFor == "target" or gearFor == "focus" or gearFor == "mouseover" ) then
 		local server
-		notesOn, server = UnitName(notesOn)
-		if( server and server ~= "" ) then name = string.format("%s-%s", name, server) end
+		gearFor, server = UnitName(gearFor)
+		if( server and server ~= "" ) then gearFor = string.format("%s-%s", gearFor, server) end
 
 		if( not gearFor ) then
 			SexyGroup:Print(L["No name found for unit."])

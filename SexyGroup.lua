@@ -364,6 +364,7 @@ SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, {
 		end
 		
 		-- Parse out the stats
+		local foundData
 		table.wipe(statCache)
 		for key, stat in pairs(SexyGroup.STAT_MAP) do
 			if( string.match(enchantText, string.lower(_G[stat])) ) then
