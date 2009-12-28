@@ -25,8 +25,10 @@ data\dungeon_data.lua
 data\item_data.lua
 
 SexyGroup.lua
-users.lua
-scan.lua
-group_history.lua
-sync.lua
-config.lua
+modules\cache.lua
+modules\users.lua
+modules\user_summary.lua
+modules\scan.lua
+modules\group_notes.lua
+modules\sync.lua
+modules\config.lua
