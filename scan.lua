@@ -1,24 +1,24 @@
 local SexyGroup = select(2, ...)
-local Scan = SexyGroup:NewModule("Scan", "AceEvent-3.0", "AceHook-3.0", "AceTimer-3.0")
+local Scan = SexyGroup:NewModule("Scan", "AceEvent-3.0", "AceTimer-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 
 -- These are the fields that comm are allowed to send, this is used so people don't try and make super complex tables to send to the user and either crash or lag them.
-SexyGroup.VALID_DB_FIELDS = { ["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string"}
+SexyGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number"}
 SexyGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 SexyGroup.MAX_LINK_LENGTH = 80
 
-local showUnit = nil
+local pending = {}
 
-function Scan:OnEnable()
+function Scan:OnInitialize()
 	self:RegisterEvent("INSPECT_TALENT_READY")
-	self:Hook("NotifyInspect", true)	
+	self:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
 	
 	-- Queue flushing is a possibility - if we want to scan and cache the whole raid in the background or something?
 	-- We can stick with active scanning via inspect for now.
 	-- self:ScheduleRepeatingTimer("FlushQueue", 3.0)
 end
 
-local pendingInspectUnitToken = nil
+--[[
 do
 	local inspectQueue = {}
 	local pushInspectQueue, popInspectQueue
@@ -32,7 +32,7 @@ do
 	end
 
 	function popInspectQueue()
-		if pendingInspectUnitToken ~= nil then return end		
+		if pendingUnit ~= nil then return end		
 		local token = tremove(inspectQueue)
 		if token then
 			if UnitPlayerControlled("target") and CheckInteractDistance("target", 1) and CanInspect(token, false) then
@@ -48,45 +48,99 @@ do
 			popInspectQueue()
 		end
 	end
+end
+]]
+
+hooksecurefunc("NotifyInspect", function(unit)
+	if( UnitIsFriend(unit, "player") and CanInspect(unit) and not pendingID ) then
+		table.wipe(pending)
+		pending.playerID = SexyGroup:GetPlayerID(unit)
+		pending.classToken = select(2, UnitClass(unit))
+		pending.totalChecks = 0
+		pending.talents = true
+		pending.gear = true
+		pending.unit = unit
+		pending.guid = UnitGUID(unit)
+
+		SetAchievementComparisonUnit(unit)
+		Scan:ScheduleTimer("ResetPendingInspect", 3)
+		Scan:ScheduleRepeatingTimer("CheckInspectGear", 0.30)
+	end
+end)
+
+hooksecurefunc("SetAchievementComparisonUnit", function(unit) pending.achievements = true end)
+hooksecurefunc("ClearAchievementComparisonUnit", function(unit) pending.achievements = nil end)
+
+function Scan:ResetPendingInspect()
+	table.wipe(pending)
+end
+
+function Scan:CheckInspectGear()
+	if( not pending.gear or pending.totalChecks > 20 or UnitGUID(pending.unit) ~= pending.guid ) then
+		self:CancelTimer("CheckInspectGear", true)
+		return
+	end
 	
-end
-
-function Scan:NotifyInspect(unit)
-	pendingInspectUnitToken = unit
-end
-
-function Scan:INSPECT_TALENT_READY()
-	if pendingInspectUnitToken then
-		self:UpdatePlayerData(pendingInspectUnitToken, showUnit == pendingInspectUnitToken)
-		pendingInspectUnitToken = nil
+	pending.totalChecks = pending.totalChecks + 1
+	for itemType in pairs(SexyGroup.INVENTORY_TO_TYPE) do
+		local inventoryID = GetInventorySlotInfo(itemType)
+		local link = GetInventoryItemLink(pending.unit, inventoryID)
+		if( link ~= pending[inventoryID] ) then
+			SexyGroup.userData[pending.playerID].equipment[inventoryID] = SexyGroup:GetItemLink(link)
+			pending.gear = nil
+		end
+	end
+	
+	if( not pending.gear ) then
+		pending.totalChecks = nil
+		self:CancelTimer("CheckInspectGear", true)
+		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
 	end
 end
 
-function Scan:CreateCoreTable(unit)
-	local classToken = select(2, UnitClass(unit))
-	local level = UnitLevel(unit)
-	
-	local data = SexyGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = SexyGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
-	data.name = name
-	data.server = server
-	data.level = level
-	data.classToken = classToken
-	
-	SexyGroup.userData[playerID] = data
-	SexyGroup.writeQueue[playerID] = true
-	
-	-- This is just so loops to find players can be simplified to only look through one table
-	SexyGroup.db.faction.users[playerID] = SexyGroup.db.faction.users[playerID] or ""
+function Scan:INSPECT_ACHIEVEMENT_READY()
+	if( pending.playerID and pending.achievements and SexyGroup.userData[pending.playerID] ) then
+		pending.achievements = nil
+		
+		local userData = SexyGroup.userData[pending.playerID]
+		for achievementID in pairs(SexyGroup.VALID_ACHIEVEMENTS) do
+			local id, _, _, _, _, _, _, _, flags = GetAchievementInfo(achievementID)
+			if( flags == ACHIEVEMENT_FLAGS_STATISTIC ) then
+				userData.achievements[achievementID] = tonumber(GetComparisonStatistic(id)) or nil
+			else
+				userData.achievements[achievementID] = GetAchievementComparisonInfo(id) and 1 or nil
+			end
+		end
+		
+		self:SendMessage("SG_DATA_UPDATED", "achievements", pending.playerID)
+	end
+end
+
+function Scan:INSPECT_TALENT_READY()
+	if( pending.playerID and pending.talents and SexyGroup.userData[pending.playerID] ) then
+		pending.talents = nil
+		
+		local userData = SexyGroup.userData[pending.playerID]
+		local first, second, third, unspentPoints, specRole = self:GetTalentData(pending.classToken, true)
+		userData.talentTree1 = first
+		userData.talentTree2 = second
+		userData.talentTree3 = third
+		userData.unspentPoints = unspentPoints
+		userData.specRole = specRole
+		
+		self:SendMessage("SG_DATA_UPDATED", "talents", pending.playerID)
+	end
 end
 
 function Scan:GetTalentData(classToken, inspect)
-	local forceData = SexyGroup.FORCE_SPECROLE[classToken]
 	local specRole
+	local forceData = SexyGroup.FORCE_SPECROLE[classToken]
+	local activeTalentGroup = GetActiveTalentGroup(inspect)
 	if( forceData ) then
 		local talentMatches = 0
 		for tabIndex=1, GetNumTalentTabs(inspect) do
 			for talentID=1, GetNumTalents(tabIndex, inspect) do
-				local name, _, _, _, spent = GetTalentInfo(tabIndex, talentID, inspect)
+				local name, _, _, _, spent = GetTalentInfo(tabIndex, talentID, inspect, nil, activeTalentGroup)
 				if( forceData[name] and spent >= forceData[name] ) then
 					talentMatches = talentMatches + 1
 				end
@@ -95,44 +149,58 @@ function Scan:GetTalentData(classToken, inspect)
 		
 		specRole = talentMatches >= forceData.required and forceData.role
 	end
-	
+		
+	local unspentPoints = GetUnspentTalentPoints(inspect, nil, activeTalentGroup)
+	unspentPoints = unspentPoints > 0 and unspentPoints or nil
+
 	local first, second, third = select(3, GetTalentTabInfo(1, inspect)), select(3, GetTalentTabInfo(2, inspect)), select(3, GetTalentTabInfo(3, inspect))
-	return first or 0, second or 0, third or 0, specRole
+	return first or 0, second or 0, third or 0, unspentPoints, specRole
 end
 
-function Scan:UpdatePartyData()
-	for i = 1, 4 do
-		self:GetTalentData("party" .. i, true)
-	end
-end
-
-function Scan:UpdatePlayerData(unit, showResults)
-	-- We need data. Go inspectin'. The inspect handler will get us back here.
-	if not UnitIsUnit(unit, "player") and not pendingInspectUnitToken then
-		if showResults then
-			showUnit = unit
-		end
-		NotifyInspect(unit)
-		return
-	end
+function Scan:CreateCoreTable(unit)
+	local name, server = UnitName(unit)
+	local playerID = SexyGroup:GetPlayerID(unit)
+	local userData = SexyGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = SexyGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	userData.name = name
+	userData.server = server and server ~= "" and server or GetRealmName()
+	userData.level = UnitLevel(unit)
+	userData.classToken = select(2, UnitClass(unit))
 	
-	-- We have data...
+	SexyGroup.userData[playerID] = userData
+	SexyGroup.writeQueue[playerID] = true
+	
+	-- This is just so loops to find players can be simplified to only look through one table
+	SexyGroup.db.faction.users[playerID] = SexyGroup.db.faction.users[playerID] or ""
+end
+
+function Scan:UpdateUnitData(unit)
 	self:CreateCoreTable(unit)
 
-	local first, second, third, specRole = self:GetTalentData(select(2, UnitClass(unit)), not UnitIsUnit(unit, "player"))
-	local userData = SexyGroup.userData[SexyGroup.GetPlayerID(unit)]
-	userData.talentTree1 = first
-	userData.talentTree2 = second
-	userData.talentTree3 = third
-	userData.specRole = specRole
+	local userData = SexyGroup.userData[SexyGroup:GetPlayerID(unit)]
 	userData.scanned = time()
-	
+
 	table.wipe(userData.equipment)
 	for itemType in pairs(SexyGroup.INVENTORY_TO_TYPE) do
 		local inventoryID = GetInventorySlotInfo(itemType)
 		userData.equipment[inventoryID] = SexyGroup:GetItemLink(GetInventoryItemLink(unit, inventoryID))
+		
+		if( pending.unit == unit ) then
+			pending[inventoryID] = GetInventoryItemLink(unit, inventoryID)
+		end
 	end
+end
+
+function Scan:UpdatePlayerData()
+	self:UpdateUnitData("player")
 	
+	local userData = SexyGroup.userData[SexyGroup.playerName]
+	local first, second, third, unspentPoints, specRole = self:GetTalentData(select(2, UnitClass("player")), nil)
+	userData.talentTree1 = first
+	userData.talentTree2 = second
+	userData.talentTree3 = third
+	userData.unspentPoints = unspentPoints
+	userData.specRole = specRole
+
 	table.wipe(userData.achievements)
 	for achievementID in pairs(SexyGroup.VALID_ACHIEVEMENTS) do
 		local id, _, _, completed, _, _, _, _, flags = GetAchievementInfo(achievementID)
@@ -142,8 +210,13 @@ function Scan:UpdatePlayerData(unit, showResults)
 			userData.achievements[id] = completed and 1 or nil
 		end
 	end
-	
-	if showResults then
-		SexyGroup.modules.Users:LoadData(userData)
+end
+
+function Scan:InspectUnit(unit)
+	if( UnitIsUnit(unit, "player") ) then
+		self:UpdatePlayerData()
+	else
+		NotifyInspect(unit)
+		self:UpdateUnitData(unit)
 	end
 end
