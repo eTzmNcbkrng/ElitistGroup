@@ -4,11 +4,15 @@ local SexyGroup = select(2, ...)
 local Sync = SexyGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local playerName = UnitName("player")
-local combatQueue, requestThrottle, cachedPlayerData = {}, {}
+local combatQueue, requestThrottle, cachedPlayerData, blockOfflineMessage = {}, {}
 local COMM_PREFIX = "SEXYG"
 local MAX_QUEUE = 20
+local REQUEST_TIMEOUT = 10
 -- This should be raised most likely, but for now only allow a notes or gear request every 5 seconds from someoneone
 local REQUEST_THROTTLE = 5
+
+--local FIRST_MULTIPART, NEXT_MULTIPART, LAST_MULTIPART = "BAZRD\001", "BAZRD\002", "BAZRD\003"
+
 
 function Sync:Setup()
 	if( SexyGroup.db.profile.comm.enabled ) then
@@ -32,8 +36,11 @@ function Sync:ResetThrottle(sender)
 	requestThrottle[sender] = nil
 end
 
-local function getName(name)
-	return string.match(name, "%-") and name or string.format("%s-%s", name, GetRealmName())
+local function getFullName(name)
+	local name = string.match(name, "(.-)%-") or name
+	local server = string.match(name, "%-(.+)") or GetRealmName()
+
+	return string.format("%s-%s", name, server), name, server
 end
 
 function Sync:VerifyTable(tbl, checkTbl)
@@ -48,15 +55,73 @@ function Sync:VerifyTable(tbl, checkTbl)
 	return tbl
 end
 
-function Sync:SendGearRequest(gearFor)
+-- Not quite sure how this should get implemented, will add it later since it's of less importance
+local function filterOffline(self, event, msg)
+	return blockOfflineMessage == msg
+end
 
+function Sync:EnableOfflineBlock(target)
+	blockOfflineMessage = string.format(ERR_CHAT_PLAYER_NOT_FOUND_S, target)
+	ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", filterOffline)
+end
+
+function Sync:DisableOfflineBlock()
+	ChatFrame_RemoveMessageEventFilter("CHAT_MSG_SYSTEM", filterOffline)
+end
+
+-- This will have to be changed, I'm not quite sure a good way of doing it yet
+function Sync:RequestSuccessful(event, type, name)
+	SexyGroup:Print(string.format(L["Successfully got data on %s, type /sexygroup %s to view!"], name, name))
+	self:UnregisterMessage("SG_DATA_UPDATED")
+end
+
+function Sync:SendGearRequest(gearFor)
+	if( not gearFor or gearFor == "" ) then
+		SexyGroup:Print(L["Invalid name entered."])
+		return
+	elseif( gearFor == "target" or gearFor == "focus" or gearFor == "mouseover" ) then
+		local server
+		notesOn, server = UnitName(notesOn)
+		if( server and server ~= "" ) then name = string.format("%s-%s", name, server) end
+
+		if( not gearFor ) then
+			SexyGroup:Print(L["No name found for unit."])
+			return
+		end
+	end
+	
+	self:CommMessage("REQGEAR", "WHISPER", gearFor)
+	self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
+	self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
 end
 
 function Sync:SendNoteRequest(notesOn)
-
+	if( not IsInGuild() ) then
+		SexyGroup:Print(L["You need to be in a guild to request notes on players."])
+		return
+	elseif( not notesOn or notesOn == "" ) then
+		SexyGroup:Print(L["Invalid name entered."])
+		return
+	elseif( notesOn == "target" or notesOn == "focus" or notesOn == "mouseover" ) then
+		local name, server = UnitName(notesOn)
+		notesOn = name and string.match("%s-%s", name, server and server ~= "" and server or GetRealmName())
+		
+		if( not notesOn ) then
+			SexyGroup:Print(L["No name found for unit."])
+			return
+		end
+	elseif( not string.match(notesOn, "%-") ) then
+		notesOn = string.format("%s-%s", notesOn, GetRealmName())
+	end
+		
+	self:CommMessage(string.format("REQNOTES@%s", notesOn), "GUILD")
+	self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
+	self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
 end
 
 function Sync:ParseGearRequest(sender)
+	if( not SexyGroup.db.profile.comm.gearRequests ) then return end
+	
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
 		SexyGroup.modules.Scan:UpdatePlayerData()
@@ -83,6 +148,8 @@ function Sync:ParseNotesRequest(sender, ...)
 			if( note ) then
 				queuedData = string.format('%s["%s"] = %s;', queuedData, name, SexyGroup:WriteTable(note))
 			end
+			
+			tempList[name] = true
 		end
 	end
 	
@@ -122,23 +189,24 @@ function Sync:ParseSentGear(sender, data)
 	end
 		
 	-- Merge everything into the current table
-	local senderName = getName(sender)
+	local senderName, name, server = getFullName(sender)
 	local userData = SexyGroup.userData[senderName] or {}
-	local notes = userData.notes
+	local notes = userData.notes or {}
 	table.wipe(userData)
 
 	for key, value in pairs(sentData) do userData[key] = value end
-	userData.name = string.match(senderName, "(.-)%-")
-	userData.server = string.match(senderName, "%-(.+)")
+	userData.name = name
+	userData.server = server
 	userData.notes = notes
 	userData.scanned = time()
-	userData.from = sender
+	userData.from = senderName
 	userData.trusted = nil
-	
+		
 	SexyGroup.writeQueue[senderName] = true
+	SexyGroup.userData[senderName] = userData
 	SexyGroup.db.faction.users[senderName] = SexyGroup.db.faction.users[senderName] or ""
 
-	self:SendMessage("SG_DATA_UPDATED", senderName)
+	self:SendMessage("SG_DATA_UPDATED", "gear", senderName)
 end
 
 function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
@@ -156,7 +224,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	-- time() can differ between players, will have the player send their time so it can be calibrated
 	-- this is still maybe 2-3 seconds off, but better 2-3 seconds off than hours
 	local timeDrift = senderTime - currentTime
-	local senderName = getName(sender)
+	local senderName, name, server = getFullName(sender)
 	
 	for noteFor, note in pairs(sentNotes()) do
 		note = self:VerifyTable(note, SexyGroup.VALID_NOTE_FIELDS)
@@ -176,7 +244,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 			SexyGroup.db.faction.users[noteFor] = SexyGroup.db.faction.users[noteFor] or ""
 			SexyGroup.writeQueue[noteFor] = true
 
-			self:SendMessage("SG_DATA_UPDATED", noteFor)
+			self:SendMessage("SG_DATA_UPDATED", "note", noteFor)
 		end
 	end
 end
