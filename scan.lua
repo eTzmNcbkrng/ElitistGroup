@@ -150,10 +150,12 @@ function Scan:GetTalentData(classToken, inspect)
 		specRole = talentMatches >= forceData.required and forceData.role
 	end
 		
+	local first = select(3, GetTalentTabInfo(1, inspect, nil, activeTalentGroup))
+	local second = select(3, GetTalentTabInfo(2, inspect, nil, activeTalentGroup))
+	local third = select(3, GetTalentTabInfo(3, inspect, nil, activeTalentGroup))
 	local unspentPoints = GetUnspentTalentPoints(inspect, nil, activeTalentGroup)
 	unspentPoints = unspentPoints > 0 and unspentPoints or nil
-
-	local first, second, third = select(3, GetTalentTabInfo(1, inspect)), select(3, GetTalentTabInfo(2, inspect)), select(3, GetTalentTabInfo(3, inspect))
+	
 	return first or 0, second or 0, third or 0, unspentPoints, specRole
 end
 
