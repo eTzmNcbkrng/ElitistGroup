@@ -224,7 +224,7 @@ local function getRelicSpecType(link)
 	return "unknown"
 end
 
-local itemMetaTable = {
+itemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = tonumber(string.match(link, "item:(%d+)"))
 		if( itemID and SexyGroup.OVERRIDE_ITEMS[itemID] ) then
