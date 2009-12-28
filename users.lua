@@ -14,7 +14,8 @@ local function sortNames(a, b) return a < b end
 
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
-		if( self.activeUserID and user == self.activeUserID ) then
+		local self = Users
+		if( self.activeUserID and user == self.activeUserID and self.frame and self.frame:IsVisible() ) then
 			self:LoadData(SexyGroup.userData[user])
 		end
 	end)
@@ -46,6 +47,7 @@ function Users:LoadData(playerData)
 					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
 					for socketID=1, MAX_NUM_SOCKETS do
 						local gemLink = select(2, GetItemGem(itemLink, socketID))
+						
 						if( gemLink ) then
 							totalUsedSockets = totalUsedSockets + 1
 							gemList[gemLink] = (gemList[gemLink] or 0) + 1
@@ -53,12 +55,12 @@ function Users:LoadData(playerData)
 					end
 					
 					-- Record enchant info
-					local enchantID = SexyGroup.ENCHANT_TALENTTYPE[itemLink]
-					if( enchantID ~= "none" ) then
-						enchantList[itemLink] = _G[itemEquipType] or itemEquipType
-					end
-					
 					if( not SexyGroup.EQUIP_UNECHANTABLE[itemEquipType] ) then
+						local enchantID = SexyGroup.ENCHANT_TALENTTYPE[itemLink]
+						if( enchantID ~= "none" ) then
+							enchantList[itemLink] = _G[itemEquipType] or itemEquipType
+						end
+
 						totalEnchants = totalEnchants + 1
 						if( enchantID ~= "none" ) then
 							totalUsedEnchants = totalUsedEnchants + 1
@@ -115,7 +117,7 @@ function Users:LoadData(playerData)
 		-- Figure out if gems
 		if( totalUsedSockets < totalSockets ) then
 			passGems = false
-			gemTooltip = string.format(L["|cfffed000Gems:|r %d empty gem sockets"], totalSockets - totalUsedSockets)
+			gemTooltip = string.format(L["|cfffed000Gems:|r |cffff2020%d|r empty gem sockets"], totalSockets - totalUsedSockets)
 		else
 			for gemLink, total in pairs(gemList) do
 				if( not SexyGroup:IsValidGem(gemLink, playerData) ) then
@@ -199,9 +201,14 @@ function Users:LoadData(playerData)
 	end
 	
 	local specType, specName, specIcon = SexyGroup:GetPlayerSpec(playerData)
-	frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, playerData.talentTree1, playerData.talentTree2, playerData.talentTree3, specName)
-	frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
-	
+	if( not playerData.unspentPoints ) then
+		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, playerData.talentTree1, playerData.talentTree2, playerData.talentTree3, specName)
+		frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
+	else
+		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, playerData.unspentPoints, L["unspent points"])
+		frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SexyGroup.TALENT_ROLES[specType])
+	end
+		
 	self.activePlayerScore = totalScore or 0
 	if( not playerData.pruned ) then
 		local scoreIcon = totalScore >= 240 and "INV_Shield_72" or totalScore >= 220 and "INV_Shield_61" or totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
@@ -224,10 +231,10 @@ function Users:LoadData(playerData)
 	end
 	
 	if( playerData.trusted ) then
-		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, playerData.from, L["Trusted"])
+		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, string.match(playerData.from, "(.-)%-"), L["Trusted"])
 		frame.userFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
 	else
-		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, playerData.from, L["Untrusted"])
+		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, string.match(playerData.from, "(.-)%-"), L["Untrusted"])
 		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
 	end
 	
