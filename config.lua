@@ -44,15 +44,23 @@ local function loadOptions()
 				inline = true,
 				name = L["Database"],
 				args = {
-					pruneBasic = {
+					ignoreBelow = {
 						order = 1,
+						type = "range",
+						name = L["Ignore below level"],
+						desc = L["Do not require players who are below the given level."],
+						min = 0, max = MAX_PLAYER_LEVEL, step = 5,
+					},
+					sep = {order = 1.5, type = "description", name = ""},
+					pruneBasic = {
+						order = 2,
 						type = "range",
 						name = L["Prune basic data (days)"],
 						desc = L["How many days equipment and achievement data should remain in the database before being removed, in days.\n\nComments and ratings will not be removed!"],
 						min = 1, max = 30, step = 1,
 					},
 					pruneFull = {
-						order = 2,
+						order = 3,
 						type = "range",
 						name = L["Prune all data (days)"],
 						desc = L["How many days before removing all data on a player. This includes comments and ratings, even your own!"],
@@ -151,7 +159,8 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 	-- Show the players data
 	if( cmd == "" ) then
 		local unit = UnitExists("target") and UnitPlayerControlled("target") and CheckInteractDistance("target", 1) and not UnitIsUnit("player", "target") and "target" or "player"
-		SexyGroup.modules.Scan:UpdatePlayerData(unit, true)
+		SexyGroup.modules.Scan:InspectUnit(unit)
+		SexyGroup.modules.Users:LoadData(SexyGroup.userData[SexyGroup:GetPlayerID(unit)])
 		return
 	end
 	
