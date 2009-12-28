@@ -273,7 +273,7 @@ itemMetaTable = {
 				-- Yay we found the enchant proc
 				if( statText ) then
 					for key, stat in pairs(SexyGroup.STAT_MAP) do
-						if( string.match(enchantText, string.lower(_G[stat])) ) then
+						if( string.match(statText, string.lower(_G[stat])) ) then
 							statCache[key] = true
 						end
 					end
