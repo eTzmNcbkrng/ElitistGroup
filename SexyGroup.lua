@@ -413,6 +413,12 @@ SexyGroup.ITEM_TALENTTYPE = setmetatable({}, {
 	end,
 })
 
+function SexyGroup.GetPlayerID(unit)
+	local name, server = UnitName(unit)
+	server = server and server ~= "" and server or GetRealmName()
+	return string.format("%s-%s", name, server), name, server
+end
+
 function SexyGroup:Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Sexy Group|r: " .. msg)
 end
