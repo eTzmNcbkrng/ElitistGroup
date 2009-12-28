@@ -2,7 +2,7 @@
 -- but I know how much people will love to try and break this, so I am going to give them as little way to break it as possible
 local SexyGroup = select(2, ...)
 local Sync = SexyGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
+local L = SexyGroup.L
 local playerName = UnitName("player")
 local combatQueue, requestThrottle, cachedPlayerData, blockOfflineMessage = {}, {}
 local COMM_PREFIX = "SEXYG"

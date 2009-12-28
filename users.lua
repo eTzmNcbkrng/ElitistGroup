@@ -1,7 +1,7 @@
 local SexyGroup = select(2, ...)
 local Users = SexyGroup:NewModule("Users", "AceEvent-3.0")
+local L = SexyGroup.L
 
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18

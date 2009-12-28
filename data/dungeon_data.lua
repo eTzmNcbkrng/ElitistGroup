@@ -1,5 +1,5 @@
 local SexyGroup = select(2, ...)
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
+local L = SexyGroup.L
 
 -- normal/heroic is for separating the dungeons like TotC/TotGC, hard will be for dungeons like Ulduar or Sartharion with hard modes on heroic
 SexyGroup.DUNGEON_TYPES = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}

@@ -1,6 +1,6 @@
 local SexyGroup = select(2, ...)
 SexyGroup = LibStub("AceAddon-3.0"):NewAddon(SexyGroup, "SexyGroup", "AceEvent-3.0", "AceTimer-3.0")
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
+local L = SexyGroup.L
 
 function SexyGroup:OnInitialize()
 	self.defaults = {
@@ -476,5 +476,12 @@ function SexyGroup:Print(msg)
 end
 
 --@debug@
+SexyGroup.L = setmetatable(SexyGroup.L, {
+	__index = function(tbl, value)
+		rawset(tbl, value, value)
+		return value
+	end,
+})
+
 _G.SexyGroup = SexyGroup
 --@end-debug@

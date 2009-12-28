@@ -1,5 +1,5 @@
 local SexyGroup = select(2, ...)
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
+local L = SexyGroup.L
 
 -- While it's true that we could apply additional modifiers like 1.05 for legendaries, it's not really necessary because legendaries aren't items
 -- that people have 70% of their equipment as that need a modifier to separate them.

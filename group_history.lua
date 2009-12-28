@@ -1,6 +1,7 @@
 local SexyGroup = select(2, ...)
 local History = SexyGroup:NewModule("GroupHistory", "AceEvent-3.0")
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
+local L = SexyGroup.L
+
 local AceGUI = LibStub("AceGUI-3.0")
 local surveyFrame, SpecialFrame, totalPartyMembers
 local groupRatings, groupNotes, groupList = {}, {}, {}

@@ -1,5 +1,5 @@
 local SexyGroup = select(2, ...)
-local L = LibStub("AceLocale-3.0"):GetLocale("SexyGroup")
+local L = SexyGroup.L
 
 SexyGroup.ROLE_TANK = 0x04
 SexyGroup.ROLE_HEALER = 0x02
