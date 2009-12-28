@@ -13,7 +13,7 @@ local function sortItemNames(a, b) return GetItemInfo(a) < GetItemInfo(b) end
 local function sortNames(a, b) return a < b end
 
 function Users:OnInitialize()
-	self:RegisterMessage("SG_DATA_UPDATED", function(event, user)
+	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		if( self.activeUserID and user == self.activeUserID ) then
 			self:LoadData(SexyGroup.userData[user])
 		end
@@ -77,12 +77,12 @@ function Users:LoadData(playerData)
 					end
 					
 					-- Build icon
+					slot.tooltip = nil
+					slot.equippedItem = itemLink
+					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]] or SexyGroup.ITEM_TALENTTYPE[itemLink]
 					slot.icon:SetTexture(itemIcon)
 					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", itemScore)
-					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(itemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]])
-					slot.equippedItem = itemLink
-					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]]
-					slot.tooltip = nil
+					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(itemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, slot.itemTalentType)
 					slot:Enable()
 					slot:Show()
 				else
@@ -130,7 +130,7 @@ function Users:LoadData(playerData)
 				local gems = ""
 				for _, gemLink in pairs(tempList) do
 					if( gems ~= "" ) then gems = gems .. "\n" end
-					gems = gems .. string.format("%d x %s - %s", gemList[gemLink], select(2, GetItemInfo(gemLink)), SexyGroup.TALENT_TYPES[SexyGroup.GEM_TALENTTYPE[gemLink]])
+					gems = gems .. string.format("%d x %s - %s", gemList[gemLink], select(2, GetItemInfo(gemLink)), SexyGroup.TALENT_TYPES[SexyGroup.GEM_TALENTTYPE[gemLink]] or SexyGroup.GEM_TALENTTYPE[gemLink])
 				end
 				
 				gemTooltip = string.format(L["|cfffed000Gems:|r Found |cffff2020%d|r bad gems\n%s"], #(tempList), gems)
@@ -157,7 +157,7 @@ function Users:LoadData(playerData)
 				local enchants = ""
 				for _, itemLink in pairs(tempList) do
 					if( enchants ~= "" ) then enchants = enchants .. "\n" end
-					enchants = enchants .. string.format(L["%s enchant - %s"], enchantList[itemLink], SexyGroup.TALENT_TYPES[SexyGroup.ENCHANT_TALENTTYPE[itemLink]])
+					enchants = enchants .. string.format(L["%s enchant - %s"], enchantList[itemLink], SexyGroup.TALENT_TYPES[SexyGroup.ENCHANT_TALENTTYPE[itemLink]] or SexyGroup.ENCHANT_TALENTTYPE[itemLink])
 				end
 				
 				enchantTooltip = string.format(L["|cfffed000Enchants:|r Found |cffff2020%d|r bad enchants\n%s\n"], #(tempList), enchants)
@@ -202,6 +202,7 @@ function Users:LoadData(playerData)
 	frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, playerData.talentTree1, playerData.talentTree2, playerData.talentTree3, specName)
 	frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
 	
+	self.activePlayerScore = totalScore or 0
 	if( not playerData.pruned ) then
 		local scoreIcon = totalScore >= 240 and "INV_Shield_72" or totalScore >= 220 and "INV_Shield_61" or totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
 		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, totalScore, L["score"])
@@ -209,17 +210,17 @@ function Users:LoadData(playerData)
 		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\INV_Shield_36:16:16:-1:0|t %s", L["Score unavailable"])
 	end
 		
-	local scanAge = (time() - playerData.scanned) / 3600
+	local scanAge = (time() - playerData.scanned) / 60
 	local scanIcon = scanAge >= 5 and 37 or scanAge >= 2 and 39 or scanAge >= 1 and 38 or 41
 	
-	if( scanAge < 0.02 ) then
+	if( scanAge <= 5 ) then
 		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, L["Just now"])
-	elseif( scanAge < 1 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d minutes old"], scanAge * 3600))
-	elseif( scanAge < 24 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d hours old"], scanAge))
+	elseif( scanAge < 60 ) then
+		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d minutes old"], scanAge))
+	elseif( scanAge <= 1440 ) then
+		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d hours old"], scanAge / 60))
 	else
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d days old"], scanAge / 24))
+		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d days old"], scanAge / 1440))
 	end
 	
 	if( playerData.trusted ) then
@@ -485,6 +486,8 @@ function Users:UpdateDungeonInfo()
 			
 			local name, score, players, type = SexyGroup.DUNGEON_DATA[dataID], SexyGroup.DUNGEON_DATA[dataID + 1], SexyGroup.DUNGEON_DATA[dataID + 2], SexyGroup.DUNGEON_DATA[dataID + 3]
 			local percent = 1.0 - ((score - SexyGroup.DUNGEON_MIN) / SexyGroup.DUNGEON_DIFF)
+			-- This shows colors relative to how close the player is to the score, not sure if we want to use this.
+			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / SexyGroup.DUNGEON_DIFF), 1), 0)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local heroicIcon = type == "heroic" and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
@@ -518,7 +521,7 @@ function Users:CreateUI()
 			
 			if( self.itemTalentType ) then
 				GameTooltip:AddLine(" ")
-				GameTooltip:AddLine(string.format(L["|cfffed000Item type:|r %s"], self.itemTalentType), 1, 1, 1, 1, true)
+				GameTooltip:AddLine(string.format(L["|cfffed000Item Type:|r %s"], self.itemTalentType), 1, 1, 1, 1, true)
 				GameTooltip:Show()
 			end
 		end
@@ -631,8 +634,8 @@ function Users:CreateUI()
 		local button = CreateFrame("Button", nil, frame.databaseFrame)
 		button:SetScript("OnClick", viewUserData)
 		button:SetHeight(14)
-		button:SetNormalFontObject(GameFontHighlight)
-		button:SetHighlightFontObject(GameFontNormal)
+		button:SetNormalFontObject(GameFontNormal)
+		button:SetHighlightFontObject(GameFontHighlight)
 		button:SetText("*")
 		button:GetFontString():SetPoint("LEFT", button, "LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
