@@ -183,6 +183,7 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 SexyGroup.OVERRIDE_ITEMS = {
+	[49464] = "caster", -- Shiny Shard of the Flame, this would be only useful if you have both trinkets, but still
 	[47668] = "tank/dps", -- Idol of Mutilation
 	[50456] = "tank/dps", -- Idol of the Crying Moon
 	[38365] = "tank/dps", -- Idol of Perspicacious Attacks
