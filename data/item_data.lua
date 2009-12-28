@@ -30,7 +30,8 @@ end
 
 -- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
 -- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
-SexyGroup.EQUIP_UNECHANTABLE = {["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true}
+-- Currently ranged weapons are considered unenchantable, need a way of identifying wands that's local independant
+SexyGroup.EQUIP_UNECHANTABLE = {["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true, ["INVTYPE_RANGEDRIGHT"] = true, ["INVTYPE_RANGED"] = true}
 
 SexyGroup.EQUIP_TO_TYPE = {
 	["INVTYPE_RANGEDRIGHT"] = "ranged", ["INVTYPE_SHIELD"] = "weapons", ["INVTYPE_WEAPONOFFHAND"] = "weapons",
@@ -54,6 +55,10 @@ SexyGroup.VALID_SPECTYPES = {
 	["tank"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 	["feral-tank"] = {},
 }
+
+-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
+for type in pairs(SexyGroup.VALID_SPECTYPES["melee-dps"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
+for type in pairs(SexyGroup.VALID_SPECTYPES["tank"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
 
 local function getSpell(id)
 	local name = GetSpellInfo(id)
@@ -110,6 +115,8 @@ SexyGroup.RELIC_SPELLTYPES = {
 	[getSpell(8232)] = "melee-dps", -- Windfury Weapon
 		
 	[getSpell(56815)] = "tank", -- Rune Strike
+	[getSpell(45902)] = "melee-dps", -- Blood Strike
+	[getSpell(55258)] = "melee-dps", -- Heart Strike
 	[getSpell(45477)] = "melee-dps", -- Icy Touch
 	[getSpell(45462)] = "melee-dps", -- Plague Strike
 	[getSpell(66198)] = "melee-dps", -- Obliterate
@@ -119,10 +126,6 @@ SexyGroup.RELIC_SPELLTYPES = {
 	
 }
 
--- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
-for type in pairs(SexyGroup.VALID_SPECTYPES["melee-dps"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
-for type in pairs(SexyGroup.VALID_SPECTYPES["tank"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
-
 -- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 SexyGroup.OVERRIDE_ENCHANTS = {
 	[3870] = "pvp", -- Blood Draining
@@ -130,7 +133,7 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 	[3232] = "all", -- Tuskarr's Vitality
 	[3296] = nil, -- Enhant Cloak - Wisdom, not sure if we want to flag this as a never. Really you should always use cloak - haste
 	[3789] = "melee-dps", -- Berserking 
-	[3790] = "never", -- Black Magic 
+	[3790] = "dps", -- Black Magic 
 	[3247] = "never", -- Scourgebane 
 	[3251] = "never", -- Giant Slayer 
 	[3239] = "never", -- Icebreaker
@@ -152,14 +155,29 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 	[3731] = "pvp", -- Titanium Weapon Chain
 	[3728] = "caster", -- Darkglow Embroidery
 	[3730] = "physical-dps", -- Swordguard Embroidery
+	[3722] = "caster", -- Lightweave Embroidery
 	[3748] = "tank", -- Titanium Spike
 	[3849] = "tank", -- Titanium plating
+	[3606] = "all", -- Nitro Boosts
+	[3860] = "tank", -- Reticulated Armor Webbing
+	[3599] = "never", -- Personal Elctromagnetic Pulse Generator
+	[3859] = "caster", -- Springy Archnoweave
 	[3878] = "tank", -- Mind Amplification Dish, it is higher STA than the other one, going for the safe flagging for now. Perhaps flag as never?
 	[3603] = "tank/dps", -- Hand-Mounted Pyro Rocket
 	[3604] = "dps", -- Hyperspeed Accelerators
 	[3599] = "never", -- Personal Electromagnetic Pulse Generator
 	[3605] = "physical-dps", -- Flexweave Underlay
 	[3601] = "never", -- Frag Belt
+	[3883] = "tank", -- Rune of the Nerubian Carapace
+	[3847] = "tank", -- Rune of the Stoneskin Gargoyle
+	[3368] = "melee-dps", -- Rune of the Fallen Crusader
+	[3369] = "melee-dps", -- Rune of Cinderglacier
+	[3370] = "melee-dps", -- Rune of Razorice
+	[3365] = "tank", -- Rune of Swordshattering
+	[3594] = "tank", -- Rune of Swordbreaking
+	[3367] = "pvp", -- Rune of Spellshattering
+	[3595] = "pvp", -- Rune of Spellbreaking
+	[3366] = "never", -- Rune of Lichbane
 }
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
@@ -219,7 +237,7 @@ SexyGroup.STAT_MAP = {
 	SPELL_POWER = "ITEM_MOD_SPELL_POWER_SHORT", SPIRIT = "ITEM_MOD_SPIRIT_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_REGENERATION_SHORT",
 	HASTE_SPELL_RATING = "ITEM_MOD_HASTE_SPELL_RATING_SHORT", CRIT_SPELL_RATING = "ITEM_MOD_CRIT_SPELL_RATING_SHORT", INTELLECT = "ITEM_MOD_INTELLECT_SHORT", RESISTANCE0 = "RESISTANCE0_NAME",
 	STAMINA = "ITEM_MOD_STAMINA_SHORT", RESIST = "RESIST", CRIT_RATING = "ITEM_MOD_CRIT_RATING_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_SHORT", HIT_RATING = "ITEM_MOD_HIT_RATING_SHORT",
-	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT",
+	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH"
 }
 
 -- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
@@ -240,7 +258,7 @@ SexyGroup.STAT_DATA = {
 	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
 	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
-	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", gems = "STAMINA@", enchants = "STAMINA@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
+	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
 	{type = "melee",		default = "EXPERTISE_RATING@"},
 	-- Hit melee rating, melee AP, melee crit rating are always melee dps items
@@ -251,4 +269,6 @@ SexyGroup.STAT_DATA = {
 	{type = "healer/dps",	default = "CRIT_RATING@HASTE_RATING@"},
 	-- Hybrid, works for DPS and Tanks
 	{type = "tank/dps",		default = "HIT_RATING@"},
+	-- Some classes are going to use a hybrid gem to activate their meta like a Dreadstone, we don't want them being flagged as a tank gem unless it's a pure STA gem
+	{type = "tank",			gems = "STAMINA@"},
 }

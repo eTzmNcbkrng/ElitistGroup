@@ -124,7 +124,7 @@ function Sync:ParseGearRequest(sender)
 	
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
-		SexyGroup.modules.Scan:UpdatePlayerData()
+		SexyGroup.modules.Scan:UpdatePlayerData("player")
 		cachedPlayerData = string.format("GEAR@%s", SexyGroup:WriteTable(SexyGroup.userData[SexyGroup.playerName], true))
 	end
 	
