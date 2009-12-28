@@ -17,7 +17,7 @@ SexyGroup.FORCE_SPECROLE = {
 		["role"] = "tank",
 		
 		[GetSpellInfo(16271)] = 5, -- Anticipation
-		[GetSpellInfo(40079)] = 5, -- Toughness
+		[GetSpellInfo(49042)] = 5, -- Toughness
 		[GetSpellInfo(55225)] = 5, -- Blade Barrier
 	},
 	["DRUID"] = {
