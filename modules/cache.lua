@@ -5,12 +5,13 @@ local CACHE_TIMEOUT = 30 * 60
 local statCache, itemMetaTable, gemMetaTable, emptyGemMetaTable, enchantMetaTable = {}
 local lastCache = GetTime() + CACHE_TIMEOUT
 
--- Especially once we start doing mass inspections, the cache will get quite big
--- so every 30 minutes or so on zoning we want to release the old cache tables and let them become GCed
 function Cache:OnInitialize()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
 end
 
+-- Item caching alone will result in 100 entries in ~7 summaries, auto inspecting a party makes this about once every two instances
+-- once we do it for raids, it'll be even more so at a certain point we want to wipe our caches and let the garbage collector
+-- do it's job
 function Cache:PLAYER_ENTERING_WORLD()
 	if( lastCache > GetTime() ) then return end
 	lastCache = GetTime() + CACHE_TIMEOUT
@@ -22,8 +23,6 @@ function Cache:PLAYER_ENTERING_WORLD()
 	SexyGroup.ITEM_TALENTTYPE = setmetatable({}, itemMetaTable)
 end
 
--- General cache functions that handle figuring out item data
--- Yay metatable caching, can only get gem totals via tooltip scanning, GetItemStats won't return a prismatic socketed item
 local tooltip = CreateFrame("GameTooltip", "SexyGroupTooltip", UIParent, "GameTooltipTemplate")
 tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
@@ -33,8 +32,6 @@ local function parseText(text)
 	return string.lower(text)
 end
 
--- Note: Regular enchants show up above sockets and below the items base stats. Engineering enchants are at the very bottom :|
--- Because of how engineering enchants are done, we cannot scan for them. They have to be manually overridden cause Blizzard are jerks.
 local ARMOR_MATCH = parseText(ARMOR_TEMPLATE)
 local ITEM_SPELL_TRIGGER_ONEQUIP = parseText(ITEM_SPELL_TRIGGER_ONEQUIP)
 local ITEM_SPELL_TRIGGER_ONPROC = parseText(ITEM_SPELL_TRIGGER_ONPROC)
@@ -46,6 +43,7 @@ local ITEM_REQUIRES_ENGINEERING = string.lower(string.format(ENCHANT_ITEM_REQ_SK
 local ITEM_ONEQUIP = "^" .. string.lower(ITEM_SPELL_TRIGGER_ONEQUIP)
 local RESILIENCE_MATCH = string.lower(ITEM_MOD_RESILIENCE_RATING_SHORT)
 
+-- Yay metatable caching, can only get gem totals via tooltip scanning, GetItemStats won't return a prismatic socketed item
 emptyGemMetaTable = {
 	__index = function(tbl, link)
 		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
@@ -116,6 +114,8 @@ gemMetaTable = {
 	end,
 }
 
+-- Note: Regular enchants show up above sockets and below the items base stats. Engineering enchants are at the very bottom :|
+-- Because of how engineering enchants are done, we cannot scan for them. They have to be manually overridden cause Blizzard are jerks.
 enchantMetaTable = {
 	__index = function(tbl, link)
 		local enchantID = tonumber(string.match(link, "item:%d+:(%d+)"))
