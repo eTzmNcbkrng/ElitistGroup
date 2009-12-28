@@ -43,8 +43,10 @@ function Users:LoadData(playerData)
 				local itemLink = playerData.equipment[slot.inventoryID]
 				local itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(3, GetItemInfo(itemLink))
 				if( itemQuality and itemLevel ) then
+					local baseItemLink = SexyGroup:GetBaseItemLink(itemLink)
+					
 					-- Record gem info
-					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
+					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[baseItemLink]
 					for socketID=1, MAX_NUM_SOCKETS do
 						local gemLink = select(2, GetItemGem(itemLink, socketID))
 						
@@ -56,9 +58,10 @@ function Users:LoadData(playerData)
 					
 					-- Record enchant info
 					if( not SexyGroup.EQUIP_UNECHANTABLE[itemEquipType] ) then
-						local enchantID = SexyGroup.ENCHANT_TALENTTYPE[itemLink]
+						local enchantLink = SexyGroup:GetItemWithEnchant(itemLink)
+						local enchantID = SexyGroup.ENCHANT_TALENTTYPE[enchantLink]
 						if( enchantID ~= "none" ) then
-							enchantList[itemLink] = _G[itemEquipType] or itemEquipType
+							enchantList[enchantLink] = _G[itemEquipType] or itemEquipType
 						end
 
 						totalEnchants = totalEnchants + 1
@@ -81,10 +84,10 @@ function Users:LoadData(playerData)
 					-- Build icon
 					slot.tooltip = nil
 					slot.equippedItem = itemLink
-					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[itemLink]] or SexyGroup.ITEM_TALENTTYPE[itemLink]
+					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[baseItemLink]] or SexyGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
 					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", itemScore)
-					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(itemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, slot.itemTalentType)
+					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(baseItemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, slot.itemTalentType)
 					slot:Enable()
 					slot:Show()
 				else
@@ -178,13 +181,9 @@ function Users:LoadData(playerData)
 		frame.gearFrame.equipSlots[18]:Show()
 		
 		-- If the player is using both a mainhand and an offhand, average the two as if they were a single item
-		if( mainLevel and offLevel ) then
-			totalEquipped = totalEquipped + 1
-			totalScore = math.floor((totalScore + ((mainLevel + offLevel) / 2)) / totalEquipped)
-		else
-			totalEquipped = totalEquipped + 1
-			totalScore = math.floor((totalScore + (mainLevel or 0) + (offLevel or 0)) / totalEquipped)
-		end
+		local weaponLevel = (mainLevel + offLevel) / (mainLevel > 0 and offLevel > 0 and 2 or 1)
+		if( weaponLevel > 0 ) then totalEquipped = totalEquipped + 1 end
+		totalScore = math.floor((totalScore + weaponLevel) / totalEquipped)
 	else
 		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
 		frame.pruneInfo:Show()
@@ -400,7 +399,7 @@ function Users:UpdateAchievementInfo()
 				
 				-- Setup toggle button
 				if( not data.child and not data.childLess ) then
-					local type = not SexyGroup.db.profile.expExpanded[data.id] and "Minus" or "Plus"
+					local type = not SexyGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
 					row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
 					row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
 					row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
@@ -547,6 +546,7 @@ function Users:CreateUI()
 	frame:RegisterForDrag("LeftButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
+	frame:SetFrameStrata("HIGH")
 	frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
 	frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 	frame:SetBackdrop({
