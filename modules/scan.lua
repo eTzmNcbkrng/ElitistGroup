@@ -70,7 +70,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 		end
 		
 		SetAchievementComparisonUnit(unit)
-		Scan:ScheduleRepeatingTimer("CheckInspectGear", 0.30)
+		Scan:ScheduleRepeatingTimer("CheckInspectGear", 0.20)
 	end
 
 	if( CanInspect(unit) ) then
@@ -90,7 +90,7 @@ function Scan:ResetPendingInspect()
 end
 
 function Scan:CheckInspectGear()
-	if( not pending.playerID or not pending.gear or pending.totalChecks > 10 or UnitGUID(pending.unit) ~= pending.guid ) then
+	if( not pending.playerID or not pending.gear or pending.totalChecks > 15 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self:CancelTimer("CheckInspectGear", true)
 		return
 	end
