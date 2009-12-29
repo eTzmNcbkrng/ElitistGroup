@@ -1,5 +1,6 @@
 local SexyGroup = select(2, ...)
 SexyGroup.L = {
+	[" (%d-man)"] = " (%d-man)",
 	["%d days old"] = "%d days old",
 	["%d hours old"] = "%d hours old",
 	["%d minutes old"] = "%d minutes old",
@@ -10,7 +11,6 @@ SexyGroup.L = {
 	["%s, %s role."] = "%s, %s role.",
 	["%s, %s role.\n\nThis player has not spent all of their talent points!"] = "%s, %s role.\n\nThis player has not spent all of their talent points!",
 	["%s: %d/%d in %d-man %s (%s)"] = "%s: %d/%d in %d-man %s (%s)",
-	["(%d-man)"] = "(%d-man)",
 	["/rate - Opens the rating panel for your group"] = "/rate - Opens the rating panel for your group",
 	["/sexygroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"] = "/sexygroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself",
 	["/sexygroup config - Opens the configuration"] = "/sexygroup config - Opens the configuration",
