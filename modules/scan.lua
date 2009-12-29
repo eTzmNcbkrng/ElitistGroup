@@ -1,5 +1,5 @@
 local SexyGroup = select(2, ...)
-local Scan = SexyGroup:NewModule("Scan", "AceEvent-3.0", "AceTimer-3.0")
+local Scan = SexyGroup:NewModule("Scan", "AceEvent-3.0")
 local L = SexyGroup.L
 
 -- These are the fields that comm are allowed to send, this is used so people don't try and make super complex tables to send to the user and either crash or lag them.
@@ -7,103 +7,127 @@ SexyGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level
 SexyGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 SexyGroup.MAX_LINK_LENGTH = 80
 
-local pending, inspectQueue = {}, {}
+local MAX_QUEUE_RETRIES = 5
+local QUEUE_RETRY_TIME = 3
+local GEAR_CHECK_INTERVAL = 0.20
+local pending, pendingGear, inspectQueue, queueRetries = {}, {}, {}, {}
 
 function Scan:OnInitialize()
 	self:RegisterEvent("INSPECT_TALENT_READY")
 	self:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
+	
+	self.frame = CreateFrame("Frame")
+	self.frame:SetScript("OnUpdate", function(self, elapsed)
+		if( self.queueTimer ) then
+			self.queueTimer = self.queueTimer - elapsed
+			
+			if( self.queueTimer <= 0 ) then
+				self.queueTimer = self.queueTimer + QUEUE_RETRY_TIME
+				Scan:ProcessQueue()
+			end
+		end
+		
+		if( self.gearTimer ) then
+			self.gearTimer = self.gearTimer - elapsed
+			
+			if( self.gearTimer <= 0 ) then
+				self.gearTimer = self.gearTimer + GEAR_CHECK_INTERVAL
+				Scan:CheckInspectGear()
+			end
+		end
+		
+		if( not self.queueTimer and not self.gearTimer ) then
+			self:Hide()
+		end
+	end)
+	self.frame:Hide()
 end
 
-function Scan:PushQueue(unit)
-	for i = 1, #inspectQueue do
-		if inspectQueue[i] == unit then return end		
+function Scan:QueueAdd(unit)
+	if( not queueRetries[unit] ) then
+		queueRetries[unit] = 0
+		table.insert(inspectQueue, unit)
+	end
+end
+
+function Scan:ProcessQueue()
+	if( #(inspectQueue) == 0 ) then
+		self.frame.queueTimer = nil
+		table.wipe(queueRetries)
+		return
 	end
 	
-	table.insert(inspectQueue, 1, unit)
-end
+	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
+		local unit = table.remove(inspectQueue, 1)
 
-function Scan:RemoveQueue(unit)
-	for i=#(inspectQueue), 1, -1 do
-		if( inspectQueue[i] == unit ) then
-			table.remove(inspectQueue, 1, unit)
+		NotifyInspect(unit)
+		if( pending.unit ~= unit and UnitExists(unit) and queueRetries[unit] < MAX_QUEUE_RETRIES ) then
+			queueRetries[unit] = queueRetries[unit] + 1
+			table.insert(inspectQueue, unit)
 		end
 	end
 end
 
-local function popInspectQueue()
-	Scan:ScheduleTimer("FlushQueue", 3)
-	if pending.activeInspect then return end		
-
-	local unit = table.remove(inspectQueue)
-	if UnitPlayerControlled(unit) and CheckInteractDistance(unit, 1) and CanInspect(unit, false) then
-		NotifyInspect(unit)
-	elseif( not CheckInteractDistance(unit, 1) ) then
-		table.insert(inspectQueue, 1, unit)
-	end
-end
-
-function Scan:FlushQueue()
-	if #inspectQueue > 0 then
-		popInspectQueue()
-	else
-		self:CancelTimer("FlushQueue", true)
-	end
+function Scan:QueueStart()
+	self:ProcessQueue()
+	self.frame.queueTimer = QUEUE_RETRY_TIME
+	self.frame:Show()
 end
 
 hooksecurefunc("NotifyInspect", function(unit)
-	if( UnitIsFriend(unit, "player") and CanInspect(unit) and not pending.playerID ) then
+	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
 		table.wipe(pending)
+		table.wipe(pendingGear)
+	end
+	
+	if( UnitIsFriend(unit, "player") and CanInspect(unit) and not pending.playerID and not pending.activeInspect ) then
 		pending.playerID = SexyGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
 		pending.talents = true
-		pending.gear = true
 		pending.unit = unit
 		pending.guid = UnitGUID(unit)
 
-		if( not Scan.isValidInspect ) then
+		if( not SexyGroup.userData[pending.playerID] ) then
 			Scan:UpdateUnitData(unit)
 		end
 		
 		SetAchievementComparisonUnit(unit)
-		Scan:ScheduleRepeatingTimer("CheckInspectGear", 0.20)
+
+		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
+		Scan.frame:Show()
 	end
 
 	if( CanInspect(unit) ) then
 		pending.activeInspect = true
-		Scan:CancelTimer("ResetPendingInspect", true)
-		Scan:ScheduleTimer("ResetPendingInspect", 3)
+		pending.expirationTime = GetTime() + 3
 	end
 end)
 
 hooksecurefunc("SetAchievementComparisonUnit", function(unit) pending.achievements = true end)
 hooksecurefunc("ClearAchievementComparisonUnit", function(unit) pending.achievements = nil end)
 
-function Scan:ResetPendingInspect()
-	table.wipe(pending)
-
-	self:CancelTimer("CheckInspectGear", true)
-end
-
 function Scan:CheckInspectGear()
-	if( not pending.playerID or not pending.gear or pending.totalChecks > 15 or UnitGUID(pending.unit) ~= pending.guid ) then
-		self:CancelTimer("CheckInspectGear", true)
+	if( not pending.playerID or UnitGUID(pending.unit) ~= pending.guid ) then
+		self.frame.gearTimer = nil
 		return
 	end
 	
 	pending.totalChecks = pending.totalChecks + 1
-	for itemType in pairs(SexyGroup.INVENTORY_TO_TYPE) do
-		local inventoryID = GetInventorySlotInfo(itemType)
-		local link = GetInventoryItemLink(pending.unit, inventoryID)
-		if( link ~= pending[inventoryID] ) then
-			SexyGroup.userData[pending.playerID].equipment[inventoryID] = SexyGroup:GetItemLink(link)
-			pending.gear = nil
+	
+	local totalPending = 0
+	for inventoryID, itemLink in pairs(pendingGear) do
+		local currentLink = GetInventoryItemLink(pending.unit, inventoryID)
+		if( currentLink ~= itemLink ) then
+			pendingGear[inventoryID] = nil
+			SexyGroup.userData[pending.playerID].equipment[inventoryID] = SexyGroup:GetItemLink(currentLink)
+		else
+			totalPending = totalPending + 1
 		end
 	end
 	
-	if( not pending.gear ) then
-		pending.totalChecks = nil
-		self:CancelTimer("CheckInspectGear", true)
+	if( pending.totalChecks >= 14 or totalPending == 0 ) then
+		self.frame.gearTimer = nil
 		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
 	end
 end
@@ -194,10 +218,19 @@ function Scan:UpdateUnitData(unit)
 	table.wipe(userData.equipment)
 	for itemType in pairs(SexyGroup.INVENTORY_TO_TYPE) do
 		local inventoryID = GetInventorySlotInfo(itemType)
-		userData.equipment[inventoryID] = SexyGroup:GetItemLink(GetInventoryItemLink(unit, inventoryID))
+		local itemLink = GetInventoryItemLink(unit, inventoryID)
+		userData.equipment[inventoryID] = SexyGroup:GetItemLink(itemLink)
 		
-		if( pending.unit == unit ) then
-			pending[inventoryID] = GetInventoryItemLink(unit, inventoryID)
+		-- Basically, this makes sure that either the item has no sockets that need to be loaded, or that the data isn't already present
+		if( pending.unit == unit and itemLink ) then
+			local totalSockets = SexyGroup.EMPTY_GEM_SLOTS[itemLink]
+			if( totalSockets > 0 ) then
+				local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
+				local totalUsed = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
+				if( totalUsed ~= totalSockets ) then
+					pendingGear[inventoryID] = itemLink
+				end
+			end
 		end
 	end
 end
@@ -228,9 +261,7 @@ function Scan:InspectUnit(unit)
 	if( UnitIsUnit(unit, "player") ) then
 		self:UpdatePlayerData()
 	else
-		self.isValidInspect = true
-		NotifyInspect(unit)
 		self:UpdateUnitData(unit)
-		self.isValidInspect = nil
+		NotifyInspect(unit)
 	end
 end
