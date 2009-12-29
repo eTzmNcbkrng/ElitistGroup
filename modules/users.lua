@@ -46,7 +46,7 @@ function Users:LoadData(playerData)
 					local baseItemLink = SexyGroup:GetBaseItemLink(itemLink)
 					
 					-- Record gem info
-					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[baseItemLink]
+					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
 					for socketID=1, MAX_NUM_SOCKETS do
 						local gemLink = SexyGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
 						
