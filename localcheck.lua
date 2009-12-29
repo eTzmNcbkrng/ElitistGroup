@@ -33,13 +33,13 @@ local function scanFile(path)
 	
 	local contents = io.open(path):read("*all")
 	for line in string.gmatch(contents, "L%[\"(.-)\"%]") do
-		foundLocals[string.trim(line)] = true
+		foundLocals[line] = true
 		totalFound = totalFound + 1
 	end
 
 	if( not IS_NAMESPACED ) then
 		for line in string.gmatch(contents, LOCAL_VAR .. "%[\"(.-)\"%]") do
-			foundLocals[string.trim(line)] = true
+			foundLocals[line] = true
 			totalFound = totalFound + 1
 		end
 	end
@@ -97,7 +97,6 @@ end
 local function parse(text)
 	text = string.gsub(text, "\n", "\\n")
 	text = string.gsub(text, "\"", "\\\"")
-	text = string.trim(text)
 	
 	return text
 end
