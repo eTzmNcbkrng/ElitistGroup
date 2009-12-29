@@ -250,7 +250,7 @@ function Users:LoadData(playerData)
 		
 		-- Add the childs score to the parents
 		if( not data.parent ) then
-			self.experienceData[data.child] = (self.experienceData[data.child] or 0) + self.experienceData[data.id]
+			self.experienceData[data.childOf] = (self.experienceData[data.childOf] or 0) + self.experienceData[data.id]
 		end
 		
 		-- Cascade the scores from this one to whatever it's supposed to
@@ -377,12 +377,12 @@ function Users:UpdateAchievementInfo()
 	local self = Users
 	local totalEntries = 0
 	for id, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
-		if( not data.child or data.child and SexyGroup.db.profile.expExpanded[data.child] ) then
+		if( not data.childOf or ( data.childOf and SexyGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SexyGroup.db.profile.expExpanded[SexyGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			totalEntries = totalEntries + 1
 		end
 	end
 	
-	FauxScrollFrame_Update(self.frame.achievementFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS - 1, 14)
+	FauxScrollFrame_Update(self.frame.achievementFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS, 18)
 	
 	for _, row in pairs(self.frame.achievementFrame.rows) do row.tooltip = nil; row.toggle:Hide(); row:Hide() end
 
@@ -391,14 +391,19 @@ function Users:UpdateAchievementInfo()
 	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
 	for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
-		if( not data.child or data.child and SexyGroup.db.profile.expExpanded[data.child] ) then
+		if( not data.childOf or ( data.childOf and SexyGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SexyGroup.db.profile.expExpanded[SexyGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			id = id + 1
 			if( id >= offset ) then
 				local row = self.frame.achievementFrame.rows[rowID]
-				local rowOffset = not data.child and 16 or 4
+				local rowOffset = 16
+				if( data.tier and not data.childless ) then
+					rowOffset = 30
+				elseif( data.childOf ) then
+					rowOffset = 20
+				end
 				
 				-- Setup toggle button
-				if( not data.child and not data.childLess ) then
+				if( not data.childless and ( SexyGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
 					local type = not SexyGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
 					row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
 					row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
@@ -407,10 +412,11 @@ function Users:UpdateAchievementInfo()
 					row.toggle:Show()
 				end
 				
+				local players = data.parent and data.players and string.format(L[" (%d-man)"], data.players) or ""
 				-- Children categories without experience requirements should be shown in the experienceText so we don't get an off looking gap
 				local heroicIcon = data.heroic and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-2:32:32:0:16:0:20|t" or ""
-				if( not data.child and not data.experienced ) then
-					row.nameText:SetFormattedText(L["%s%s (%d-man)"], heroicIcon, data.name, data.players)
+				if( not data.experienced ) then
+					row.nameText:SetFormattedText("%s%s%s", heroicIcon, data.name, players)
 				-- Anything with an experience requirement obviously should show it
 				elseif( data.experienced ) then
 					local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
@@ -418,10 +424,10 @@ function Users:UpdateAchievementInfo()
 					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 					
-					if( data.child ) then
-						row.nameText:SetFormattedText(L["- [|cff%02x%02x00%d%%|r] %s%s"], r, g, percent * 100, heroicIcon, data.name)
+					if( data.childOf ) then
+						row.nameText:SetFormattedText("- [|cff%02x%02x00%d%%|r] %s%s", r, g, percent * 100, heroicIcon, data.name)
 					else
-						row.nameText:SetFormattedText(L["[|cff%02x%02x00%d%%|r] %s%s (%d-man)"], r, g, percent * 100, heroicIcon, data.name, data.players)
+						row.nameText:SetFormattedText("[|cff%02x%02x00%d%%|r] %s%s%s", r, g, percent * 100, heroicIcon, data.name, players)
 					end
 					
 					row.tooltip = string.format(L["%s: %d/%d in %d-man %s (%s)"], experienceText, self.experienceData[data.id], data.experienced, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
