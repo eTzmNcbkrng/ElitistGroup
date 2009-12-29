@@ -160,6 +160,7 @@ function History:LogGroup()
 			local classToken = select(2, UnitClass("party" .. i))
 			
 			groupList[partyID] = {role = role, roleText = roleText, name = name, classToken = classToken}
+			groupRatings[partyID] = 3
 		end
 
 		self.activeGroupID = groupID
