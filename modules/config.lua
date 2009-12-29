@@ -159,7 +159,7 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 	
 	-- Show the players data
 	if( cmd == "" ) then
-		local unit = UnitExists("target") and UnitPlayerControlled("target") and CheckInteractDistance("target", 1) and not UnitIsUnit("player", "target") and "target" or "player"
+		local unit = CanInspect("target") and UnitIsFriend("target", "player") and "target" or "player"
 		SexyGroup.modules.Scan:InspectUnit(unit)
 		SexyGroup.modules.Users:LoadData(SexyGroup.userData[SexyGroup:GetPlayerID(unit)])
 		return
