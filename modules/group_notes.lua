@@ -3,11 +3,12 @@ local History = SexyGroup:NewModule("GroupHistory", "AceEvent-3.0")
 local L = SexyGroup.L
 
 local AceGUI = LibStub("AceGUI-3.0")
-local surveyFrame, SpecialFrame, totalPartyMembers
+local surveyFrame, SpecialFrame, totalPartyMembers, wasAutoPopped
 local groupRatings, groupNotes, groupList = {}, {}, {}
 
 function History:LFG_COMPLETION_REWARD()
 	if( SexyGroup.db.profile.general.autoPopup ) then
+		wasAutoPopped = true
 		self:LogGroup()
 	else
 		local name, typeID = GetLFGCompletionReward()
@@ -42,7 +43,7 @@ function History:OnInitialize()
 	end	
 end
 
-local function OnEnterPressed(self, event, text)
+local function OnTextChanged(self, event, text)
 	groupNotes[self:GetUserData("partyID")] = text
 end
 
@@ -51,7 +52,10 @@ local function OnValueChanged(self, event, value)
 end
 			
 local function OnHide(self)
+	local total, noted = 0, 0
 	for partyID, data in pairs(groupList) do
+		total = total + 1
+
 		if( groupRatings[partyID] and groupNotes[partyID] ) then
 			local note = SexyGroup.userData[partyID].notes[SexyGroup.playerName] or {}
 			note.role = note.role and bit.bor(note.role, data.role) or data.role
@@ -60,7 +64,14 @@ local function OnHide(self)
 			note.time = time()
 			
 			SexyGroup.userData[partyID].notes[SexyGroup.playerName] = note
+
+			noted = noted + 1
 		end
+	end
+	
+	-- Remind people to rate their group if they have it on auto popup that they didn't rate everyone
+	if( total > 0 and noted < total and wasAutoPopped ) then
+		SexyGroup:Print(L["You didn't finish rating your group, type /rate to finish rating them."])
 	end
 	
 	surveyFrame = nil
@@ -114,8 +125,9 @@ function History:InitFrame()
 		local notes = AceGUI:Create("EditBox")
 		notes:SetLabel(L["Notes"])
 		notes:SetText(groupNotes[partyID] or string.format("%s - ", data.roleText))
-		notes:SetCallback("OnEnterPressed", OnEnterPressed)
+		notes:SetCallback("OnTextChanged", OnTextChanged)
 		notes:SetUserData("partyID", partyID)
+		notes.showbutton = nil
 		group:AddChild(notes)
 		
 		surveyFrame:AddChild(group)
