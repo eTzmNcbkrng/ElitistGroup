@@ -7,50 +7,46 @@ SexyGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level
 SexyGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 SexyGroup.MAX_LINK_LENGTH = 80
 
-local pending = {}
+local pending, inspectQueue = {}, {}
 
 function Scan:OnInitialize()
 	self:RegisterEvent("INSPECT_TALENT_READY")
 	self:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
 end
 
-do
-	local inspectQueue = {}
+function Scan:PushQueue(unit)
+	for i = 1, #inspectQueue do
+		if inspectQueue[i] == unit then return end		
+	end
+	
+	table.insert(inspectQueue, 1, unit)
+end
 
-	function Scan:PushQueue(unit)
-		for i = 1, #inspectQueue do
-			if inspectQueue[i] == unit then return end		
+function Scan:RemoveQueue(unit)
+	for i=#(inspectQueue), 1, -1 do
+		if( inspectQueue[i] == unit ) then
+			table.remove(inspectQueue, 1, unit)
 		end
-		
+	end
+end
+
+local function popInspectQueue()
+	Scan:ScheduleTimer("FlushQueue", 3)
+	if pending.activeInspect then return end		
+
+	local unit = table.remove(inspectQueue)
+	if UnitPlayerControlled(unit) and CheckInteractDistance(unit, 1) and CanInspect(unit, false) then
+		NotifyInspect(unit)
+	elseif( not CheckInteractDistance(unit, 1) ) then
 		table.insert(inspectQueue, 1, unit)
 	end
-	
-	function Scan:RemoveQueue(unit)
-		for i=#(inspectQueue), 1, -1 do
-			if( inspectQueue[i] == unit ) then
-				table.remove(inspectQueue, 1, unit)
-			end
-		end
-	end
-	
-	function popInspectQueue()
-		Scan:ScheduleTimer("FlushQueue", 3)
-		if pending.activeInspect then return end		
+end
 
-		local unit = table.remove(inspectQueue)
-		if UnitPlayerControlled(unit) and CheckInteractDistance(unit, 1) and CanInspect(unit, false) then
-			NotifyInspect(unit)
-		elseif( not CheckInteractDistance(unit, 1) ) then
-			table.insert(inspectQueue, 1, unit)
-		end
-	end
-	
-	function Scan:FlushQueue()
-		if #inspectQueue > 0 then
-			popInspectQueue()
-		else
-			self:CancelTimer("FlushQueue", true)
-		end
+function Scan:FlushQueue()
+	if #inspectQueue > 0 then
+		popInspectQueue()
+	else
+		self:CancelTimer("FlushQueue", true)
 	end
 end
 
