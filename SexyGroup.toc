@@ -20,11 +20,11 @@ libs\AceTimer-3.0\AceTimer-3.0.xml
 
 localization\enUS.lua
 
+SexyGroup.lua
 data\data.lua
 data\dungeon_data.lua
 data\item_data.lua
 
-SexyGroup.lua
 modules\cache.lua
 modules\users.lua
 modules\user_summary.lua
