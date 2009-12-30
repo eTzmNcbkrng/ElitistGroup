@@ -220,7 +220,7 @@ function Scan:UpdateUnitData(unit)
 		local inventoryID = GetInventorySlotInfo(itemType)
 		local itemLink = GetInventoryItemLink(unit, inventoryID)
 		userData.equipment[inventoryID] = SexyGroup:GetItemLink(itemLink)
-		
+				
 		-- Basically, this makes sure that either the item has no sockets that need to be loaded, or that the data isn't already present
 		if( pending.unit == unit and itemLink ) then
 			local totalSockets = SexyGroup.EMPTY_GEM_SLOTS[itemLink]
@@ -261,7 +261,6 @@ function Scan:InspectUnit(unit)
 	if( UnitIsUnit(unit, "player") ) then
 		self:UpdatePlayerData()
 	else
-		self:UpdateUnitData(unit)
 		NotifyInspect(unit)
 	end
 end
