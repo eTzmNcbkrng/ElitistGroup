@@ -11,6 +11,11 @@ SexyGroup.QUALITY_MODIFIERS = {
 	[ITEM_QUALITY_EPIC] = 1,
 }
 
+-- Specific override, epic items must have a rare or higher quality gem in them
+SexyGroup.GEM_THRESHOLDS = {
+	[ITEM_QUALITY_EPIC] = ITEM_QUALITY_RARE,
+}
+
 -- Item level of heirlooms based on the player's level. Currently this is ~2.22/per player level, meaning they work out to 187 item level blues at 80
 -- This will have to change come Cataclysm, not quite sure how Blizzard is going to handle heirlooms then
 SexyGroup.HEIRLOOM_ILEVEL = (187 / 80) * SexyGroup.QUALITY_MODIFIERS[ITEM_QUALITY_RARE]
@@ -30,8 +35,13 @@ end
 
 -- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
 -- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
--- Currently ranged weapons are considered unenchantable, need a way of identifying wands that's local independant
-SexyGroup.EQUIP_UNECHANTABLE = {["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true, ["INVTYPE_RANGEDRIGHT"] = true, ["INVTYPE_RANGED"] = true}
+-- Setting a class token means that it's unenchantable for everyone except that class
+SexyGroup.EQUIP_UNECHANTABLE = {
+	["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true,
+	["INVTYPE_RANGEDRIGHT"] = "HUNTER",
+	["INVTYPE_RANGED"] = "HUNTER",
+}
+
 
 SexyGroup.EQUIP_TO_TYPE = {
 	["INVTYPE_RANGEDRIGHT"] = "ranged", ["INVTYPE_SHIELD"] = "weapons", ["INVTYPE_WEAPONOFFHAND"] = "weapons",
@@ -45,14 +55,14 @@ SexyGroup.EQUIP_TO_TYPE = {
 }
 
 SexyGroup.TALENT_ROLES = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"]}
-SexyGroup.TALENT_TYPES = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always Bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"]}
+SexyGroup.TALENT_TYPES = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always Bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"]}
 
 SexyGroup.VALID_SPECTYPES = {
 	["healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 	["caster-dps"] = {["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
 	["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
 	["range-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
-	["tank"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
+	["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 	["feral-tank"] = {},
 }
 
@@ -152,7 +162,7 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 	[1896] = "never", -- Lifestealing
 	[930] = "never", -- Riding Skill
 	[803] = "melee-dps", -- Fiery Weapon
-	[3731] = "pvp", -- Titanium Weapon Chain
+	[3731] = "tank/pvp", -- Titanium Weapon Chain
 	[3728] = "caster", -- Darkglow Embroidery
 	[3730] = "physical-dps", -- Swordguard Embroidery
 	[3722] = "caster", -- Lightweave Embroidery
