@@ -6,11 +6,9 @@ local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local gemList, enchantList = {}, {}
+local gemData, enchantData, equipmentData
 
-local function sortGems(a, b) return gemList[a] > gemList[b] end
-local function sortItemNames(a, b) return GetItemInfo(a) < GetItemInfo(b) end
-local function sortNames(a, b) return a < b end
+local function sortTable(a, b) return a < b end
 
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
@@ -21,73 +19,33 @@ function Users:OnInitialize()
 	end)
 end
 
-function Users:LoadData(playerData)
+function Users:LoadData(userData)
 	self:CreateUI()
 	local frame = self.frame
 
-	self.activeData = playerData
-	self.activeUserID = string.format("%s-%s", playerData.name, playerData.server)
-
-	table.wipe(gemList)
-	table.wipe(enchantList)
+	self.activeData = userData
+	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
 
 	-- Build score as well as figure out their score
-	local tempList = {}
-	local totalEquipped, totalSockets, totalEnchants, totalUsedEnchants, totalUsedSockets, totalScore, mainLevel, offLevel = 0, 0, 0, 0, 0, 0, 0, 0
+	SexyGroup:DeleteTables(equipmentData, enchantData, gemData)
+	equipmentData, enchantData, gemData = SexyGroup:GetGearSummary(userData)
 
-	if( not playerData.pruned ) then
+	if( not userData.pruned ) then
 		frame.pruneInfo:Hide()
 		
 		for _, slot in pairs(frame.gearFrame.equipSlots) do
-			if( slot.inventoryID and playerData.equipment[slot.inventoryID] ) then
-				local itemLink = playerData.equipment[slot.inventoryID]
+			if( slot.inventoryID and userData.equipment[slot.inventoryID] ) then
+				local itemLink = userData.equipment[slot.inventoryID]
 				local itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(3, GetItemInfo(itemLink))
 				if( itemQuality and itemLevel ) then
 					local baseItemLink = SexyGroup:GetBaseItemLink(itemLink)
 					
-					-- Record gem info
-					totalSockets = totalSockets + SexyGroup.EMPTY_GEM_SLOTS[itemLink]
-					for socketID=1, MAX_NUM_SOCKETS do
-						local gemLink = SexyGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
-						
-						if( gemLink ) then
-							totalUsedSockets = totalUsedSockets + 1
-							gemList[gemLink] = (gemList[gemLink] or 0) + 1
-						end
-					end
-					
-					-- Record enchant info
-					if( not SexyGroup.EQUIP_UNECHANTABLE[itemEquipType] ) then
-						local enchantLink = SexyGroup:GetItemWithEnchant(itemLink)
-						local enchantID = SexyGroup.ENCHANT_TALENTTYPE[enchantLink]
-						if( enchantID ~= "none" ) then
-							enchantList[enchantLink] = _G[itemEquipType] or itemEquipType
-						end
-
-						totalEnchants = totalEnchants + 1
-						if( enchantID ~= "none" ) then
-							totalUsedEnchants = totalUsedEnchants + 1
-						end
-					end
-					
-					-- Calculate score
-					local itemScore = SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
-					if( slot.inventorySlot == "MainHandSlot" ) then
-						mainLevel = itemScore
-					elseif( slot.inventorySlot == "SecondaryHandSlot" ) then
-						offLevel = itemScore
-					else
-						totalEquipped = totalEquipped + 1
-						totalScore = totalScore + itemScore
-					end
-					
-					-- Build icon
 					slot.tooltip = nil
 					slot.equippedItem = itemLink
 					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[baseItemLink]] or SexyGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
-					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", itemScore)
-					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", SexyGroup:IsValidItem(baseItemLink, playerData) and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, slot.itemTalentType)
+					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel))
+					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", not equipmentData[itemLink] and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, slot.itemTalentType)
 					slot:Enable()
 					slot:Show()
 				else
@@ -101,7 +59,7 @@ function Users:LoadData(playerData)
 				end
 			elseif( slot.inventoryID ) then
 				local texture = slot.emptyTexture
-				if( slot.checkRelic and ( playerData.classToken == "PALADIN" or playerData.classToken == "DRUID" or playerData.classToken == "SHAMAN" ) ) then
+				if( slot.checkRelic and ( userData.classToken == "PALADIN" or userData.classToken == "DRUID" or userData.classToken == "SHAMAN" ) ) then
 					texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
 				end
 				
@@ -114,109 +72,105 @@ function Users:LoadData(playerData)
 			end
 		end
 		
-		local enchantTooltip, gemTooltip = L["|cfffed000Enchants:|r All good"], L["|cfffed000Gems:|r All good"]
-		local passEnchants, passGems = true, true
-
-		-- Figure out if gems
-		if( totalUsedSockets < totalSockets ) then
-			passGems = false
-			gemTooltip = string.format(L["|cfffed000Gems:|r |cffff2020%d|r empty gem sockets"], totalSockets - totalUsedSockets)
-		else
-			for gemLink, total in pairs(gemList) do
-				if( not SexyGroup:IsValidGem(gemLink, playerData) ) then
-					table.insert(tempList, gemLink)
-				end
-			end
-			
-			if( #(tempList) > 0 ) then
-				passGems = false
-				table.sort(tempList, sortGems)
-				
-				local gems = ""
-				for _, gemLink in pairs(tempList) do
-					if( gems ~= "" ) then gems = gems .. "\n" end
-					gems = gems .. string.format("%d x %s - %s", gemList[gemLink], select(2, GetItemInfo(gemLink)), SexyGroup.TALENT_TYPES[SexyGroup.GEM_TALENTTYPE[gemLink]] or SexyGroup.GEM_TALENTTYPE[gemLink])
-				end
-				
-				gemTooltip = string.format(L["|cfffed000Gems:|r Found |cffff2020%d|r bad gems\n%s"], #(tempList), gems)
-			end
+		-- Now for the extras
+		local gemTooltip, enchantTooltip
+		local totalLines = 0
+		local tempList = {}
+		
+		-- Gems
+		if( gemData.totalUsed < gemData.total ) then
+			gemTooltip = string.format(L["Gems: |cffffffff%d missing|r"], gemData.total - gemData.totalUsed)
 		end
 		
-		-- Figure out enchants
-		if( totalUsedEnchants < totalEnchants ) then
-			passEnchants = false
-			enchantTooltip = string.format(L["|cfffed000Enchants:|r |cffff2020%d|r missing enchants"], totalEnchants - totalUsedEnchants)
-		else
-			table.wipe(tempList)
+		if( gemData.totalBad > 0 ) then
+			gemTooltip = gemTooltip or string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
 			
-			for itemLink in pairs(enchantList) do
-				if( not SexyGroup:IsValidEnchant(itemLink, playerData) ) then
-					table.insert(tempList, itemLink)
+			for i=1, #(gemData), 2 do
+				local fullItemLink, arg = gemData[i], gemData[i + 1]
+				if( type(arg) == "string" ) then
+					table.insert(tempList, string.format(L["%s - %s gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
+				else
+					table.insert(tempList, string.format(L["%s - %s quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 				end
 			end
 			
-			if( #(tempList) > 0 ) then
-				passEnchants = false
-				table.sort(tempList, sortItemNames)
-				
-				local enchants = ""
-				for _, itemLink in pairs(tempList) do
-					if( enchants ~= "" ) then enchants = enchants .. "\n" end
-					enchants = enchants .. string.format(L["%s enchant - %s"], enchantList[itemLink], SexyGroup.TALENT_TYPES[SexyGroup.ENCHANT_TALENTTYPE[itemLink]] or SexyGroup.ENCHANT_TALENTTYPE[itemLink])
-				end
-				
-				enchantTooltip = string.format(L["|cfffed000Enchants:|r Found |cffff2020%d|r bad enchants\n%s\n"], #(tempList), enchants)
+			table.sort(tempList, sortTable)
+			gemTooltip = gemTooltip .. "\n" .. table.concat(tempList, "\n")
+			totalLines = totalLines + #(tempList)
+		end
+		
+		-- Enchants
+		table.wipe(tempList)
+		if( enchantData.totalUsed < enchantData.total ) then
+			enchantTooltip = string.format(L["Enchants: |cffffffff%d missing|r"], enchantData.total - enchantData.totalUsed)
+		end
+		
+		if( enchantData.totalBad > 0 ) then
+			enchantTooltip = enchantTooltip or string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
+			
+			for i=1, #(enchantData), 2 do
+				local fullItemLink, enchantTalent = enchantData[i], enchantData[i + 1]
+				table.insert(tempList, string.format(L["%s - %s enchant"], fullItemLink, SexyGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
 			end
+			
+			table.sort(tempList, sortTable)
+			enchantTooltip = enchantTooltip .. "\n" .. table.concat(tempList, "\n")
+			totalLines = totalLines + #(tempList)
 		end
 		
 		-- Now combine these too, in the same way you combine to make a better and more powerful robot
-		frame.gearFrame.equipSlots[18].icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
-		frame.gearFrame.equipSlots[18].levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], passEnchants and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-		frame.gearFrame.equipSlots[18].typeText:SetFormattedText(L["|T%s:14:14|t Gems"], passGems and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-		frame.gearFrame.equipSlots[18].tooltip = enchantTooltip .. "\n" .. gemTooltip
-		frame.gearFrame.equipSlots[18].disableWrap = true
-		frame.gearFrame.equipSlots[18].tooltipR = 1
-		frame.gearFrame.equipSlots[18].tooltipG = 1
-		frame.gearFrame.equipSlots[18].tooltipB = 1
-		frame.gearFrame.equipSlots[18]:Show()
-		
-		-- If the player is using both a mainhand and an offhand, average the two as if they were a single item
-		local weaponLevel = (mainLevel + offLevel) / (mainLevel > 0 and offLevel > 0 and 2 or 1)
-		if( weaponLevel > 0 ) then totalEquipped = totalEquipped + 1 end
-		totalScore = math.floor((totalScore + weaponLevel) / totalEquipped)
+		local equipSlot = frame.gearFrame.equipSlots[18]
+		equipSlot.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
+		equipSlot.levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+		equipSlot.typeText:SetFormattedText(L["|T%s:14:14|t Gems"], gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+		equipSlot:Show()
+
+		-- Switch to using two tooltips if we're trying to show too much data to make it easier to read
+		if( gemTooltip and enchantTooltip and totalLines > 10 ) then
+			equipSlot.tooltip1 = gemTooltip
+			equipSlot.tooltip2 = enchantTooltip
+			equipSlot.tooltip = nil
+		else
+			local spacing = (gemTooltip and enchantTooltip) and "\n\n" or "\n"
+			
+			equipSlot.tooltip1 = nil
+			equipSlot.tooltip2 = nil
+			equipSlot.tooltip = (gemTooltip or L["Gems: |cffffffffAll good|r"]) .. spacing .. (enchantTooltip or L["Enchants: |cffffffffAll good|r"])
+			equipSlot.disableWrap = true
+		end
 	else
 		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
 		frame.pruneInfo:Show()
 	end
 
 	-- Build the players info
-	local coords = CLASS_BUTTONS[playerData.classToken]
+	local coords = CLASS_BUTTONS[userData.classToken]
 	if( coords ) then
-		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes:16:16:-1:0:%s:%s:%s:%s:%s:%s|t %s (%s)", 256, 256, coords[1] * 256, coords[2] * 256, coords[3] * 256, coords[4] * 256, playerData.name, playerData.level)
-		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], playerData.name, playerData.server, playerData.level, LOCALIZED_CLASS_NAMES_MALE[playerData.classToken])
+		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes:16:16:-1:0:%s:%s:%s:%s:%s:%s|t %s (%s)", 256, 256, coords[1] * 256, coords[2] * 256, coords[3] * 256, coords[4] * 256, userData.name, userData.level)
+		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], userData.name, userData.server, userData.level, LOCALIZED_CLASS_NAMES_MALE[userData.classToken])
 	else
-		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s (%s)", playerData.name, playerData.level)
-		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], playerData.name, playerData.server, playerData.level)
+		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s (%s)", userData.name, userData.level)
+		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
 	end
 	
-	local specType, specName, specIcon = SexyGroup:GetPlayerSpec(playerData)
-	if( not playerData.unspentPoints ) then
-		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, playerData.talentTree1, playerData.talentTree2, playerData.talentTree3, specName)
+	local specType, specName, specIcon = SexyGroup:GetPlayerSpec(userData)
+	if( not userData.unspentPoints ) then
+		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
 		frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
 	else
-		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, playerData.unspentPoints, L["unspent points"])
+		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
 		frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SexyGroup.TALENT_ROLES[specType])
 	end
 		
-	self.activePlayerScore = totalScore or 0
-	if( not playerData.pruned ) then
-		local scoreIcon = totalScore >= 240 and "INV_Shield_72" or totalScore >= 220 and "INV_Shield_61" or totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
-		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, totalScore, L["score"])
+	self.activePlayerScore = equipmentData.totalScore or 0
+	if( not userData.pruned ) then
+		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
+		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, equipmentData.totalScore, L["score"])
 	else
 		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\INV_Shield_36:16:16:-1:0|t %s", L["Score unavailable"])
 	end
 		
-	local scanAge = (time() - playerData.scanned) / 60
+	local scanAge = (time() - userData.scanned) / 60
 	local scanIcon = scanAge >= 5 and 37 or scanAge >= 2 and 39 or scanAge >= 1 and 38 or 41
 	
 	if( scanAge <= 5 ) then
@@ -229,11 +183,11 @@ function Users:LoadData(playerData)
 		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d days old"], scanAge / 1440))
 	end
 	
-	if( playerData.trusted ) then
-		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, string.match(playerData.from, "(.-)%-"), L["Trusted"])
+	if( userData.trusted ) then
+		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, string.match(userData.from, "(.-)%-"), L["Trusted"])
 		frame.userFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
 	else
-		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, string.match(playerData.from, "(.-)%-"), L["Untrusted"])
+		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, string.match(userData.from, "(.-)%-"), L["Untrusted"])
 		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
 	end
 	
@@ -243,8 +197,8 @@ function Users:LoadData(playerData)
 		self.experienceData[data.id] = self.experienceData[data.id] or 0
 				
 		for id, points in pairs(data) do
-			if( type(id) == "number" and playerData.achievements[id] ) then
-				self.experienceData[data.id] = self.experienceData[data.id] + (points * playerData.achievements[id])
+			if( type(id) == "number" and userData.achievements[id] ) then
+				self.experienceData[data.id] = self.experienceData[data.id] + (points * userData.achievements[id])
 			end
 		end
 		
@@ -267,14 +221,14 @@ function Users:LoadData(playerData)
 		if( lockedScore and lockedScore ~= score ) then
 			self.forceOffset = math.ceil((i + 1) / 4)
 			break
-		elseif( totalScore >= score ) then
+		elseif( equipmentData.totalScore >= score ) then
 			lockedScore = score
 			self.forceOffset = math.ceil((i + 1) / 4)
 		end
 	end
 	
 	self.activeDataNotes = 0
-	for _ in pairs(playerData.notes) do 
+	for _ in pairs(userData.notes) do 
 		self.activeDataNotes = self.activeDataNotes + 1
 		break
 	end
@@ -522,11 +476,24 @@ function Users:CreateUI()
 		return
 	end
 
+	local extraTooltip
 	local function OnEnter(self)
-		if( self.tooltip ) then
+		if( self.tooltip1 and self.tooltip2 ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-			GameTooltip:SetText(self.tooltip, self.tooltipR, self.tooltipG, self.tooltipB, nil, self.disableWrap == nil and true)
+			GameTooltip:SetText(self.tooltip1)
 			GameTooltip:Show()
+			
+			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "SexyGroupUserTooltip", UIParent, "GameTooltipTemplate")
+			extraTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
+			extraTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
+			extraTooltip:SetText(self.tooltip2)
+			extraTooltip:Show()
+
+		elseif( self.tooltip ) then
+			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
+			GameTooltip:Show()
+
 		elseif( self.equippedItem ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetHyperlink(self.equippedItem)
@@ -541,6 +508,10 @@ function Users:CreateUI()
 
 	local function OnLeave(self)
 		GameTooltip:Hide()
+		
+		if( extraTooltip ) then
+			extraTooltip:Hide()
+		end
 	end
 		
 	-- Main container
@@ -555,6 +526,7 @@ function Users:CreateUI()
 	frame:SetFrameStrata("HIGH")
 	frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
 	frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+	frame:SetScript("OnHide", function() SexyGroup:DeleteTables(equipmentData, enchantData, gemData) end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
 		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
