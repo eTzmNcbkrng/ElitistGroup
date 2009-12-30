@@ -155,6 +155,117 @@ function SexyGroup:IsValidEnchant(itemLink, playerData)
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
+-- Handles caching of tables for variable tick spells, like Wild Growth
+local tableCache = setmetatable({}, {__mode = "k"})
+local function getTable()
+	return table.remove(tableCache, 1) or {}
+end
+
+function SexyGroup:DeleteTables(...)	
+	for i=1, select("#", ...) do
+		local tbl = select(i, ...)
+		if( tbl ) then
+			table.wipe(tbl)
+			table.insert(tableCache, tbl)
+		end
+	end
+end
+
+local MAINHAND_SLOT, OFFHAND_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot")
+function SexyGroup:GetGearSummary(userData)
+	local spec = self:GetPlayerSpec(userData)
+	local validSpecTypes = self.VALID_SPECTYPES[spec]
+	local equipment, gems, enchants = getTable(), getTable(), getTable()
+	
+	equipment.totalScore = 0
+	equipment.totalEquipped = 0
+	equipment.pass = true
+	
+	enchants.total = 0
+	enchants.totalUsed = 0
+	enchants.totalBad = 0
+	enchants.pass = true
+	
+	gems.total = 0
+	gems.totalUsed = 0
+	gems.totalBad = 0
+	gems.pass = true
+	
+	for inventoryID, itemLink in pairs(userData.equipment) do
+		local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
+		if( fullItemLink ) then
+			local baseItemLink, enchantItemLink = string.match(itemLink, "item:%d+"), string.match(itemLink, "item:%d+:%d+")
+						
+			-- Figure out the items primary info
+			equipment.totalScore = equipment.totalScore + self:CalculateScore(itemLink, itemQuality, itemLevel)
+			equipment.totalEquipped = equipment.totalEquipped + 1
+			
+			local itemTalent = self.ITEM_TALENTTYPE[baseItemLink]
+			if( itemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[itemTalent] ) then
+				equipment.pass = nil
+				equipment[itemLink] = itemTalent
+			end
+			
+			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
+			local unenchantable = SexyGroup.EQUIP_UNECHANTABLE[itemEquipType]
+			if( not unenchantable or type(unenchantable) == "string" and unenchantable ~= userData.classToken ) then
+				enchants.total = enchants.total + 1
+
+				local enchantTalent = SexyGroup.ENCHANT_TALENTTYPE[enchantItemLink]
+				if( enchantTalent ~= "none" ) then
+					enchants.totalUsed = enchants.totalUsed + 1
+					
+					if( enchantTalent ~= "unknown" and validSpecTypes and not validSpecTypes[enchantTalent] ) then
+						enchants.totalBad = enchants.totalBad + 1
+						enchants.pass = nil
+						
+						table.insert(enchants, fullItemLink)
+						table.insert(enchants, enchantTalent)
+					end
+				end
+			end
+			
+			-- Last but not least, off to the gems
+			gems.total = gems.total + self.EMPTY_GEM_SLOTS[itemLink]
+			for socketID=1, MAX_NUM_SOCKETS do
+				local gemLink = SexyGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
+				if( gemLink ) then
+					gems.totalUsed = gems.totalUsed + 1
+					
+					local gemTalent = self.GEM_TALENTTYPE[gemLink]
+					if( gemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[gemTalent] ) then
+						table.insert(gems, fullItemLink)
+						table.insert(gems, gemTalent)
+						
+						gems.totalBad = gems.totalBad + 1
+						gems.pass = nil
+					else
+						local gemQuality = select(3, GetItemInfo(gemLink))
+						if( SexyGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < SexyGroup.GEM_THRESHOLDS[itemQuality] ) then
+							table.insert(gems, fullItemLink)
+							table.insert(gems, gemQuality)
+
+							gems.totalBad = gems.totalBad + 1
+							gems.pass = nil
+						end
+					end
+				end
+			end			
+		end
+	end
+	
+	if( gems.totalUsed < gems.total ) then
+		gems.pass = nil
+	end
+	
+	if( enchants.totalUsed < enchants.total ) then
+		enchants.pass = nil
+	end
+	
+	equipment.totalScore = equipment.totalScore / equipment.totalEquipped
+	return equipment, enchants, gems
+end
+
 -- Encodes text in a way that it won't interfere with the table being loaded
 local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}"),
 				['"'] = "\\" .. string.byte('"'), [";"] = "\\" .. string.byte(";"),
