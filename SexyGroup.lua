@@ -8,6 +8,7 @@ function SexyGroup:OnInitialize()
 			expExpanded = {},
 			general = {
 				autoPopup = true,
+				databaseExpanded = true,
 			},
 			database = {
 				pruneBasic = 30,
