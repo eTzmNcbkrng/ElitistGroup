@@ -4,7 +4,7 @@ local L = SexyGroup.L
 
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
-local MAX_DATABASE_ROWS = 18
+local MAX_DATABASE_ROWS = 19
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 local gemData, enchantData, equipmentData
 
@@ -20,6 +20,8 @@ function Users:OnInitialize()
 end
 
 function Users:LoadData(userData)
+	if( not userData ) then return end
+	
 	self:CreateUI()
 	local frame = self.frame
 
@@ -244,36 +246,20 @@ function Users:UpdateDatabasePage()
 	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
 	
 	if( not self.scrollUpdate ) then
-		if( self.frame.dataTabFrame.selectedTab ~= "database" ) then
-			self.frame.gearFrame:Show()
-			self.frame.databaseFrame:Hide()
-
-			self.frame.dataTabFrame.gearButton:LockHighlight()
-			self.frame.dataTabFrame.databaseButton:UnlockHighlight()
-			return
-		end
-		
-		self.frame.gearFrame:Hide()
-		self.frame.databaseFrame:Show()
-		self.frame.dataTabFrame.gearButton:UnlockHighlight()
-		self.frame.dataTabFrame.databaseButton:LockHighlight()
-
-		-- Cause we don't immediately cache data, we have to merge everything. Also, we want to be able to sort anywa!
 		table.wipe(userList)
 		for name in pairs(SexyGroup.db.faction.users) do table.insert(userList, name) end
-		
 		table.sort(userList, sortNames)
 	end
 	
 	self.scrollUpdate = nil
 	
-	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS - 1, 14)
+	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS, 16)
 	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
-	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 26 or 10)
+	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 10)
 	
 	local rowID = 1
 	for id=1, #(userList) do
-		if( id >= offset ) then
+		if( id > offset ) then
 			local row = self.frame.databaseFrame.rows[rowID]
 			row.userID = userList[id]
 			row:SetText(userList[id])
@@ -289,8 +275,6 @@ function Users:UpdateDatabasePage()
 			rowID = rowID + 1
 			if( rowID > MAX_DATABASE_ROWS ) then break end
 		end
-		
-		id = id + 1
 	end
 end
 
@@ -470,6 +454,7 @@ function Users:UpdateDungeonInfo()
 	end
 end
 
+-- Really need to restructure all of this soon
 function Users:CreateUI()
 	if( Users.frame ) then
 		Users.frame:Show()
@@ -520,13 +505,27 @@ function Users:CreateUI()
 	frame:SetClampedToScreen(true)
 	frame:SetWidth(675)
 	frame:SetHeight(400)
-	frame:RegisterForDrag("LeftButton")
+	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetFrameStrata("HIGH")
-	frame:SetScript("OnDragStart", function(self) self:StartMoving() end)
-	frame:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
 	frame:SetScript("OnHide", function() SexyGroup:DeleteTables(equipmentData, enchantData, gemData) end)
+	frame:SetScript("OnDragStart", function(self, mouseButton)
+		if( mouseButton == "RightButton" ) then
+			frame:ClearAllPoints()
+			frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+			SexyGroup.db.profile.position = nil
+			return
+		end
+		
+		self:StartMoving()
+	end)
+	frame:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		
+		local scale = self:GetEffectiveScale()
+		SexyGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
 		edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -534,7 +533,13 @@ function Users:CreateUI()
 		insets = {left = 9, right = 9, top = 9, bottom = 9},
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
-	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	
+	if( SexyGroup.db.profile.position ) then
+		local scale = frame:GetEffectiveScale()
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SexyGroup.db.profile.position.x / scale, SexyGroup.db.profile.position.y / scale)
+	else
+		frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+	end
 
 	frame.titleBar = frame:CreateTexture(nil, "ARTWORK")
 	frame.titleBar:SetTexture("Interface\\DialogFrame\\UI-DialogBox-Header")
@@ -549,95 +554,124 @@ function Users:CreateUI()
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
 	button:SetPoint("TOPRIGHT", -3, -3)
-	button:SetHeight(24)
-	button:SetWidth(24)
-	button:SetScript("OnClick", function()
-		frame:Hide()
-	end)
-		
-	-- Parent container
-	frame.dataTabFrame = CreateFrame("Frame", nil, frame)   
-	frame.dataTabFrame:SetBackdrop(backdrop)
-	frame.dataTabFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.dataTabFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.dataTabFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
-	frame.dataTabFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 15)
-	frame.dataTabFrame:SetWidth(225)
-	
-	frame.dataTabFrame.selectedTab = "gear"
-	local function tabClicked(self)
-		frame.dataTabFrame.selectedTab = self.tabID
-		Users:UpdateDatabasePage()
-	end
-	
-	frame.dataTabFrame.gearButton = CreateFrame("Button", nil, frame.dataTabFrame)
-	frame.dataTabFrame.gearButton:SetNormalFontObject(GameFontNormal)
-	frame.dataTabFrame.gearButton:SetHighlightFontObject(GameFontHighlight)
-	frame.dataTabFrame.gearButton:SetDisabledFontObject(GameFontDisable)
-	frame.dataTabFrame.gearButton:SetPoint("BOTTOMLEFT", frame.dataTabFrame, "TOPLEFT", 0, -1)
-	frame.dataTabFrame.gearButton:SetScript("OnClick", tabClicked)
-	frame.dataTabFrame.gearButton:SetText(L["Equipped items"])
-	frame.dataTabFrame.gearButton:GetFontString():SetPoint("LEFT", 3, 0)
-	frame.dataTabFrame.gearButton:SetHeight(22)
-	frame.dataTabFrame.gearButton:SetWidth(110)
-	frame.dataTabFrame.gearButton:SetBackdrop(backdrop)
-	frame.dataTabFrame.gearButton:SetBackdropColor(0, 0, 0, 0)
-	frame.dataTabFrame.gearButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
-	frame.dataTabFrame.gearButton.tabID = "gear"
-
-	frame.dataTabFrame.databaseButton = CreateFrame("Button", nil, frame.dataTabFrame)
-	frame.dataTabFrame.databaseButton:SetNormalFontObject(GameFontNormal)
-	frame.dataTabFrame.databaseButton:SetHighlightFontObject(GameFontHighlight)
-	frame.dataTabFrame.databaseButton:SetDisabledFontObject(GameFontDisable)
-	frame.dataTabFrame.databaseButton:SetPoint("TOPLEFT", frame.dataTabFrame.gearButton, "TOPRIGHT", 4, 0)
-	frame.dataTabFrame.databaseButton:SetScript("OnClick", tabClicked)
-	frame.dataTabFrame.databaseButton:SetText(L["Database"])
-	frame.dataTabFrame.databaseButton:GetFontString():SetPoint("LEFT", 3, 0)
-	frame.dataTabFrame.databaseButton:SetHeight(22)
-	frame.dataTabFrame.databaseButton:SetWidth(90)
-	frame.dataTabFrame.databaseButton:SetBackdrop(backdrop)
-	frame.dataTabFrame.databaseButton:SetBackdropColor(0, 0, 0, 0)
-	frame.dataTabFrame.databaseButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
-	frame.dataTabFrame.databaseButton.tabID = "database"
+	button:SetHeight(28)
+	button:SetWidth(28)
+	button:SetScript("OnClick", function() frame:Hide() end)
 	
 	-- Database frame
-	frame.databaseFrame = CreateFrame("Frame", nil, frame.dataTabFrame)   
-	frame.databaseFrame:SetAllPoints(frame.dataTabFrame)
+	frame.databaseFrame = CreateFrame("Frame", nil, frame)   
+	frame.databaseFrame:SetHeight(frame:GetHeight() - 6)
+	frame.databaseFrame:SetWidth(230)
+	frame.databaseFrame:SetFrameLevel(0)
+	frame.databaseFrame:SetBackdrop({
+		  bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
+		  edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+		  edgeSize = 20,
+		  insets = {left = 6, right = 6, top = 6, bottom = 6},
+	})
+	frame.databaseFrame:SetBackdropColor(0, 0, 0, 0.9)
+	frame.databaseFrame.fadeFrame = CreateFrame("Frame", nil, frame.databaseFrame)
+	frame.databaseFrame.fadeFrame:SetAllPoints(frame.databaseFrame)
 
-	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameDatabase", frame.databaseFrame, "FauxScrollFrameTemplate")
-	frame.databaseFrame.scroll.bar = SexyGroupUserFrameDatabase
-	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -2)
-	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -24, 1)
-	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage) end)
+	if( SexyGroup.db.profile.general.databaseExpanded ) then
+		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -10, -3)
+	else
+		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -230, -3)
+		frame.databaseFrame.fadeFrame:SetAlpha(0)
+	end
+
+	local TIME_TO_MOVE = 0.50
+	local TIME_TO_FADE = 0.25
 	
+	frame.databaseFrame.timeElapsed = 0
+	local function frameAnimator(self, elapsed)
+		self.timeElapsed = self.timeElapsed + elapsed
+		self:SetPoint("TOPLEFT", frame, "TOPRIGHT", self.startOffset + (self.endOffset * math.min((self.timeElapsed / TIME_TO_MOVE), 1)), -3)
+		
+		if( self.timeElapsed >= TIME_TO_MOVE ) then
+			self.timeElapsed = 0
+			self:SetScript("OnUpdate", nil)
+		end
+	end
+
+	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameDatabase", frame.databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
+	frame.databaseFrame.scroll.bar = SexyGroupUserFrameDatabase
+	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -7)
+	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -28, 6)
+	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage) end)
+
+	frame.databaseFrame.toggle = CreateFrame("Button", nil, frame.databaseFrame)
+	frame.databaseFrame.toggle:SetPoint("LEFT", frame.databaseFrame, "RIGHT", -3, 0)
+	frame.databaseFrame.toggle:SetHeight(128)
+	frame.databaseFrame.toggle:SetWidth(8)
+	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\SexyGroup\\media\\tabhandle")
+	frame.databaseFrame.toggle:SetScript("OnEnter", function(self)
+		SetCursor("INTERACT_CURSOR")
+		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+		GameTooltip:SetText(L["Click to open and close the database viewer."])
+		GameTooltip:Show()
+	end)
+	frame.databaseFrame.toggle:SetScript("OnLeave", function(self)
+		GameTooltip:Hide()
+		SetCursor(nil)
+	end)
+	frame.databaseFrame.toggle:SetScript("OnClick", function(self)
+		if( SexyGroup.db.profile.general.databaseExpanded ) then
+			frame.databaseFrame.startOffset = -10
+			frame.databaseFrame.endOffset = -220
+
+			UIFrameFadeIn(frame.databaseFrame.fadeFrame, 0.25, 1, 0)
+		else
+			frame.databaseFrame.startOffset = -220
+			frame.databaseFrame.endOffset = 210
+			
+			UIFrameFadeIn(frame.databaseFrame.fadeFrame, 0.50, 0, 1)
+		end
+		
+		SexyGroup.db.profile.general.databaseExpanded = not SexyGroup.db.profile.general.databaseExpanded
+		frame.databaseFrame:SetScript("OnUpdate", frameAnimator)
+	end)
+
 	local function viewUserData(self)
 		Users:LoadData(SexyGroup.userData[self.userID])
 	end
-	
+
 	frame.databaseFrame.rows = {}
 	for i=1, MAX_DATABASE_ROWS do
-		local button = CreateFrame("Button", nil, frame.databaseFrame)
+		local button = CreateFrame("Button", nil, frame.databaseFrame.fadeFrame)
 		button:SetScript("OnClick", viewUserData)
 		button:SetHeight(14)
 		button:SetNormalFontObject(GameFontNormal)
 		button:SetHighlightFontObject(GameFontHighlight)
 		button:SetText("*")
-		button:GetFontString():SetPoint("LEFT", button, "LEFT")
+		button:GetFontString():SetPoint("TOPLEFT", button, "TOPLEFT")
+		button:GetFontString():SetPoint("TOPRIGHT", button, "TOPRIGHT")
+		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
+		button:SetFrameLevel(0)
 
 		if( i > 1 ) then
 			button:SetPoint("TOPLEFT", frame.databaseFrame.rows[i - 1], "BOTTOMLEFT", 0, -6)
 		else
-			button:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 3, -1)
+			button:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -10)
 		end
 
 		frame.databaseFrame.rows[i] = button
 	end
-	
+
 	-- Equipment frame
-	frame.gearFrame = CreateFrame("Frame", nil, frame.dataTabFrame)
-	frame.gearFrame:SetAllPoints(frame.dataTabFrame)
-		
+	frame.gearFrame = CreateFrame("Frame", nil, frame)
+	frame.gearFrame:SetBackdrop(backdrop)
+	frame.gearFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	frame.gearFrame:SetBackdropColor(0, 0, 0, 0)
+	frame.gearFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
+	frame.gearFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 15)
+	frame.gearFrame:SetWidth(225)
+
+	frame.gearFrame.headerText = frame.gearFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
+	frame.gearFrame.headerText:SetPoint("BOTTOMLEFT", frame.gearFrame, "TOPLEFT", 0, 5)
+	frame.gearFrame.headerText:SetText(L["Equipped gear"])
+	
 	frame.pruneInfo = frame.gearFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	frame.pruneInfo:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 4, -4)
 	frame.pruneInfo:SetPoint("BOTTOMRIGHT", frame.gearFrame, "BOTTOMRIGHT", -4, 4)
@@ -697,7 +731,7 @@ function Users:CreateUI()
 	frame.userFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.userFrame:SetWidth(175)
 	frame.userFrame:SetHeight(100)
-	frame.userFrame:SetPoint("TOPLEFT", frame.dataTabFrame, "TOPRIGHT", 10, -8)
+	frame.userFrame:SetPoint("TOPLEFT", frame.gearFrame, "TOPRIGHT", 10, -8)
 
 	frame.userFrame.headerText = frame.userFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
 	frame.userFrame.headerText:SetPoint("BOTTOMLEFT", frame.userFrame, "TOPLEFT", 0, 5)
