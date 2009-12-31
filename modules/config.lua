@@ -171,7 +171,7 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 		if( not SexyGroup.db.profile.general.autoSummary ) then
 			SexyGroup.modules.Summary:Setup()
 		end
-		
+		return
 	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" ) then
 		SexyGroup:Print(L["Slash commands"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup config - Opens the configuration"])
