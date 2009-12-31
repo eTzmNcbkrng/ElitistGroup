@@ -168,7 +168,7 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 		end
 	
 		SexyGroup.modules.Summary:PLAYER_ROLES_ASSIGNED()
-		if( not SexyGroup.db.profile.general.autoSummary ) then
+		if( not SexyGroup.modules.Summary.frame or not SexyGroup.modules.Summary.frame:IsVisible() ) then
 			SexyGroup.modules.Summary:Setup()
 		end
 		return
