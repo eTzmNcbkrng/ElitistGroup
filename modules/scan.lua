@@ -7,7 +7,7 @@ SexyGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level
 SexyGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 SexyGroup.MAX_LINK_LENGTH = 80
 
-local MAX_QUEUE_RETRIES = 5
+local MAX_QUEUE_RETRIES = 20
 local QUEUE_RETRY_TIME = 3
 local GEAR_CHECK_INTERVAL = 0.20
 local pending, pendingGear, inspectQueue, queueRetries = {}, {}, {}, {}
@@ -50,6 +50,11 @@ function Scan:QueueAdd(unit)
 	end
 end
 
+function Scan:ResetQueue()
+	table.wipe(inspectQueue)
+	table.wipe(queueRetries)
+end
+
 function Scan:ProcessQueue()
 	if( #(inspectQueue) == 0 ) then
 		self.frame.queueTimer = nil
@@ -80,7 +85,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 		table.wipe(pendingGear)
 	end
 	
-	if( UnitIsFriend(unit, "player") and CanInspect(unit) and not pending.playerID and not pending.activeInspect ) then
+	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN and not pending.playerID and not pending.activeInspect ) then
 		pending.playerID = SexyGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
