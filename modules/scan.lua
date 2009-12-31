@@ -6,6 +6,7 @@ local L = SexyGroup.L
 SexyGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number"}
 SexyGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 SexyGroup.MAX_LINK_LENGTH = 80
+SexyGroup.MAX_NOTE_LENGTH = 256
 
 local MAX_QUEUE_RETRIES = 20
 local QUEUE_RETRY_TIME = 3
