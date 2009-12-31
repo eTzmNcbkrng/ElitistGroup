@@ -181,19 +181,19 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 	local totalLines = 0
 	
 	-- Gems
-	if( gemData.totalUsed < gemData.total and not gemData.noData ) then
-		gemTooltip = string.format(L["Gems: |cffffffff%d missing|r"], gemData.total - gemData.totalUsed)
-	end
-	
-	if( gemData.totalBad > 0 and not gemData.noData ) then
-		gemTooltip = gemTooltip or string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
+	if( gemData.noData ) then
+		gemTooltip = L["Gems: |cffffffffNo gems found. Either the player has no enchants or the enchant data was not found.|r"]
+	elseif( gemData.totalBad > 0 ) then
+		gemTooltip = string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
 		
 		for i=1, #(gemData), 2 do
 			local fullItemLink, arg = gemData[i], gemData[i + 1]
-			if( type(arg) == "string" ) then
-				table.insert(tempList, string.format(L["%s - %s gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
+			if( arg == "missing" ) then
+				table.insert(tempList, string.format(L["%s - Missing gems"], fullItemLink))
+			elseif( type(arg) == "string" ) then
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
 			else
-				table.insert(tempList, string.format(L["%s - %s quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 			end
 		end
 		
@@ -202,31 +202,26 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 		totalLines = totalLines + #(tempList)
 	end
 	
-	if( gemData.noData ) then
-		gemTooltip = L["Gems: |cffffffffNo gems found. Either the person has no enchants or the enchant data was not found.|r"]
-	end
-	
 	-- Enchants
 	table.wipe(tempList)
-	if( enchantData.totalUsed < enchantData.total and not enchantData.noData ) then
-		enchantTooltip = string.format(L["Enchants: |cffffffff%d missing|r"], enchantData.total - enchantData.totalUsed)
-	end
-	
-	if( enchantData.totalBad > 0 and not enchantData.noData ) then
-		enchantTooltip = enchantTooltip or string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
+
+	if( enchantData.noData ) then
+		enchantTooltip = L["Enchants: |cffffffffNo enchants found. Either the player has no enchants or the enchant data was not found.|r"]
+	elseif( enchantData.totalBad > 0 ) then
+		enchantTooltip = string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
 		
 		for i=1, #(enchantData), 2 do
 			local fullItemLink, enchantTalent = enchantData[i], enchantData[i + 1]
-			table.insert(tempList, string.format(L["%s - %s enchant"], fullItemLink, SexyGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
+			if( enchantTalent == "missing" ) then
+				table.insert(tempList, string.format(L["%s - Unenchanted"], fullItemLink))
+			else
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r enchant"], fullItemLink, SexyGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
+			end
 		end
 		
 		table.sort(tempList, sortTable)
 		enchantTooltip = enchantTooltip .. "\n" .. table.concat(tempList, "\n")
 		totalLines = totalLines + #(tempList)
-	end
-	
-	if( enchantData.noData ) then
-		enchantTooltip = L["Enchants: |cffffffffNo enchants found. Either the person has no enchants or the enchant data was not found.|r"]
 	end
 	
 	self:DeleteTables(tempList)
@@ -274,7 +269,7 @@ function SexyGroup:GetGearSummary(userData)
 			
 			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
 			local unenchantable = SexyGroup.EQUIP_UNECHANTABLE[itemEquipType]
-			if( not unenchantable or type(unenchantable) == "string" and unenchantable ~= userData.classToken ) then
+			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
 				enchants.total = enchants.total + 1
 
 				local enchantTalent = SexyGroup.ENCHANT_TALENTTYPE[enchantItemLink]
@@ -288,24 +283,33 @@ function SexyGroup:GetGearSummary(userData)
 						table.insert(enchants, fullItemLink)
 						table.insert(enchants, enchantTalent)
 					end
+				else
+					table.insert(enchants, fullItemLink)
+					table.insert(enchants, "missing")
 				end
 			end
 			
 			-- Last but not least, off to the gems
 			gems.total = gems.total + self.EMPTY_GEM_SLOTS[itemLink]
+			
+			local itemUnsocketed = self.EMPTY_GEM_SLOTS[itemLink]
+			local alreadyFailed
 			for socketID=1, MAX_NUM_SOCKETS do
 				local gemLink = SexyGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
 				if( gemLink ) then
 					gems.totalUsed = gems.totalUsed + 1
+					itemUnsocketed = itemUnsocketed - 1
 					
 					local gemTalent = self.GEM_TALENTTYPE[gemLink]
-					if( gemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[gemTalent] ) then
+					if( gemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[gemTalent] and not alreadyFailed ) then
 						table.insert(gems, fullItemLink)
 						table.insert(gems, gemTalent)
 						
 						gems.totalBad = gems.totalBad + 1
 						gems.pass = nil
-					else
+						alreadyFailed = true
+						
+					elseif( not alreadyFailed ) then
 						local gemQuality = select(3, GetItemInfo(gemLink))
 						if( SexyGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < SexyGroup.GEM_THRESHOLDS[itemQuality] ) then
 							table.insert(gems, fullItemLink)
@@ -313,10 +317,17 @@ function SexyGroup:GetGearSummary(userData)
 
 							gems.totalBad = gems.totalBad + 1
 							gems.pass = nil
+							alreadyFailed = true
 						end
 					end
 				end
-			end			
+			end	
+
+			if( itemUnsocketed > 0 ) then
+				table.insert(gems, fullItemLink)
+				table.insert(gems, "missing")
+				gems.pass = nil
+			end
 		end
 	end
 	
