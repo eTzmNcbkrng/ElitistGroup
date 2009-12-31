@@ -231,7 +231,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	
 	for noteFor, note in pairs(sentNotes()) do
 		note = self:VerifyTable(note, SexyGroup.VALID_NOTE_FIELDS)
-		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and note.comment and string.match(noteFor, "%-") and senderName ~= noteFor ) then
+		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and note.comment and string.match(noteFor, "%-") and senderName ~= noteFor and string.len(note.comment) <= SexyGroup.MAX_NOTE_LENGTH ) then
 			local name, server = string.split("-", noteFor, 2)
 			local userData = SexyGroup.userData[noteFor] or {}
 			
