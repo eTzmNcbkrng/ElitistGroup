@@ -202,12 +202,17 @@ function Users:UpdateDatabasePage()
 	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
 	
 	if( not self.scrollUpdate ) then
+		local search = not self.frame.databaseFrame.search.searchText and string.gsub(string.lower(self.frame.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
+	
 		table.wipe(userList)
-		for name in pairs(SexyGroup.db.faction.users) do table.insert(userList, name) end
+		for name in pairs(SexyGroup.db.faction.users) do
+			if( search == "" or string.match(string.lower(name), search) ) then
+				table.insert(userList, name)
+			end
+		end
+		
 		table.sort(userList, sortNames)
 	end
-	
-	self.scrollUpdate = nil
 	
 	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS, 16)
 	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
@@ -358,7 +363,7 @@ function Users:UpdateNoteInfo()
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment)
-			row.tooltip = string.format(L["%s wrote: %s"], from, note.comment)
+			row.tooltip = string.format(L["%s on %s wrote: %s"], from, date("%m/%d/%Y", note.time), note.comment)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
@@ -465,7 +470,6 @@ function Users:CreateUI()
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetFrameStrata("HIGH")
-	frame:SetScript("OnHide", function() SexyGroup:DeleteTables(equipmentData, enchantData, gemData) end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
@@ -556,7 +560,7 @@ function Users:CreateUI()
 	frame.databaseFrame.scroll.bar = SexyGroupUserFrameDatabase
 	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -7)
 	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -28, 6)
-	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage) end)
+	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage); Users.scrollUpdate = nil end)
 
 	frame.databaseFrame.toggle = CreateFrame("Button", nil, frame.databaseFrame)
 	frame.databaseFrame.toggle:SetPoint("LEFT", frame.databaseFrame, "RIGHT", -3, 0)
@@ -591,6 +595,33 @@ function Users:CreateUI()
 		frame.databaseFrame:SetScript("OnUpdate", frameAnimator)
 	end)
 
+	frame.databaseFrame.search = CreateFrame("EditBox", "SexyGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
+	frame.databaseFrame.search:SetHeight(18)
+	frame.databaseFrame.search:SetWidth(150)
+	frame.databaseFrame.search:SetAutoFocus(false)
+	frame.databaseFrame.search:ClearAllPoints()
+	frame.databaseFrame.search:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -7)
+	frame.databaseFrame.search:SetFrameLevel(0)
+
+	frame.databaseFrame.search.searchText = true
+	frame.databaseFrame.search:SetText(L["Search..."])
+	frame.databaseFrame.search:SetTextColor(0.90, 0.90, 0.90, 0.80)
+	frame.databaseFrame.search:SetScript("OnTextChanged", function(self) Users:UpdateDatabasePage() end)
+	frame.databaseFrame.search:SetScript("OnEditFocusGained", function(self)
+		if( self.searchText ) then
+			self.searchText = nil
+			self:SetText("")
+			self:SetTextColor(1, 1, 1, 1)
+		end
+	end)
+	frame.databaseFrame.search:SetScript("OnEditFocusLost", function(self)
+		if( not self.searchText and string.trim(self:GetText()) == "" ) then
+			self.searchText = true
+			self:SetText(L["Search..."])
+			self:SetTextColor(0.90, 0.90, 0.90, 0.80)
+		end
+	end)
+
 	local function viewUserData(self)
 		Users:LoadData(SexyGroup.userData[self.userID])
 	end
@@ -612,7 +643,7 @@ function Users:CreateUI()
 		if( i > 1 ) then
 			button:SetPoint("TOPLEFT", frame.databaseFrame.rows[i - 1], "BOTTOMLEFT", 0, -6)
 		else
-			button:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -10)
+			button:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -30)
 		end
 
 		frame.databaseFrame.rows[i] = button
