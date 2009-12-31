@@ -57,7 +57,8 @@ function Summary:Setup()
 	self:CreateUI()
 	self.frame:SetHeight(35 + (140 * math.floor(GetNumPartyMembers() / 2)))
 	self.frame:SetWidth(30 + (175 * math.floor(GetNumPartyMembers() / 2)))
-
+	self.frame:Show()
+	
 	for _, row in pairs(self.summaryRows) do row:Hide() end
 	for i=1, GetNumPartyMembers() do
 		local row = self:CreateSingle(i)
@@ -267,6 +268,10 @@ function Summary:CreateSingle(id)
 		
 		row[key] = button
 	end
+	
+	row.gemInfo.disableWrap = true
+	row.enchantInfo.disableWrap = true
+	row.gearInfo.disableWrap = true
 	
 	if( id == 3 ) then
 		row:SetPoint("TOPLEFT", self.summaryRows[1], "BOTTOMLEFT", 0, -5)
