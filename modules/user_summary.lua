@@ -129,7 +129,7 @@ function Summary:UpdateSingle(row)
 			end
 			
 			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, L["Mouseover for note"])
-			row.notesInfo.tooltip = string.format(L["cffffffffYou wrote %s ago:|r\n%s"], noteAge, userData.notes[SexyGroup.playerName].comment)
+			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, userData.notes[SexyGroup.playerName].comment)
 		-- We haven't, but somebody else has left a note on them
 		elseif( totalNotes > 0 ) then
 			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["%d notes found"], totalNotes))
