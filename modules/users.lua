@@ -73,62 +73,18 @@ function Users:LoadData(userData)
 				slot:Show()
 			end
 		end
-		
-		-- Now for the extras
-		local gemTooltip, enchantTooltip
-		local totalLines = 0
-		local tempList = {}
-		
-		-- Gems
-		if( gemData.totalUsed < gemData.total ) then
-			gemTooltip = string.format(L["Gems: |cffffffff%d missing|r"], gemData.total - gemData.totalUsed)
-		end
-		
-		if( gemData.totalBad > 0 ) then
-			gemTooltip = gemTooltip or string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
-			
-			for i=1, #(gemData), 2 do
-				local fullItemLink, arg = gemData[i], gemData[i + 1]
-				if( type(arg) == "string" ) then
-					table.insert(tempList, string.format(L["%s - %s gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
-				else
-					table.insert(tempList, string.format(L["%s - %s quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
-				end
-			end
-			
-			table.sort(tempList, sortTable)
-			gemTooltip = gemTooltip .. "\n" .. table.concat(tempList, "\n")
-			totalLines = totalLines + #(tempList)
-		end
-		
-		-- Enchants
-		table.wipe(tempList)
-		if( enchantData.totalUsed < enchantData.total ) then
-			enchantTooltip = string.format(L["Enchants: |cffffffff%d missing|r"], enchantData.total - enchantData.totalUsed)
-		end
-		
-		if( enchantData.totalBad > 0 ) then
-			enchantTooltip = enchantTooltip or string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
-			
-			for i=1, #(enchantData), 2 do
-				local fullItemLink, enchantTalent = enchantData[i], enchantData[i + 1]
-				table.insert(tempList, string.format(L["%s - %s enchant"], fullItemLink, SexyGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
-			end
-			
-			table.sort(tempList, sortTable)
-			enchantTooltip = enchantTooltip .. "\n" .. table.concat(tempList, "\n")
-			totalLines = totalLines + #(tempList)
-		end
-		
+				
 		-- Now combine these too, in the same way you combine to make a better and more powerful robot
 		local equipSlot = frame.gearFrame.equipSlots[18]
 		equipSlot.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
 		equipSlot.levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-		equipSlot.typeText:SetFormattedText(L["|T%s:14:14|t Gems"], gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+		equipSlot.typeText:SetFormattedText(L["|T%s:14:14|t Gems"], gemData.noData and READY_CHECK_WAITING_TEXTURE or gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 		equipSlot:Show()
-
+	
+		local gemTooltip, enchantTooltip, totalLines = SexyGroup:GetGearExtraTooltip(gemData, enchantData)
+		
 		-- Switch to using two tooltips if we're trying to show too much data to make it easier to read
-		if( gemTooltip and enchantTooltip and totalLines > 10 ) then
+		if( totalLines > 10 ) then
 			equipSlot.tooltip1 = gemTooltip
 			equipSlot.tooltip2 = enchantTooltip
 			equipSlot.tooltip = nil
@@ -137,7 +93,7 @@ function Users:LoadData(userData)
 			
 			equipSlot.tooltip1 = nil
 			equipSlot.tooltip2 = nil
-			equipSlot.tooltip = (gemTooltip or L["Gems: |cffffffffAll good|r"]) .. spacing .. (enchantTooltip or L["Enchants: |cffffffffAll good|r"])
+			equipSlot.tooltip = gemTooltip .. spacing .. enchantTooltip
 			equipSlot.disableWrap = true
 		end
 	else
@@ -500,8 +456,8 @@ function Users:CreateUI()
 	end
 		
 	-- Main container
-	local frame = CreateFrame("Frame", nil, UIParent)
-	Users.frame = frame
+	local frame = CreateFrame("Frame", "SexyGroupUserInfo", UIParent)
+	self.frame = frame
 	frame:SetClampedToScreen(true)
 	frame:SetWidth(675)
 	frame:SetHeight(400)
@@ -514,7 +470,7 @@ function Users:CreateUI()
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
 			frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
-			SexyGroup.db.profile.position = nil
+			SexyGroup.db.profile.positions.user = nil
 			return
 		end
 		
@@ -524,7 +480,7 @@ function Users:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		SexyGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		SexyGroup.db.profile.positions.user = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -534,9 +490,11 @@ function Users:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	if( SexyGroup.db.profile.position ) then
+	table.insert(UISpecialFrames, "SexyGroupUserInfo")
+	
+	if( SexyGroup.db.profile.positions.user ) then
 		local scale = frame:GetEffectiveScale()
-		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SexyGroup.db.profile.position.x / scale, SexyGroup.db.profile.position.y / scale)
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SexyGroup.db.profile.positions.user.x / scale, SexyGroup.db.profile.positions.user.y / scale)
 	else
 		frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
 	end
@@ -602,6 +560,7 @@ function Users:CreateUI()
 
 	frame.databaseFrame.toggle = CreateFrame("Button", nil, frame.databaseFrame)
 	frame.databaseFrame.toggle:SetPoint("LEFT", frame.databaseFrame, "RIGHT", -3, 0)
+	frame.databaseFrame.toggle:SetFrameLevel(frame:GetFrameLevel() + 2)
 	frame.databaseFrame.toggle:SetHeight(128)
 	frame.databaseFrame.toggle:SetWidth(8)
 	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\SexyGroup\\media\\tabhandle")
