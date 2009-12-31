@@ -1,9 +1,8 @@
 ## Interface: 30300
 ## Title: SexyGroup
-## Notes: Know how sexy your group is.
+## Notes: Provides quick access to information on your group and their gear/enchant/gem choices
 ## Author: Antiarc / Shadowed
 ## OptionalDeps: Ace3
-## Version: 1.0
 ## SavedVariables: SexyGroupDB
 
 #@no-lib-strip@
