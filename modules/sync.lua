@@ -11,9 +11,6 @@ local REQUEST_TIMEOUT = 10
 -- This should be raised most likely, but for now only allow a notes or gear request every 5 seconds from someoneone
 local REQUEST_THROTTLE = 5
 
---local FIRST_MULTIPART, NEXT_MULTIPART, LAST_MULTIPART = "BAZRD\001", "BAZRD\002", "BAZRD\003"
-
-
 function Sync:Setup()
 	if( SexyGroup.db.profile.comm.enabled ) then
 		self:RegisterComm(COMM_PREFIX)
@@ -103,9 +100,7 @@ function Sync:SendNoteRequest(notesOn)
 		SexyGroup:Print(L["Invalid name entered."])
 		return
 	elseif( notesOn == "target" or notesOn == "focus" or notesOn == "mouseover" ) then
-		local name, server = UnitName(notesOn)
-		notesOn = name and string.match("%s-%s", name, server and server ~= "" and server or GetRealmName())
-		
+		notesOn = SexyGroup:GetPlayerID(notesOn)
 		if( not notesOn ) then
 			SexyGroup:Print(L["No name found for unit."])
 			return
@@ -142,7 +137,7 @@ function Sync:ParseNotesRequest(sender, ...)
 	local queuedData = ""
 	for i=1, select("#", ...) do
 		local name = select(i, ...)
-		if( not tempList[name] ) then
+		if( not tempList[name] and name ~= SexyGroup.playerName ) then
 			local userData = SexyGroup.userData[name]
 			local note = userData and userData.notes[SexyGroup.playerName]
 			if( note ) then
@@ -192,6 +187,14 @@ function Sync:ParseSentGear(sender, data)
 	local senderName, name, server = getFullName(sender)
 	local userData = SexyGroup.userData[senderName] or {}
 	local notes = userData.notes or {}
+
+	-- If the player already has trusted data on this person from within 10 minutes, don't accept the comm
+	local threshold = time() - 600
+	if( userData.trusted and userData.scanned < threshold ) then
+		return
+	end
+
+	-- Finalize it all
 	table.wipe(userData)
 
 	for key, value in pairs(sentData) do userData[key] = value end
@@ -228,7 +231,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	
 	for noteFor, note in pairs(sentNotes()) do
 		note = self:VerifyTable(note, SexyGroup.VALID_NOTE_FIELDS)
-		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and note.comment ) then
+		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and note.comment and string.match(noteFor, "%-") and senderName ~= noteFor ) then
 			local name, server = string.split("-", noteFor, 2)
 			local userData = SexyGroup.userData[noteFor] or {}
 			
