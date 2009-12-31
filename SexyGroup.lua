@@ -6,14 +6,17 @@ function SexyGroup:OnInitialize()
 	self.defaults = {
 		profile = {
 			expExpanded = {},
+			positions = {},
 			general = {
 				autoPopup = true,
+				autoSummary = false,
 				databaseExpanded = true,
 			},
 			database = {
 				pruneBasic = 30,
 				pruneFull = 120,
 				ignoreBelow = 80,
+				autoNotes = true,
 			},
 			comm = {
 				enabled = true,
@@ -63,8 +66,8 @@ function SexyGroup:OnInitialize()
 			end
 		end
 	end
-	
-	-- God bless meta tables
+		
+	-- God bless metatables
 	self.writeQueue = {}
 	self.userData = setmetatable({}, {
 		__index = function(tbl, name)
@@ -172,6 +175,66 @@ function SexyGroup:DeleteTables(...)
 	end
 end
 
+function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
+	local tempList = getTable()
+	local gemTooltip, enchantTooltip
+	local totalLines = 0
+	
+	-- Gems
+	if( gemData.totalUsed < gemData.total and not gemData.noData ) then
+		gemTooltip = string.format(L["Gems: |cffffffff%d missing|r"], gemData.total - gemData.totalUsed)
+	end
+	
+	if( gemData.totalBad > 0 and not gemData.noData ) then
+		gemTooltip = gemTooltip or string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
+		
+		for i=1, #(gemData), 2 do
+			local fullItemLink, arg = gemData[i], gemData[i + 1]
+			if( type(arg) == "string" ) then
+				table.insert(tempList, string.format(L["%s - %s gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
+			else
+				table.insert(tempList, string.format(L["%s - %s quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
+			end
+		end
+		
+		table.sort(tempList, sortTable)
+		gemTooltip = gemTooltip .. "\n" .. table.concat(tempList, "\n")
+		totalLines = totalLines + #(tempList)
+	end
+	
+	if( gemData.noData ) then
+		gemTooltip = L["Gems: |cffffffffNo gems found. Either the person has no enchants or the enchant data was not found.|r"]
+	end
+	
+	-- Enchants
+	table.wipe(tempList)
+	if( enchantData.totalUsed < enchantData.total and not enchantData.noData ) then
+		enchantTooltip = string.format(L["Enchants: |cffffffff%d missing|r"], enchantData.total - enchantData.totalUsed)
+	end
+	
+	if( enchantData.totalBad > 0 and not enchantData.noData ) then
+		enchantTooltip = enchantTooltip or string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
+		
+		for i=1, #(enchantData), 2 do
+			local fullItemLink, enchantTalent = enchantData[i], enchantData[i + 1]
+			table.insert(tempList, string.format(L["%s - %s enchant"], fullItemLink, SexyGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
+		end
+		
+		table.sort(tempList, sortTable)
+		enchantTooltip = enchantTooltip .. "\n" .. table.concat(tempList, "\n")
+		totalLines = totalLines + #(tempList)
+	end
+	
+	if( enchantData.noData ) then
+		enchantTooltip = L["Enchants: |cffffffffNo enchants found. Either the person has no enchants or the enchant data was not found.|r"]
+	end
+	
+	self:DeleteTables(tempList)
+	
+	return gemTooltip or L["Gems: |cffffffffAll good|r"], enchantTooltip or L["Enchants: |cffffffffAll good|r"], totalLines
+end
+
+
 local MAINHAND_SLOT, OFFHAND_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot")
 function SexyGroup:GetGearSummary(userData)
 	local spec = self:GetPlayerSpec(userData)
@@ -180,6 +243,7 @@ function SexyGroup:GetGearSummary(userData)
 	
 	equipment.totalScore = 0
 	equipment.totalEquipped = 0
+	equipment.totalBad = 0
 	equipment.pass = true
 	
 	enchants.total = 0
@@ -205,6 +269,7 @@ function SexyGroup:GetGearSummary(userData)
 			if( itemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[itemTalent] ) then
 				equipment.pass = nil
 				equipment[itemLink] = itemTalent
+				equipment.totalBad = equipment.totalBad + 1
 			end
 			
 			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
@@ -255,15 +320,26 @@ function SexyGroup:GetGearSummary(userData)
 		end
 	end
 	
-	if( gems.totalUsed < gems.total ) then
+	-- Try and account for the fact that the inspection can fail to find gems, so if we find 0 gems used will give a warning
+	if( gems.total > 0 and gems.totalUsed == 0 ) then
+		gems.noData = true
+	elseif( gems.totalUsed < gems.total ) then
 		gems.pass = nil
+	end
+	
+	if( enchants.total > 0 and enchants.totalUsed == 0 ) then
+		enchants.noData = true
 	end
 	
 	if( enchants.totalUsed < enchants.total ) then
 		enchants.pass = nil
 	end
 	
-	equipment.totalScore = equipment.totalScore / equipment.totalEquipped
+	if( equipment.totalEquipped == 0 ) then
+		equipment.noData = true
+	end
+	
+	equipment.totalScore = equipment.totalEquipped > 0 and equipment.totalScore / equipment.totalEquipped or 0
 	return equipment, enchants, gems
 end
 
