@@ -3,7 +3,7 @@ local L = SexyGroup.L
 
 -- normal/heroic is for separating the dungeons like TotC/TotGC, hard will be for dungeons like Ulduar or Sartharion with hard modes on heroic
 SexyGroup.DUNGEON_TYPES = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
-local MOD = 0.86
+local MOD = 0.87
 SexyGroup.DUNGEON_DATA = {
 	L["T7 Dungeons"],					200 * MOD, 5,	"heroic",
 	L["Sartharion"],					200 * MOD, 10,	"normal",
