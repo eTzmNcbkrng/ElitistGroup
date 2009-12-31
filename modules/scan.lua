@@ -94,10 +94,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 		pending.unit = unit
 		pending.guid = UnitGUID(unit)
 
-		if( not SexyGroup.userData[pending.playerID] ) then
-			Scan:UpdateUnitData(unit)
-		end
-		
+		Scan:UpdateUnitData(unit)
 		SetAchievementComparisonUnit(unit)
 
 		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
