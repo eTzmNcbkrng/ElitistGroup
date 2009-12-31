@@ -4,7 +4,7 @@ local L = SexyGroup.L
 
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
-local MAX_DATABASE_ROWS = 19
+local MAX_DATABASE_ROWS = 18
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 local gemData, enchantData, equipmentData
 
@@ -85,15 +85,15 @@ function Users:LoadData(userData)
 		
 		-- Switch to using two tooltips if we're trying to show too much data to make it easier to read
 		if( totalLines > 10 ) then
-			equipSlot.tooltip1 = gemTooltip
-			equipSlot.tooltip2 = enchantTooltip
+			equipSlot.tooltip1 = enchantTooltip
+			equipSlot.tooltip2 = gemTooltip
 			equipSlot.tooltip = nil
 		else
 			local spacing = (gemTooltip and enchantTooltip) and "\n\n" or "\n"
 			
 			equipSlot.tooltip1 = nil
 			equipSlot.tooltip2 = nil
-			equipSlot.tooltip = gemTooltip .. spacing .. enchantTooltip
+			equipSlot.tooltip = enchantTooltip .. spacing .. gemTooltip
 			equipSlot.disableWrap = true
 		end
 	else
@@ -363,7 +363,7 @@ function Users:UpdateNoteInfo()
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment)
-			row.tooltip = string.format(L["|cffffffff%s on %s wrote:|r\n%s"], from, date("%m/%d/%Y", note.time), note.comment)
+			row.tooltip = string.format(L["%s on %s wrote:\n|cffffffff%s|r"], from, date("%m/%d/%Y", note.time), note.comment)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
@@ -425,7 +425,7 @@ function Users:CreateUI()
 	local extraTooltip
 	local function OnEnter(self)
 		if( self.tooltip1 and self.tooltip2 ) then
-			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+			GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
 			GameTooltip:SetText(self.tooltip1)
 			GameTooltip:Show()
 			
