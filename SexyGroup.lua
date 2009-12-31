@@ -286,6 +286,9 @@ function SexyGroup:GetGearSummary(userData)
 				else
 					table.insert(enchants, fullItemLink)
 					table.insert(enchants, "missing")
+					
+					enchants.totalBad = enchants.totalBad + 1
+					enchants.pass = nil
 				end
 			end
 			
