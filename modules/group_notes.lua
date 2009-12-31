@@ -3,7 +3,7 @@ local History = SexyGroup:NewModule("GroupHistory", "AceEvent-3.0")
 local L = SexyGroup.L
 
 local AceGUI = LibStub("AceGUI-3.0")
-local surveyFrame, SpecialFrame, totalPartyMembers, wasAutoPopped
+local surveyFrame, SpecialFrame, totalPartyMembers, instanceName, wasAutoPopped
 local groupRatings, groupNotes, groupList = {}, {}, {}
 
 function History:LFG_COMPLETION_REWARD()
@@ -64,7 +64,7 @@ local function OnHide(self)
 			note.time = time()
 			
 			SexyGroup.userData[partyID].notes[SexyGroup.playerName] = note
-
+			
 			noted = noted + 1
 		end
 	end
@@ -134,9 +134,7 @@ function History:InitFrame()
 		surveyFrame:AddChild(group)
 	end
 	
-	surveyFrame:SetStatusText((L["Instance run: %s"]):format(
-		GetInstanceDifficulty() > 1 and (HEROIC_PREFIX):format(GetRealZoneText()) or GetRealZoneText()
-	))
+	surveyFrame:SetStatusText((L["Instance run: %s"]):format(instanceName or UNKNOWN))
 end
 
 function History:LogGroup()
@@ -149,6 +147,7 @@ function History:LogGroup()
 		table.wipe(groupNotes)
 		table.wipe(groupRatings)
 		
+		instanceName = GetInstanceDifficulty() > 1 and (HEROIC_PREFIX):format(GetRealZoneText()) or GetRealZoneText()
 		totalPartyMembers = GetNumPartyMembers()
 		for i=1, GetNumPartyMembers() do
 			SexyGroup.modules.Scan:CreateCoreTable("party" .. i)
