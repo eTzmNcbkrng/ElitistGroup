@@ -34,7 +34,12 @@ local function loadOptions()
 						type = "toggle",
 						name = L["Show rating after dungeon"],
 						desc = L["After completing a dungeon through the Looking For Dungeon system, automatically popup the /rate frame so you can set notes and rating on your group members."],
-						width = "full",
+					},
+					autoSummary = {
+						order = 2,
+						type = "toggle",
+						name = L["Show summary on dungeon start"],
+						desc = L["Pops up the summary window when you first zone into an instance using the Looking for Dungeon system showing you info on your group."],
 					},
 				},
 			},
@@ -85,9 +90,18 @@ local function loadOptions()
 						set = set,
 						get = get,
 						disabled = false,
+						width = "full",
+					},
+					autoNotes = {
+						order = 2,
+						type = "toggle",
+						name = L["Auto request notes"],
+						desc = L["Automatically requests notes on your group from other Sexy Group users. Only sends requests once per session, and you have to be in a guild."],
+						set = set,
+						get = get,
 					},
 					gearRequests = {
-						order = 2,
+						order = 3,
 						type = "toggle",
 						name = L["Allow gear requests"],
 						desc = L["Unchecking this disables other Sexy Group users from requesting your gear without inspecting."],
@@ -95,32 +109,32 @@ local function loadOptions()
 						get = get,
 					},
 					header = {
-						order = 2,
+						order = 10,
 						type = "header",
 						name = L["Enabled channels"],
 					},
 					description = {
-						order = 3,
+						order = 11,
 						type = "description",
 						name = L["You can choose which channels communication is accepted over. As long as communications are enabled, whisper is accepted. Communications are queued while in combat regardless."],
 					},
 					GUILD = {
-						order = 4,
+						order = 12,
 						type = "toggle",
 						name = L["Guild channel"],
 					},
 					RAID = {
-						order = 5,
+						order = 13,
 						type = "toggle",
 						name = L["Raid channel"],
 					},
 					PARTY = {
-						order = 6,
+						order = 14,
 						type = "toggle",
 						name = L["Party channel"],
 					},
 					BATTLEGROUND = {
-						order = 7,
+						order = 15,
 						type = "toggle",
 						name = L["Battleground channel"],
 					},
@@ -147,12 +161,24 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 	elseif( cmd == "notes" and arg ) then
 		SexyGroup.modules.Sync:SendNoteRequest(arg)
 		return
+	elseif( cmd == "summary" ) then
+		if( GetNumPartyMembers() == 0 ) then
+			SexyGroup:Print(L["You must be in a party to use this."])
+			return
+		end
+	
+		SexyGroup.modules.Summary:PLAYER_ROLES_ASSIGNED()
+		if( not SexyGroup.db.profile.general.autoSummary ) then
+			SexyGroup.modules.Summary:Setup()
+		end
+		
 	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" ) then
 		SexyGroup:Print(L["Slash commands"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup config - Opens the configuration"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup gear <name> - Requests gear from another Sexy Group user without inspecting"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup notes <for> - Requests all notes that people have for the name entered"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/sexygroup summary - Displays the summary page for your party"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/rate - Opens the rating panel for your group"])
 		return
 	end
