@@ -363,7 +363,7 @@ function Users:UpdateNoteInfo()
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment)
-			row.tooltip = string.format(L["%s on %s wrote: %s"], from, date("%m/%d/%Y", note.time), note.comment)
+			row.tooltip = string.format(L["|cffffffff%s on %s wrote:|r\n%s"], from, date("%m/%d/%Y", note.time), note.comment)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
@@ -470,6 +470,7 @@ function Users:CreateUI()
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetFrameStrata("HIGH")
+	frame:SetFrameLevel(5)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
@@ -524,7 +525,7 @@ function Users:CreateUI()
 	frame.databaseFrame = CreateFrame("Frame", nil, frame)   
 	frame.databaseFrame:SetHeight(frame:GetHeight() - 6)
 	frame.databaseFrame:SetWidth(230)
-	frame.databaseFrame:SetFrameLevel(0)
+	frame.databaseFrame:SetFrameLevel(2)
 	frame.databaseFrame:SetBackdrop({
 		  bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
 		  edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
@@ -534,6 +535,7 @@ function Users:CreateUI()
 	frame.databaseFrame:SetBackdropColor(0, 0, 0, 0.9)
 	frame.databaseFrame.fadeFrame = CreateFrame("Frame", nil, frame.databaseFrame)
 	frame.databaseFrame.fadeFrame:SetAllPoints(frame.databaseFrame)
+	frame.databaseFrame.fadeFrame:SetFrameLevel(3)
 
 	if( SexyGroup.db.profile.general.databaseExpanded ) then
 		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -10, -3)
@@ -601,7 +603,7 @@ function Users:CreateUI()
 	frame.databaseFrame.search:SetAutoFocus(false)
 	frame.databaseFrame.search:ClearAllPoints()
 	frame.databaseFrame.search:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -7)
-	frame.databaseFrame.search:SetFrameLevel(0)
+	frame.databaseFrame.search:SetFrameLevel(3)
 
 	frame.databaseFrame.search.searchText = true
 	frame.databaseFrame.search:SetText(L["Search..."])
@@ -638,8 +640,7 @@ function Users:CreateUI()
 		button:GetFontString():SetPoint("TOPRIGHT", button, "TOPRIGHT")
 		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
-		button:SetFrameLevel(0)
-
+		
 		if( i > 1 ) then
 			button:SetPoint("TOPLEFT", frame.databaseFrame.rows[i - 1], "BOTTOMLEFT", 0, -6)
 		else
