@@ -43,14 +43,15 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 		SexyGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
 	end
 	
-	if( SexyGroup.db.profile.general.autoSummary ) then
+	if( SexyGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
 		self:Setup()
 	end
 	
 	for i=1, GetNumPartyMembers() do
 		SexyGroup.modules.Scan:QueueAdd("party" .. i)
-		SexyGroup.modules.Scan:QueueStart()
 	end
+
+	SexyGroup.modules.Scan:QueueStart()
 end
 
 function Summary:Setup()
