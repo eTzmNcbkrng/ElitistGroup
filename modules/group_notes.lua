@@ -4,13 +4,12 @@ local L = SexyGroup.L
 
 local AceGUI = LibStub("AceGUI-3.0")
 local surveyFrame, SpecialFrame, instanceName, wasAutoPopped
-local groupData = {}
+local groupData, queuedUnits = {}, {}
 local totalGroupMembers = 0
 
 function History:OnInitialize()
 	self:RegisterEvent("LFG_COMPLETION_REWARD")
 	self:RegisterEvent("PARTY_MEMBERS_CHANGED")
-	self:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 
 	SpecialFrame = CreateFrame("Frame", "SexyGroupHistoryHider")
 	SpecialFrame:SetScript("OnHide", function()
@@ -32,9 +31,63 @@ function History:OnInitialize()
 	end	
 end
 
-function History:PARTY_MEMBERS_CHANGED()
+function History:UpdateUnitData(unit)
+	if( UnitName(unit) == UNKNOWN ) then
+		queuedUnits[unit] = true
+		self:RegisterEvent("UNIT_NAME_UPDATE")
+		return 
+	end
+	
+	SexyGroup.modules.Scan:CreateCoreTable(unit)
+
+	local partyID = SexyGroup:GetPlayerID(unit)
+	if( not groupData[partyID] ) then
+		totalGroupMembers = totalGroupMembers + 1
+		
+		local userData = SexyGroup.userData[partyID]
+		local playerNote = userData.notes[SexyGroup.playerName]
+		groupData[partyID] = {name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
+	end
+	
+	local isTank, isHealer, isDamage = UnitGroupRolesAssigned(unit)
+	local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
+	local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
+	
+	groupData[partyID].role = role
+	groupData[partyID].roletext = roleText
+end
+
+function History:UNIT_NAME_UPDATE(event, unit)
+	if( queuedUnits[unit] ) then
+		queuedUnits[unit] = nil
+		self:UpdateUnitData(unit)
+		
+		local hasQueue
+		for unit in pairs(queuedUnits) do hasQueue = true; break end
+		if( not hasQueue ) then
+			self:UnregisterEvent("UNIT_NAME_UPDATE")
+		end
+	end
+end
+
+function History:PARTY_MEMBERS_CHANGED(event)
 	if( GetNumPartyMembers() == 0 ) then
 		self.resetGroup = true
+	elseif( GetNumPartyMembers() == MAX_PARTY_MEMBERS and ( not event or select(2, IsInInstance()) == "party" ) ) then
+		if( self.resetGroup ) then
+			groupData = {}
+			
+			self.resetGroup = nil
+			totalGroupMembers = 0
+			instanceName = nil
+		end
+		
+		instanceName = instanceName or GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetRealZoneText()
+		self.haveActiveGroup = true
+		
+		for i=1, GetNumPartyMembers() do
+			self:UpdateUnitData("party" .. i)
+		end
 	end
 end
 
@@ -51,7 +104,6 @@ function History:LFG_COMPLETION_REWARD()
 		SexyGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], name))
 	end
 end
-
 
 local function OnTextChanged(self, event, text)
 	groupData[self:GetUserData("partyID")].comment = text and text ~= "" and text
@@ -160,49 +212,8 @@ function test(num)
 end
 ]]
 
-function History:PLAYER_ROLES_ASSIGNED(event)
-	if( event and GetNumPartyMembers() < 4 or not event and GetNumPartyMembers() == 0 ) then return end
-	
-	if( self.resetGroup ) then
-		groupData = {}
-		
-		self.haveActiveGroup = nil
-		self.resetGroup = nil
-		totalGroupMembers = 0
-		instanceName = nil
-	end
-	
-	if( IsInInstance() ) then
-		instanceName = GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetReaZoneText()
-		
-		for i=1, GetNumPartyMembers() do
-			if( UnitName("party" .. i) ~= UNKNOWN ) then
-				SexyGroup.modules.Scan:CreateCoreTable("party" .. i)
-
-				local partyID = SexyGroup:GetPlayerID("party" .. i)
-				if( not groupData[partyID] ) then
-					totalGroupMembers = totalGroupMembers + 1
-					
-					local userData = SexyGroup.userData[partyID]
-					local playerNote = userData.notes[SexyGroup.playerName]
-					groupData[partyID] = {name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
-				end
-				
-				local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. i)
-				local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
-				local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
-				
-				groupData[partyID].role = role
-				groupData[partyID].roletext = roleText
-			end
-		end
-		
-		self.haveActiveGroup = true
-	end
-end
-
 function History:LogGroup()
-	self:PLAYER_ROLES_ASSIGNED()
+	self:PARTY_MEMBERS_CHANGED()
 	self:InitFrame()
 end
 
