@@ -61,7 +61,7 @@ local function loadOptions()
 						order = 2,
 						type = "range",
 						name = L["Prune basic data (days)"],
-						desc = L["How many days equipment and achievement data should remain in the database before being removed, in days.\n\nComments and ratings will not be removed!"],
+						desc = L["How many days before talents/experience/equipment should be pruned, notes will be kept!\n\nIf the player has no notes or rating on them, all data is removed."],
 						min = 1, max = 30, step = 1,
 					},
 					pruneFull = {
@@ -69,7 +69,7 @@ local function loadOptions()
 						type = "range",
 						name = L["Prune all data (days)"],
 						desc = L["How many days before removing all data on a player. This includes comments and ratings, even your own!"],
-						min = 30, max = 120, step = 1,
+						min = 30, max = 365, step = 1,
 					},
 				},
 			},
@@ -203,7 +203,7 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 			playerID = SexyGroup.playerName
 		end
 
-		local userData = SexyGroup.userData[playerID]
+		local userData = playerID and SexyGroup.userData[playerID]
 		if( userData ) then
 			SexyGroup.modules.Users:LoadData(userData)
 		end
