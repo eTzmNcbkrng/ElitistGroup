@@ -119,8 +119,9 @@ function Summary:UpdateSingle(row)
 		for _, note in pairs(userData.notes) do totalNotes = totalNotes + 1 end
 		
 		-- Player personally left a note on the person
-		if( userData.notes[SexyGroup.playerName] ) then
-			local noteAge = (time() - userData.notes[SexyGroup.playerName].time) / 60
+		local playerNote = userData.notes[SexyGroup.playerName]
+		if( playerNote ) then
+			local noteAge = (time() - playerNote.time) / 60
 			if( noteAge < 60 ) then
 				noteAge = string.format(L["%d minutes"], noteAge)
 			elseif( noteAge < 1440 ) then
@@ -129,8 +130,8 @@ function Summary:UpdateSingle(row)
 				noteAge = string.format(L["%d days"], noteAge / 1440)
 			end
 			
-			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, L["Mouseover for note"])
-			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, userData.notes[SexyGroup.playerName].comment)
+			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["Rated %d of %d"], playerNote.rating, SexyGroup.MAX_RATING))
+			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, playerNote.comment or L["No comment"])
 		-- We haven't, but somebody else has left a note on them
 		elseif( totalNotes > 0 ) then
 			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["%d notes found"], totalNotes))
