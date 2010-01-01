@@ -30,9 +30,9 @@ function Users:LoadData(userData)
 
 	-- Build score as well as figure out their score
 	SexyGroup:DeleteTables(equipmentData, enchantData, gemData)
-	equipmentData, enchantData, gemData = SexyGroup:GetGearSummary(userData)
 
 	if( not userData.pruned ) then
+		equipmentData, enchantData, gemData = SexyGroup:GetGearSummary(userData)
 		frame.pruneInfo:Hide()
 		
 		for _, slot in pairs(frame.gearFrame.equipSlots) do
@@ -97,6 +97,8 @@ function Users:LoadData(userData)
 			equipSlot.disableWrap = true
 		end
 	else
+		equipmentData, gemData, enchantData = nil, nil, nil
+		
 		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
 		frame.pruneInfo:Show()
 	end
@@ -111,21 +113,22 @@ function Users:LoadData(userData)
 		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
 	end
 	
-	local specType, specName, specIcon = SexyGroup:GetPlayerSpec(userData)
-	if( not userData.unspentPoints ) then
-		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-		frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
-	else
-		frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
-		frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SexyGroup.TALENT_ROLES[specType])
-	end
-		
-	self.activePlayerScore = equipmentData.totalScore or 0
+	self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
 	if( not userData.pruned ) then
+		local specType, specName, specIcon = SexyGroup:GetPlayerSpec(userData)
+		if( not userData.unspentPoints ) then
+			frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
+		else
+			frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SexyGroup.TALENT_ROLES[specType])
+		end
+			
 		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
 		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, equipmentData.totalScore, L["score"])
 	else
 		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\INV_Shield_36:16:16:-1:0|t %s", L["Score unavailable"])
+		frame.userFrame.talentInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s", L["Talents unavailable"])
 	end
 		
 	local scanAge = (time() - userData.scanned) / 60
@@ -174,14 +177,16 @@ function Users:LoadData(userData)
 	-- Setup dungeon info
 	-- Find where the players score lets them into at least
 	local lockedScore
-	for i=#(SexyGroup.DUNGEON_DATA), 1, -4 do
-		local score = SexyGroup.DUNGEON_DATA[i - 2]
-		if( lockedScore and lockedScore ~= score ) then
-			self.forceOffset = math.ceil((i + 1) / 4)
-			break
-		elseif( equipmentData.totalScore >= score ) then
-			lockedScore = score
-			self.forceOffset = math.ceil((i + 1) / 4)
+	if( equipmentData ) then
+		for i=#(SexyGroup.DUNGEON_DATA), 1, -4 do
+			local score = SexyGroup.DUNGEON_DATA[i - 2]
+			if( lockedScore and lockedScore ~= score ) then
+				self.forceOffset = math.ceil((i + 1) / 4)
+				break
+			elseif( equipmentData.totalScore >= score ) then
+				lockedScore = score
+				self.forceOffset = math.ceil((i + 1) / 4)
+			end
 		end
 	end
 	
@@ -243,6 +248,7 @@ function Users:UpdateTabPage()
 	self.frame.userTabFrame.notesButton:SetFormattedText(L["Notes (%d)"], self.activeDataNotes)
 	if( self.activeData.pruned ) then
 		self.frame.userTabFrame.selectedTab = "notes"
+		self.frame.userTabFrame.notesButton:Enable()
 		self.frame.userTabFrame.achievementsButton:Disable()
 	elseif( self.activeDataNotes == 0 ) then
 		self.frame.userTabFrame.selectedTab = "achievements"
