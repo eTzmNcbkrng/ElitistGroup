@@ -10,6 +10,7 @@ local totalGroupMembers = 0
 function History:OnInitialize()
 	self:RegisterEvent("LFG_COMPLETION_REWARD")
 	self:RegisterEvent("PARTY_MEMBERS_CHANGED")
+	self:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 
 	SpecialFrame = CreateFrame("Frame", "SexyGroupHistoryHider")
 	SpecialFrame:SetScript("OnHide", function()
@@ -159,21 +160,23 @@ function test(num)
 end
 ]]
 
-function History:LogGroup()
-	if( GetNumPartyMembers() > 0 ) then
-		if( self.resetGroup ) then
-			groupData = {}
-			
-			self.haveActiveGroup = nil
-			self.resetGroup = nil
-			totalGroupMembers = 0
-			instanceName = nil
-		end
+function History:PLAYER_ROLES_ASSIGNED(event)
+	if( event and GetNumPartyMembers() < 4 or not event and GetNumPartyMembers() == 0 ) then return end
+	
+	if( self.resetGroup ) then
+		groupData = {}
 		
-		if( IsInInstance() ) then
-			instanceName = GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetReaZoneText()
-			
-			for i=1, GetNumPartyMembers() do
+		self.haveActiveGroup = nil
+		self.resetGroup = nil
+		totalGroupMembers = 0
+		instanceName = nil
+	end
+	
+	if( IsInInstance() ) then
+		instanceName = GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetReaZoneText()
+		
+		for i=1, GetNumPartyMembers() do
+			if( UnitName("party" .. i) ~= UNKNOWN ) then
 				SexyGroup.modules.Scan:CreateCoreTable("party" .. i)
 
 				local partyID = SexyGroup:GetPlayerID("party" .. i)
@@ -181,18 +184,25 @@ function History:LogGroup()
 					totalGroupMembers = totalGroupMembers + 1
 					
 					local userData = SexyGroup.userData[partyID]
-					local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. i)
-					local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
-					local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
 					local playerNote = userData.notes[SexyGroup.playerName]
-					groupData[partyID] = {role = role, roleText = roleText, name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
+					groupData[partyID] = {name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
 				end
+				
+				local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. i)
+				local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
+				local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
+				
+				groupData[partyID].role = role
+				groupData[partyID].roletext = roleText
 			end
-			
-			self.haveActiveGroup = true
 		end
-	end
 		
+		self.haveActiveGroup = true
+	end
+end
+
+function History:LogGroup()
+	self:PLAYER_ROLES_ASSIGNED()
 	self:InitFrame()
 end
 
