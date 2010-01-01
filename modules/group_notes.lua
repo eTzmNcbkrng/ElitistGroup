@@ -123,7 +123,7 @@ local function OnHide(self)
 		local note = SexyGroup.userData[partyID].notes[SexyGroup.playerName] or {}
 		note.role = note.role and bit.bor(note.role, data.role) or data.role
 		note.rating = data.rating
-		note.comment = SexyGroup:SafeEncode(data.comment)
+		note.comment = SexyGroup:SafeEncode(data.comment and data.comment ~= "" and data.comment)
 		note.time = time()
 		
 		SexyGroup.userData[partyID].notes[SexyGroup.playerName] = note
