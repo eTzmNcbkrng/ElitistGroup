@@ -9,7 +9,8 @@ SexyGroup.MAX_LINK_LENGTH = 80
 SexyGroup.MAX_NOTE_LENGTH = 256
 
 local MAX_QUEUE_RETRIES = 20
-local QUEUE_RETRY_TIME = 3
+local QUEUE_RETRY_TIME = 2
+local INSPECTION_TIMEOUT = 2
 local GEAR_CHECK_INTERVAL = 0.20
 local pending, pendingGear, inspectQueue, queueRetries = {}, {}, {}, {}
 
@@ -42,6 +43,10 @@ function Scan:OnInitialize()
 		end
 	end)
 	self.frame:Hide()
+end
+
+function Scan:IsInspectPending()
+	return pending.activeInspect and pending.expirationTime and pending.expirationTime > GetTime()
 end
 
 function Scan:QueueAdd(unit)
@@ -103,7 +108,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 
 	if( CanInspect(unit) ) then
 		pending.activeInspect = true
-		pending.expirationTime = GetTime() + 3
+		pending.expirationTime = GetTime() + INSPECTION_TIMEOUT
 	end
 end)
 
@@ -111,7 +116,7 @@ hooksecurefunc("SetAchievementComparisonUnit", function(unit) pending.achievemen
 hooksecurefunc("ClearAchievementComparisonUnit", function(unit) pending.achievements = nil end)
 
 function Scan:CheckInspectGear()
-	if( not pending.playerID or UnitGUID(pending.unit) ~= pending.guid ) then
+	if( not pending.playerID or pending.totalChecks >= 25 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
 		return
 	end
@@ -129,7 +134,7 @@ function Scan:CheckInspectGear()
 		end
 	end
 	
-	if( pending.totalChecks >= 14 or totalPending == 0 ) then
+	if( totalPending == 0 ) then
 		self.frame.gearTimer = nil
 		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
 	end
