@@ -165,6 +165,9 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 		if( GetNumPartyMembers() == 0 ) then
 			SexyGroup:Print(L["You must be in a party to use this."])
 			return
+		elseif( select(2, IsInInstance()) ~= "party" ) then
+			SexyGroup:Print(L["You must be inside a raid or party instance to use this feature."])
+			return
 		end
 	
 		SexyGroup.modules.Summary:PLAYER_ROLES_ASSIGNED()
@@ -185,9 +188,25 @@ SlashCmdList["SEXYGROUP"] = function(msg)
 	
 	-- Show the players data
 	if( cmd == "" ) then
-		local unit = CanInspect("target") and UnitIsFriend("target", "player") and "target" or "player"
-		SexyGroup.modules.Scan:InspectUnit(unit)
-		SexyGroup.modules.Users:LoadData(SexyGroup.userData[SexyGroup:GetPlayerID(unit)])
+		local playerID
+		if( UnitExists("target") and UnitIsFriend("target", "player") ) then
+			if( CanInspect("target", true) ) then
+				playerID = SexyGroup:GetPlayerID("target")
+				if( not SexyGroup.modules.Scan:IsInspectPending() ) then
+					SexyGroup.modules.Scan:InspectUnit("target")
+				elseif( not SexyGroup.userData[playerID] ) then
+					SexyGroup:Print(L["An inspection is currently pending, please wait a second and try again."])
+				end
+			end
+		else
+			SexyGroup.modules.Scan:InspectUnit("player")
+			playerID = SexyGroup.playerName
+		end
+
+		local userData = SexyGroup.userData[playerID]
+		if( userData ) then
+			SexyGroup.modules.Users:LoadData(userData)
+		end
 		return
 	end
 	
