@@ -363,6 +363,8 @@ local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}")
 				["%["] = "\\" .. string.byte("["), ["%]"] = "\\" .. string.byte("]"),
 				["@"] = "\\" .. string.byte("@")}
 function SexyGroup:SafeEncode(text)
+	if( not text ) then return text end
+	
 	for find, replace in pairs(map) do
 		text = string.gsub(text, find, replace)
 	end
