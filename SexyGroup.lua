@@ -37,36 +37,7 @@ function SexyGroup:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 	
 	self.playerName = string.format("%s-%s", UnitName("player"), GetRealmName())
-	self.modules.Sync:Setup()
-	
-	-- Data is old enough that we want to remove extra data to save space
-	if( self.db.profile.database.pruneBasic > 0 or self.db.database.pruneFull > 0 ) then
-		local pruneBasic = time() - (self.db.profile.database.pruneBasic * 86400)
-		local pruneFull = time() - (self.db.profile.database.pruneFull * 86400)
-		
-		for name, modified in pairs(self.db.faction.lastModified) do
-			-- Basic pruning, we wipe out any volatile data
-			if( self.db.profile.database.pruneBasic > 0 and modified <= pruneBasic ) then
-				self.db.faction.lastModified[name] = time()
-				
-				local name, server, level, classToken, notes = self.userData[name].name, self.userData[name].server, self.userData[name].level, self.userData[name].classToken, self.userData[name].notes
-				table.wipe(self.userData[name])
-				self.userData[name].name = name
-				self.userData[name].server = server
-				self.userData[name].level = level
-				self.userData[name].classToken = classToken
-				self.userData[name].notes = notes
-				self.userData[name].pruned = true
-			-- Full pruning, all data gets removed
-			elseif( self.db.profile.database.pruneFull > 0 and modified <= pruneFull ) then
-				self.db.faction.lastModified[name] = nil
-				self.db.faction.users[name] = nil
-				self.writeQueue[name] = nil
-				self.userData[name] = nil
-			end
-		end
-	end
-		
+
 	-- God bless metatables
 	self.writeQueue = {}
 	self.userData = setmetatable({}, {
@@ -89,7 +60,55 @@ function SexyGroup:OnInitialize()
 			return tbl[name]
 		end
 	})
-	
+		
+	-- Data is old enough that we want to remove extra data to save space
+	if( self.db.profile.database.pruneBasic > 0 or self.db.database.pruneFull > 0 ) then
+		local pruneBasic = time() - (self.db.profile.database.pruneBasic * 86400)
+		local pruneFull = time() - (self.db.profile.database.pruneFull * 86400)
+		
+		for name, modified in pairs(self.db.faction.lastModified) do
+			-- Shouldn't happen, but just in case their is a modified field set but not an actual data entry
+			if( not self.db.faction.users[name] ) then
+				self.db.faction.lastModified[name] = nil
+				
+			-- Basic pruning, we wipe out any volatile data
+			elseif( self.db.profile.database.pruneBasic > 0 and modified <= pruneBasic ) then
+				-- If a player has note data on them, then will preserve their entire record, if they don't will just wipe everything out
+				local hasNotes
+				for note in pairs(self.userData[name].notes) do hasNotes = true break end
+				
+				if( hasNotes ) then
+					local userData = self.userData[name]
+					userData.talentTree1 = nil
+					userData.talentTree2 = nil
+					userData.talentTree3 = nil
+					userData.unspentPoints = nil
+					userData.specRole = nil
+					
+					table.wipe(userData.equipment)
+					table.wipe(userData.achievements)
+					
+					userData.pruned = true
+
+					self.db.faction.lastModified[name] = time()
+					self.writeQueue[name] = true
+				else
+					self.db.faction.lastModified[name] = nil
+					self.db.faction.users[name] = nil
+					self.writeQueue[name] = nil
+					self.userData[name] = nil
+				end
+
+			-- Full pruning, all data gets removed
+			elseif( self.db.profile.database.pruneFull > 0 and modified <= pruneFull ) then
+				self.db.faction.lastModified[name] = nil
+				self.db.faction.users[name] = nil
+				self.writeQueue[name] = nil
+				self.userData[name] = nil
+			end
+		end
+	end
+		
 	if( not SexyGroup.db.profile.helped ) then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
 			SexyGroup.db.profile.helped = true
@@ -97,6 +116,8 @@ function SexyGroup:OnInitialize()
 			SexyGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		end)
 	end
+
+	self.modules.Sync:Setup()
 end
 
 function SexyGroup:GetItemLink(link)
