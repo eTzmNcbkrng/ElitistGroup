@@ -187,18 +187,22 @@ function Summary:UpdateSingle(row)
 		if( not enchantData.noData ) then
 			row.enchantInfo:SetFormattedText("|T%s:14:14|t %s", enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, L["Enchants"])
 			row.enchantInfo.tooltip = enchantTooltip
+			row.enchantInfo.disableWrap = not enchantData.noData
 		else
 			row.enchantInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
 			row.enchantInfo.tooltip = L["Enchant information is still loading, you need to be within inspection range for data to become available."]
+			row.enchantInfo.disableWrap = nil
 		end
 
 		-- Build gems
 		if( not gemData.noData ) then
 			row.gemInfo:SetFormattedText("|T%s:14:14|t %s", gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, L["Gems"])
 			row.gemInfo.tooltip = gemTooltip
+			row.gemInfo.disableWrap = not gemData.noData
 		else
 			row.gemInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
-			row.gemInfo.tooltip = L["Enchant information is still loading, you need to be within inspection range for data to become available."]
+			row.gemInfo.tooltip = L["Gem information is still loading, you need to be within inspection range for data to become available."]
+			row.gemInfo.disableWrap = nil
 		end
 
 		SexyGroup:DeleteTables(equipmentData, enchantData, gemData)
