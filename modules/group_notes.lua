@@ -85,8 +85,6 @@ local function OnHide(self)
 	AceGUI:Release(self)
 end
 
-groupTest = {}
-
 function History:InitFrame()
 	local perRow = totalGroupMembers <= 4 and 2 or 3
 	
