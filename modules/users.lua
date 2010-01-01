@@ -129,7 +129,7 @@ function Users:LoadData(userData)
 	end
 		
 	local scanAge = (time() - userData.scanned) / 60
-	local scanIcon = scanAge >= 5 and 37 or scanAge >= 2 and 39 or scanAge >= 1 and 38 or 41
+	local scanIcon = scanAge >= 1440 and 37 or scanAge >= 60 and 39 or scanAge >= 30 and 38 or 41
 	
 	if( scanAge <= 5 ) then
 		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, L["Just now"])
@@ -360,10 +360,14 @@ function Users:UpdateNoteInfo()
 			local percent = (note.rating - 1) / (SexyGroup.MAX_RATING - 1)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+			local roles = ""
+			if( bit.band(note.role, SexyGroup.ROLE_HEALER) > 0 ) then roles = HEALER end
+			if( bit.band(note.role, SexyGroup.ROLE_TANK) > 0 ) then roles = roles .. ", " .. TANK end
+			if( bit.band(note.role, SexyGroup.ROLE_DAMAGE) > 0 ) then roles = roles .. ", " .. DAMAGE end
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
-			row.commentText:SetText(note.comment)
-			row.tooltip = string.format(L["%s on %s wrote:\n|cffffffff%s|r"], from, date("%m/%d/%Y", note.time), note.comment)
+			row.commentText:SetText(note.comment or L["No comment"])
+			row.tooltip = string.format(L["Seen as %s - %s:\n|cffffffff%s|r"], string.trim(string.gsub(roles, "^, ", "")), date("%m/%d/%Y", note.time), note.comment or L["No comment"])
 			row:SetWidth(rowWidth)
 			row:Show()
 			
