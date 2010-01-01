@@ -11,6 +11,7 @@ SexyGroup.L = {
 	["%s - %s item"] = "%s - %s item",
 	["%s - %s, level %s %s."] = "%s - %s, level %s %s.",
 	["%s - %s, level %s, unknown class."] = "%s - %s, level %s, unknown class.",
+	["%s - Missing belt buckle or gem"] = "%s - Missing belt buckle or gem",
 	["%s - Missing gems"] = "%s - Missing gems",
 	["%s - Unenchanted"] = "%s - Unenchanted",
 	["%s - |cffffffff%s|r enchant"] = "%s - |cffffffff%s|r enchant",
