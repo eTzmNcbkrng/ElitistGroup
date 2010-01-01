@@ -69,14 +69,14 @@ function Summary:Setup()
 end
 
 function Summary:UNIT_NAME_UPDATE(event, unit)
-	if( unitToRow[unit] ) then
+	if( unitToRow[unit] and unitToRow[unit]:IsVisible() ) then
 		self:UpdateSingle(unitToRow[unit])
 	end
 end
 
 function Summary:SG_DATA_UPDATED(event, type, name)
 	for unit, row in pairs(unitToRow) do
-		if( SexyGroup:GetPlayerID(unit) == name ) then
+		if( row:IsVisible() and SexyGroup:GetPlayerID(unit) == name ) then
 			self:UpdateSingle(row)
 		end
 	end
