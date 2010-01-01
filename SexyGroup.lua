@@ -360,6 +360,7 @@ function SexyGroup:GetGearSummary(userData)
 	
 	-- Belt buckles are a special case, you cannot detect them through item links at all or tooltip scanning
 	-- what has to be done is scan the base item links sockets
+	--[[
 	local itemLink = userData.equipment[WAIST_SLOT]
 	if( itemLink and userData.level >= 70 ) then
 		local baseSocketCount = self.EMPTY_GEM_SLOTS[self:GetBaseItemLink(itemLink)]
@@ -374,6 +375,7 @@ function SexyGroup:GetGearSummary(userData)
 			gems.totalBad = gems.totalBad + 1
 		end
 	end
+	]]
 	
 	-- Try and account for the fact that the inspection can fail to find gems, so if we find 0 gems used will give a warning
 	if( gems.total > 0 and gems.totalUsed == 0 ) then
