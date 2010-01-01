@@ -18,6 +18,8 @@ end
 -- My theory with this event, and from looking is it seems to only fire when you are using the LFD system
 -- it also seems to only fire once you have data. If your group changes, in theory! It will also refire this event once data is available because someone left etc
 function Summary:PLAYER_ROLES_ASSIGNED()
+	if( select(2, IsInInstance()) ~= "party" ) then return end
+	
 	local groupID, notes = ""
 	for i=1, GetNumPartyMembers() do
 		local guid = UnitGUID("party" .. i)
