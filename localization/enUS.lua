@@ -87,6 +87,7 @@ SexyGroup.L = {
 	["Frost"] = "Frost",
 	["Fury"] = "Fury",
 	["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /sexygroup and change the value."] = "Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /sexygroup and change the value.",
+	["Gem information is still loading, you need to be within inspection range for data to become available."] = "Gem information is still loading, you need to be within inspection range for data to become available.",
 	["Gems"] = "Gems",
 	["Gems: |cffffffff%d bad|r"] = "Gems: |cffffffff%d bad|r",
 	["Gems: |cffffffffAll good|r"] = "Gems: |cffffffffAll good|r",
