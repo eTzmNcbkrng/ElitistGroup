@@ -188,7 +188,9 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 		
 		for i=1, #(gemData), 2 do
 			local fullItemLink, arg = gemData[i], gemData[i + 1]
-			if( arg == "missing" ) then
+			if( arg == "buckle" ) then
+				table.insert(tempList, string.format(L["%s - Missing belt buckle or gem"], fullItemLink))
+			elseif( arg == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Missing gems"], fullItemLink))
 			elseif( type(arg) == "string" ) then
 				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
@@ -230,7 +232,7 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 end
 
 
-local MAINHAND_SLOT, OFFHAND_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot")
+local MAINHAND_SLOT, OFFHAND_SLOT, WAIST_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot"), GetInventorySlotInfo("WaistSlot")
 function SexyGroup:GetGearSummary(userData)
 	local spec = self:GetPlayerSpec(userData)
 	local validSpecTypes = self.VALID_SPECTYPES[spec]
@@ -330,23 +332,35 @@ function SexyGroup:GetGearSummary(userData)
 				table.insert(gems, fullItemLink)
 				table.insert(gems, "missing")
 				gems.pass = nil
+				gems.totalBad = gems.totalBad + 1
 			end
+		end
+	end
+	
+	-- Belt buckles are a special case, you cannot detect them through item links at all or tooltip scanning
+	-- what has to be done is scan the base item links sockets
+	local itemLink = userData.equipment[WAIST_SLOT]
+	if( itemLink and userData.level >= 70 ) then
+		local baseSocketCount = self.EMPTY_GEM_SLOTS[self:GetBaseItemLink(itemLink)]
+		local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
+		local totalSockets = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
+		
+		-- If the base empty socket count and the total active socket count is anything except -1, they are missing a belt buckle
+		if( totalSockets >= baseSocketCount and (baseSocketCount - totalSockets) ~= -1 ) then
+			table.insert(gems, (select(2, GetItemInfo(itemLink))))
+			table.insert(gems, "buckle")
+			gems.pass = nil
+			gems.totalBad = gems.totalBad + 1
 		end
 	end
 	
 	-- Try and account for the fact that the inspection can fail to find gems, so if we find 0 gems used will give a warning
 	if( gems.total > 0 and gems.totalUsed == 0 ) then
 		gems.noData = true
-	elseif( gems.totalUsed < gems.total ) then
-		gems.pass = nil
 	end
 	
 	if( enchants.total > 0 and enchants.totalUsed == 0 ) then
 		enchants.noData = true
-	end
-	
-	if( enchants.totalUsed < enchants.total ) then
-		enchants.pass = nil
 	end
 	
 	if( equipment.totalEquipped == 0 ) then
