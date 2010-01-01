@@ -1,10 +1,41 @@
 local SexyGroup = select(2, ...)
-local History = SexyGroup:NewModule("GroupHistory", "AceEvent-3.0")
+local History = SexyGroup:NewModule("History", "AceEvent-3.0")
 local L = SexyGroup.L
 
 local AceGUI = LibStub("AceGUI-3.0")
-local surveyFrame, SpecialFrame, totalPartyMembers, instanceName, wasAutoPopped
-local groupRatings, groupNotes, groupList = {}, {}, {}
+local surveyFrame, SpecialFrame, instanceName, wasAutoPopped
+local groupData = {}
+local totalGroupMembers = 0
+
+function History:OnInitialize()
+	self:RegisterEvent("LFG_COMPLETION_REWARD")
+	self:RegisterEvent("PARTY_MEMBERS_CHANGED")
+
+	SpecialFrame = CreateFrame("Frame", "SexyGroupHistoryHider")
+	SpecialFrame:SetScript("OnHide", function()
+		if( surveyFrame ) then
+			surveyFrame:Hide()
+		end
+	end)
+
+	table.insert(UISpecialFrames, "SexyGroupHistoryHider")
+	
+	SLASH_SEXYGROUPRATE1 = "/rate"
+	SlashCmdList["SEXYGROUPRATE"] = function(msg, editbox)
+		if( GetNumPartyMembers() == 0 and not self.haveActiveGroup ) then
+			SexyGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
+			return
+		end
+		
+		History:LogGroup()
+	end	
+end
+
+function History:PARTY_MEMBERS_CHANGED()
+	if( GetNumPartyMembers() == 0 ) then
+		self.resetGroup = true
+	end
+end
 
 function History:LFG_COMPLETION_REWARD()
 	if( SexyGroup.db.profile.general.autoPopup ) then
@@ -20,102 +51,78 @@ function History:LFG_COMPLETION_REWARD()
 	end
 end
 
-function History:OnInitialize()
-	self:RegisterEvent("LFG_COMPLETION_REWARD")
-
-	SpecialFrame = CreateFrame("Frame", "SexyGroupHistoryHider")
-	SpecialFrame:SetScript("OnHide", function()
-		if( surveyFrame ) then
-			surveyFrame:Hide()
-		end
-	end)
-
-	table.insert(UISpecialFrames, "SexyGroupHistoryHider")
-	
-	SLASH_SEXYGROUPRATE1 = "/rate"
-	SlashCmdList["SEXYGROUPRATE"] = function(msg, editbox)
-		if( GetNumPartyMembers() == 0 and not self.activeGroupID ) then
-			SexyGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
-			return
-		end
-		
-		History:LogGroup()
-	end	
-end
 
 local function OnTextChanged(self, event, text)
-	groupNotes[self:GetUserData("partyID")] = text
+	groupData[self:GetUserData("partyID")].comment = text and text ~= "" and text
 end
 
 local function OnValueChanged(self, event, value)
-	groupRatings[self:GetUserData("partyID")] = value
+	groupData[self:GetUserData("partyID")].rating = value
 end
 			
 local function OnHide(self)
-	local total, noted = 0, 0
-	for partyID, data in pairs(groupList) do
-		total = total + 1
-
-		if( groupRatings[partyID] and groupNotes[partyID] ) then
-			local note = SexyGroup.userData[partyID].notes[SexyGroup.playerName] or {}
-			note.role = note.role and bit.bor(note.role, data.role) or data.role
-			note.rating = groupRatings[partyID]
-			note.comment = SexyGroup:SafeEncode(groupNotes[partyID])
-			note.time = time()
-			
-			SexyGroup.userData[partyID].notes[SexyGroup.playerName] = note
-			
-			noted = noted + 1
+	local missing = 0
+	for partyID, data in pairs(groupData) do
+		if( not data.comment ) then
+			missing = missing + 1
 		end
+
+		local note = SexyGroup.userData[partyID].notes[SexyGroup.playerName] or {}
+		note.role = note.role and bit.bor(note.role, data.role) or data.role
+		note.rating = data.rating
+		note.comment = SexyGroup:SafeEncode(data.comment)
+		note.time = time()
+		
+		SexyGroup.userData[partyID].notes[SexyGroup.playerName] = note
 	end
 	
 	-- Remind people to rate their group if they have it on auto popup that they didn't rate everyone
-	if( total > 0 and noted < total and wasAutoPopped ) then
-		SexyGroup:Print(L["You didn't finish rating your group, type /rate to finish rating them."])
+	if( missing > 0 and wasAutoPopped ) then
+		SexyGroup:Print(string.format(L["Defaulting to no comment on %d players, type /rate to set a specific comment."], missing))
 	end
 	
 	surveyFrame = nil
 	AceGUI:Release(self)
 end
 
+groupTest = {}
+
 function History:InitFrame()
+	local perRow = totalGroupMembers <= 4 and 2 or 3
+	
 	surveyFrame = AceGUI:Create("Frame")	
 	surveyFrame:SetCallback("OnClose", OnHide)
-	surveyFrame:SetTitle(L["Rate This Group"])
+	surveyFrame:SetTitle("Sexy Group")
 	surveyFrame:SetStatusText("")
 	surveyFrame:SetLayout("Flow")
-	surveyFrame:SetWidth(495)
-	surveyFrame:SetHeight(245 + (totalPartyMembers > 2 and 155 or 0))
+	surveyFrame:SetWidth(35 + (perRow * 230))
+	surveyFrame:SetHeight(90 + (math.ceil(totalGroupMembers / perRow) * 130))
+	surveyFrame:SetStatusText(string.format(L["Instance: %s"], instanceName or UNKNOWN))
 	surveyFrame:Show()
 
 	-- Be do be do be dooooo
 	SpecialFrame:Show()
-	PlaySoundFile([[Interface\AddOns\SexyGroup\question.mp3]])
+	PlaySoundFile("Interface\\AddOns\\SexyGroup\\question.mp3")
 
 	local header = AceGUI:Create("Heading")
-	header:SetText(L["Rate and make notes on the players in your group."])
+	header:SetText(L["Rate and comment on the players in your group."])
 	header.width = "fill"
 	surveyFrame:AddChild(header)
 	
-	for partyID, data in pairs(groupList) do
+	for partyID, data in pairs(groupData) do
 		local group = AceGUI:Create("InlineGroup")
-		group:SetWidth(230)			
+		group:SetWidth(230)		
 		
-		local label = AceGUI:Create("Label")
-		label:SetWidth(300)
-		label:SetText(data.name)
-		if( data.classToken ) then
-			label:SetImage("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes", CLASS_ICON_TCOORDS[data.classToken][1], CLASS_ICON_TCOORDS[data.classToken][2], CLASS_ICON_TCOORDS[data.classToken][3], CLASS_ICON_TCOORDS[data.classToken][4])
-			label:SetImageSize(24, 24)
+		local classColor = RAID_CLASS_COLORS[data.classToken]
+		if( classColor ) then
+			group:SetTitle(string.format("|cff%02x%02x%02x%s|r", classColor.r * 255, classColor.g * 255, classColor.b * 255, data.name))
 		else
-			label:SetImage("")
-		end	
-		label:SetFontObject(SystemFont_Huge1)
-		group:AddChild(label)
+			group:SetTitle(string.format("|cffffffff%s|r", data.name))
+		end
 		
 		local rating = AceGUI:Create("Slider")
 		rating:SetSliderValues(1, SexyGroup.MAX_RATING, 1)
-		rating:SetValue(groupRatings[partyID] or 3)
+		rating:SetValue(groupData[partyID].rating)
 		rating:SetCallback("OnValueChanged", OnValueChanged)
 		rating:SetUserData("partyID", partyID)
 		rating:SetLabel("")
@@ -123,49 +130,71 @@ function History:InitFrame()
 		rating.hightext:SetText(L["Great"])
 		group:AddChild(rating)
 
-		local notes = AceGUI:Create("EditBox")
-		notes:SetLabel(L["Notes"])
-		notes:SetText(groupNotes[partyID] or string.format("%s - ", data.roleText))
-		notes:SetCallback("OnTextChanged", OnTextChanged)
-		notes:SetUserData("partyID", partyID)
-		notes.showbutton = nil
-		group:AddChild(notes)
+		local comment = AceGUI:Create("EditBox")
+		comment:SetLabel(L["Comment"])
+		comment:SetText(groupData[partyID].comment or "")
+		comment:SetCallback("OnTextChanged", OnTextChanged)
+		comment:SetUserData("partyID", partyID)
+		comment.showbutton = nil
+		group:AddChild(comment)
+		
 		
 		surveyFrame:AddChild(group)
 	end
-	
-	surveyFrame:SetStatusText((L["Instance run: %s"]):format(instanceName or UNKNOWN))
 end
 
-function History:LogGroup()
-	local groupID = ""
-	for i=1, GetNumPartyMembers() do groupID = groupID .. UnitGUID("party" .. i) end
-	if( groupID == "" and not self.activeGroupID ) then return end
-	
-	if( groupID ~= "" and ( not self.activeGroupID or self.activeGroupID ~= groupID ) ) then
-		table.wipe(groupList)
-		table.wipe(groupNotes)
-		table.wipe(groupRatings)
-		
-		instanceName = GetInstanceDifficulty() > 1 and (HEROIC_PREFIX):format(GetRealZoneText()) or GetRealZoneText()
-		totalPartyMembers = GetNumPartyMembers()
-		for i=1, GetNumPartyMembers() do
-			SexyGroup.modules.Scan:CreateCoreTable("party" .. i)
-			
-			local name, server = UnitName("party" .. i)
-			local partyID = string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
-			local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. i)
-			local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
-			local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
-			local classToken = select(2, UnitClass("party" .. i))
-			
-			groupList[partyID] = {role = role, roleText = roleText, name = name, classToken = classToken}
-			groupRatings[partyID] = 3
-		end
-
-		self.activeGroupID = groupID
+--[[
+function test(num)
+	if( surveyFrame ) then
+		AceGUI:Release(surveyFrame)
 	end
 	
+	GetNumPartyMembers = function() return num end
+	table.wipe(groupData)
+	for i=1, GetNumPartyMembers() do
+		groupData["Test" .. i .. "-Mal'Ganis"] = {role = SexyGroup.ROLE_TANK, roleText = "Tank", name = "Test" .. i, classToken = "DRUID", rating = 3}
+	end
+	
+	instanceName = "Test"
+	totalGroupMembers = GetNumPartyMembers()
+	History:InitFrame()
+end
+]]
+
+function History:LogGroup()
+	if( GetNumPartyMembers() > 0 ) then
+		if( self.resetGroup ) then
+			groupData = {}
+			
+			self.haveActiveGroup = nil
+			self.resetGroup = nil
+			totalGroupMembers = 0
+			instanceName = nil
+		end
+		
+		if( IsInInstance() ) then
+			instanceName = GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetReaZoneText()
+			
+			for i=1, GetNumPartyMembers() do
+				SexyGroup.modules.Scan:CreateCoreTable("party" .. i)
+
+				local partyID = SexyGroup:GetPlayerID("party" .. i)
+				if( not groupData[partyID] ) then
+					totalGroupMembers = totalGroupMembers + 1
+					
+					local userData = SexyGroup.userData[partyID]
+					local isTank, isHealer, isDamage = UnitGroupRolesAssigned("party" .. i)
+					local role = bit.bor(isTank and SexyGroup.ROLE_TANK or 0, isHealer and SexyGroup.ROLE_HEALER or 0, isDamage and SexyGroup.ROLE_DAMAGE or 0)
+					local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
+					local playerNote = userData.notes[SexyGroup.playerName]
+					groupData[partyID] = {role = role, roleText = roleText, name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
+				end
+			end
+			
+			self.haveActiveGroup = true
+		end
+	end
+		
 	self:InitFrame()
 end
 
