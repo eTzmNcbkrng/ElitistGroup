@@ -32,16 +32,11 @@ local function parseText(text)
 	return string.lower(text)
 end
 
-local ARMOR_MATCH = parseText(ARMOR_TEMPLATE)
 local ITEM_SPELL_TRIGGER_ONEQUIP = parseText(ITEM_SPELL_TRIGGER_ONEQUIP)
 local ITEM_SPELL_TRIGGER_ONPROC = parseText(ITEM_SPELL_TRIGGER_ONPROC)
 local ITEM_SPELL_TRIGGER_ONUSE = parseText(ITEM_SPELL_TRIGGER_ONUSE)
-local ITEM_SET_BONUS = parseText(ITEM_SET_BONUS)
-local ITEM_HEROIC = parseText(ITEM_HEROIC)
-local ITEM_HEROIC_EPIC = parseText(ITEM_HEROIC_EPIC)
-local ITEM_REQUIRES_ENGINEERING = string.lower(string.format(ENCHANT_ITEM_REQ_SKILL, (GetSpellInfo(4036))))
-local ITEM_ONEQUIP = "^" .. string.lower(ITEM_SPELL_TRIGGER_ONEQUIP)
-local RESILIENCE_MATCH = string.lower(ITEM_MOD_RESILIENCE_RATING_SHORT)
+local ITEM_ONEQUIP = "^" .. parseText(ITEM_SPELL_TRIGGER_ONEQUIP)
+local RESILIENCE_MATCH = parseText(ITEM_MOD_RESILIENCE_RATING_SHORT)
 
 -- Yay metatable caching, can only get gem totals via tooltip scanning, GetItemStats won't return a prismatic socketed item
 emptyGemMetaTable = {
@@ -125,33 +120,30 @@ enchantMetaTable = {
 			return type
 		end
 		
-		-- Sadly, we cannot find enchant info without tooltip scanning, so we have to find the first green text that is not armor :(
+		-- The reason for using a hardcoded item is it gives us a more consistent set of data to work off of
+		-- this means we can rely on the location of an enchant because we know 100% where they will be located.
+		-- I would actually rather use something like Worn Dagger, or another piece of gear that has zero green text on it except gems
+		-- but I'm worried there might be issues if the item is not immediately available due to not being cached, whereas Hearthstone is always available.
 		tooltip:SetOwner(UIParent, "ANCHOR_NONE")
-		tooltip:SetHyperlink(link)
+		tooltip:SetHyperlink(string.format("item:6948:%d", enchantID))
 
-		-- The first check is we hit the row with an icon anchored to it, this is where gems start
-		local stopAt = SexyGroupTooltipTexture1:IsVisible() and select(2, SexyGroupTooltipTexture1:GetPoint())
 		local enchantText
 		for i=1, tooltip:NumLines() do
-			local row = _G["SexyGroupTooltipTextLeft" .. i]
-			if( row == stopAt ) then break end
+			local text = string.lower(_G["SexyGroupTooltipTextLeft" .. i]:GetText())
+			local r, g, b = _G["SexyGroupTooltipTextLeft" .. i]:GetTextColor()
+									
+			-- If we don't find the enchant up top, but we know one exists then it's an engineering enchant, which means the next line will have the enchant in it
+			if( string.match(text, ITEM_SPELL_TRIGGER_ONUSE) ) then
+				if( tooltip:NumLines() > i ) then
+					enchantText = string.lower(_G["SexyGroupTooltipTextLeft" .. i + 1]:GetText())
+				end
 
-			-- Don't scan anything with right text, this fixes issues where "Main-Hand" is red for the weapon type line
-			if( not _G["SexyGroupTooltipTextRight" .. i]:GetText() ) then
-				local text = string.lower(row:GetText())
-				local r, g, b = row:GetTextColor()
-										
-				-- If we hit these we're out of stuff
-				if( string.match(text, ITEM_SPELL_TRIGGER_ONEQUIP) or string.match(text, ITEM_SPELL_TRIGGER_ONPROC) or string.match(text, ITEM_SPELL_TRIGGER_ONUSE) or string.match(text, ITEM_SET_BONUS) ) then
-					break
-				-- Should be a valid line, or at least god I hope it is
-				elseif( ( r >= 0.97 and g < 0.15 and b < 0.15 ) or ( r == 0 and g >= 0.97 and b == 0 ) ) then
-					if( not string.match(text, ARMOR_MATCH) and text ~= ITEM_HEROIC_EPIC and text ~= ITEM_HEROIC ) then
-						enchantText = text
-						break
-					end
-				end	
-			end
+				break
+			-- First green text we find that isn't the Use: is the enchant
+			elseif( ( r >= 0.97 and g < 0.15 and b < 0.15 ) or ( r == 0 and g >= 0.97 and b == 0 ) ) then
+				enchantText = text
+				break
+			end	
 		end
 		
 		if( not enchantText ) then
