@@ -3,46 +3,59 @@ local L = SexyGroup.L
 
 -- normal/heroic is for separating the dungeons like TotC/TotGC, hard will be for dungeons like Ulduar or Sartharion with hard modes on heroic
 SexyGroup.DUNGEON_TYPES = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
-local MOD = 0.87
+
 SexyGroup.DUNGEON_DATA = {
-	L["T7 Dungeons"],					200 * MOD, 5,	"heroic",
-	L["Sartharion"],					200 * MOD, 10,	"normal",
-	L["Naxxramas"],						200 * MOD, 10,	"normal",
-	L["Archavon, Vault"],				200 * MOD, 10,	"normal",
-	L["Naxxramas"],						213 * MOD, 25,	"normal",
-	L["Malygos"], 						213 * MOD, 10,	"normal",
-	L["Archavon, Vault"],				213 * MOD, 25,	"normal",
-	L["Ulduar"], 						219 * MOD, 10,	"normal",
-	L["Emalon, Vault"],					219 * MOD, 10,	"normal",
-	L["T9 Dungeons"],					219 * MOD, 5,	"heroic",
-	L["Ulduar"],						226 * MOD, 10,	"heroic",
-	L["Ulduar"], 						226 * MOD, 25,	"normal",
-	L["Emalon, Vault"], 				226 * MOD, 25,	"normal",
-	L["Malygos"], 						226 * MOD, 25,	"normal",
-	L["Sartharion"], 					226 * MOD, 25,	"normal",
-	L["T10 Dungeons"], 					232 * MOD, 5,	"heroic",
-	L["Koralon, Vault"],				232 * MOD, 10,	"normal",
-	L["Trial of the Crusader"],			232 * MOD, 10,	"normal",
-	L["Onyxia's Lair"], 				232 * MOD, 10,	"normal",
-	L["Ulduar"],						239 * MOD, 25,	"heroic",
-	L["Onyxia's Lair"], 				245 * MOD, 25,	"normal",
-	L["Trial of the Grand Crusader"],	245 * MOD, 10,	"heroic",
-	L["Koralon, Vault"], 				245 * MOD, 25,	"normal",
-	L["Trial of the Crusader"],			245 * MOD, 25,	"normal",
-	L["Icecrown Citadel"], 				251 * MOD, 10,	"normal",
-	L["Trial of the Grand Crusader"],	258 * MOD, 25,	"heroic",
-	L["Icecrown Citadel"],				264 * MOD, 10,	"heroic",
-	L["Icecrown Citadel"], 				264 * MOD, 25,	"normal", 
-	L["Icecrown Citadel"], 				277 * MOD, 25,	"heroic",
+	L["T7 Dungeons"],					200, 5,		"heroic",
+	L["Sartharion"],					200, 10,	"normal",
+	L["Naxxramas"],						200, 10,	"normal",
+	L["Archavon, Vault"],				200, 10,	"normal",
+	L["Naxxramas"],						213, 25,	"normal",
+	L["Malygos"], 						213, 10,	"normal",
+	L["Archavon, Vault"],				213, 25,	"normal",
+	L["T9 Dungeons"],					219, 5,		"heroic",
+	L["Ulduar"], 						219, 10,	"normal",
+	L["Emalon, Vault"],					219, 10,	"normal",
+	L["Ulduar"], 						226, 25,	"normal",
+	L["Emalon, Vault"], 				226, 25,	"normal",
+	L["Malygos"], 						226, 25,	"normal",
+	L["Sartharion"], 					226, 25,	"normal",
+	L["Ulduar"],						226, 10,	"hard",
+	L["T10 Dungeons"], 					232, 5,		"heroic",
+	L["Koralon, Vault"],				232, 10,	"normal",
+	L["Trial of the Crusader"],			232, 10,	"normal",
+	L["Onyxia's Lair"], 				232, 10,	"normal",
+	L["Ulduar"],						239, 25,	"hard",
+	L["Onyxia's Lair"], 				245, 25,	"normal",
+	L["Koralon, Vault"], 				245, 25,	"normal",
+	L["Trial of the Crusader"],			245, 25,	"normal",
+	L["Trial of the Grand Crusader"],	245, 10,	"heroic",
+	L["Icecrown Citadel"], 				251, 10,	"normal",
+	L["Trial of the Grand Crusader"],	258, 25,	"heroic",
+	L["Icecrown Citadel"], 				264, 25,	"normal", 
+	L["Icecrown Citadel"],				264, 10,	"heroic",
+	L["Icecrown Citadel"], 				277, 25,	"heroic",
 }
 
--- I'm lazy!
+local BASE_MOD = 0.89
+
 SexyGroup.DUNGEON_MIN = 1000
 SexyGroup.DUNGEON_MAX = 0
-for i=2, #(SexyGroup.DUNGEON_DATA), 4 do
-	SexyGroup.DUNGEON_DATA[i] = math.floor(SexyGroup.DUNGEON_DATA[i])
-	SexyGroup.DUNGEON_MIN = math.min(SexyGroup.DUNGEON_MIN, SexyGroup.DUNGEON_DATA[i])
-	SexyGroup.DUNGEON_MAX = math.max(SexyGroup.DUNGEON_MAX, SexyGroup.DUNGEON_DATA[i])
+for i=1, #(SexyGroup.DUNGEON_DATA), 4 do
+	local itemLevel, players, type = SexyGroup.DUNGEON_DATA[i + 1], SexyGroup.DUNGEON_DATA[i + 2], SexyGroup.DUNGEON_DATA[i + 3]
+	local modifier = BASE_MOD
+	
+	-- 10/25 mans get a slight modifier compared to 5 mans, hard/heroic mdoes are also given a slight bump
+	if( players >= 10 ) then
+		modifier = modifier + 0.01
+		
+		if( type == "heroic" or type == "hard" ) then
+			modifier = modifier + 0.01
+		end
+	end
+	
+	SexyGroup.DUNGEON_DATA[i + 1] = math.floor(itemLevel * modifier)
+	SexyGroup.DUNGEON_MIN = math.min(SexyGroup.DUNGEON_MIN, SexyGroup.DUNGEON_DATA[i + 1])
+	SexyGroup.DUNGEON_MAX = math.max(SexyGroup.DUNGEON_MAX, SexyGroup.DUNGEON_DATA[i + 1])
 end
 
 SexyGroup.DUNGEON_DIFF = SexyGroup.DUNGEON_MAX - SexyGroup.DUNGEON_MIN
