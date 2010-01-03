@@ -1,18 +1,18 @@
 -- Some of the sanity checks in this are a bit unnecessary and me being super paranoid
 -- but I know how much people will love to try and break this, so I am going to give them as little way to break it as possible
-local SexyGroup = select(2, ...)
-local Sync = SexyGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
-local L = SexyGroup.L
+local SimpleGroup = select(2, ...)
+local Sync = SimpleGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
+local L = SimpleGroup.L
 local playerName = UnitName("player")
 local combatQueue, requestThrottle, cachedPlayerData, blockOfflineMessage = {}, {}
-local COMM_PREFIX = "SEXYG"
+local COMM_PREFIX = "SMPGRP"
 local MAX_QUEUE = 20
 local REQUEST_TIMEOUT = 10
 -- This should be raised most likely, but for now only allow a notes or gear request every 5 seconds from someoneone
 local REQUEST_THROTTLE = 5
 
 function Sync:Setup()
-	if( SexyGroup.db.profile.comm.enabled ) then
+	if( SimpleGroup.db.profile.comm.enabled ) then
 		self:RegisterComm(COMM_PREFIX)
 		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetCacheData")
 		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetCacheData")
@@ -68,13 +68,13 @@ end
 
 -- This will have to be changed, I'm not quite sure a good way of doing it yet
 function Sync:RequestSuccessful(event, type, name)
-	SexyGroup:Print(string.format(L["Successfully got data on %s, type /sexygroup %s to view!"], name, name))
+	SimpleGroup:Print(string.format(L["Successfully got data on %s, type /SimpleGroup %s to view!"], name, name))
 	self:UnregisterMessage("SG_DATA_UPDATED")
 end
 
 function Sync:SendGearRequest(gearFor)
 	if( not gearFor or gearFor == "" ) then
-		SexyGroup:Print(L["Invalid name entered."])
+		SimpleGroup:Print(L["Invalid name entered."])
 		return
 	elseif( gearFor == "target" or gearFor == "focus" or gearFor == "mouseover" ) then
 		local server
@@ -82,7 +82,7 @@ function Sync:SendGearRequest(gearFor)
 		if( server and server ~= "" ) then gearFor = string.format("%s-%s", gearFor, server) end
 
 		if( not gearFor ) then
-			SexyGroup:Print(L["No name found for unit."])
+			SimpleGroup:Print(L["No name found for unit."])
 			return
 		end
 	end
@@ -94,15 +94,15 @@ end
 
 function Sync:SendNoteRequest(notesOn)
 	if( not IsInGuild() ) then
-		SexyGroup:Print(L["You need to be in a guild to request notes on players."])
+		SimpleGroup:Print(L["You need to be in a guild to request notes on players."])
 		return
 	elseif( not notesOn or notesOn == "" ) then
-		SexyGroup:Print(L["Invalid name entered."])
+		SimpleGroup:Print(L["Invalid name entered."])
 		return
 	elseif( notesOn == "target" or notesOn == "focus" or notesOn == "mouseover" ) then
-		notesOn = SexyGroup:GetPlayerID(notesOn)
+		notesOn = SimpleGroup:GetPlayerID(notesOn)
 		if( not notesOn ) then
-			SexyGroup:Print(L["No name found for unit."])
+			SimpleGroup:Print(L["No name found for unit."])
 			return
 		end
 	elseif( not string.match(notesOn, "%-") ) then
@@ -115,12 +115,12 @@ function Sync:SendNoteRequest(notesOn)
 end
 
 function Sync:ParseGearRequest(sender)
-	if( not SexyGroup.db.profile.comm.gearRequests ) then return end
+	if( not SimpleGroup.db.profile.comm.gearRequests ) then return end
 	
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
-		SexyGroup.modules.Scan:UpdatePlayerData("player")
-		cachedPlayerData = string.format("GEAR@%s", SexyGroup:WriteTable(SexyGroup.userData[SexyGroup.playerName], true))
+		SimpleGroup.modules.Scan:UpdatePlayerData("player")
+		cachedPlayerData = string.format("GEAR@%s", SimpleGroup:WriteTable(SimpleGroup.userData[SimpleGroup.playerName], true))
 	end
 	
 	self:CommMessage(cachedPlayerData, "WHISPER", sender)
@@ -137,11 +137,11 @@ function Sync:ParseNotesRequest(sender, ...)
 	local queuedData = ""
 	for i=1, select("#", ...) do
 		local name = select(i, ...)
-		if( not tempList[name] and name ~= SexyGroup.playerName ) then
-			local userData = SexyGroup.userData[name]
-			local note = userData and userData.notes[SexyGroup.playerName]
+		if( not tempList[name] and name ~= SimpleGroup.playerName ) then
+			local userData = SimpleGroup.userData[name]
+			local note = userData and userData.notes[SimpleGroup.playerName]
 			if( note ) then
-				queuedData = string.format('%s["%s"] = %s;', queuedData, name, SexyGroup:WriteTable(note))
+				queuedData = string.format('%s["%s"] = %s;', queuedData, name, SimpleGroup:WriteTable(note))
 			end
 			
 			tempList[name] = true
@@ -166,26 +166,26 @@ function Sync:ParseSentGear(sender, data)
 		return
 	end
 	
-	sentData = self:VerifyTable(sentData(), SexyGroup.VALID_DB_FIELDS)
+	sentData = self:VerifyTable(sentData(), SimpleGroup.VALID_DB_FIELDS)
 	if( not sentData or not sentData.achievements or not sentData.equipment ) then return end
 	
 	-- Verify gear
 	for key, value in pairs(sentData.equipment) do
-		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > SexyGroup.MAX_LINK_LENGTH or not SexyGroup.VALID_INVENTORY_SLOTS ) then
+		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > SimpleGroup.MAX_LINK_LENGTH or not SimpleGroup.VALID_INVENTORY_SLOTS ) then
 			sentData.equipment[key] = nil
 		end
 	end
 	
 	-- Verify achievements
 	for key, value in pairs(sentData.achievements) do
-		if( type(key) ~= "number" or type(value) ~= "number" or not SexyGroup.VALID_ACHIEVEMENTS[key] ) then
+		if( type(key) ~= "number" or type(value) ~= "number" or not SimpleGroup.VALID_ACHIEVEMENTS[key] ) then
 			sentData.achievements[key] = nil
 		end
 	end
 		
 	-- Merge everything into the current table
 	local senderName, name, server = getFullName(sender)
-	local userData = SexyGroup.userData[senderName] or {}
+	local userData = SimpleGroup.userData[senderName] or {}
 	local notes = userData.notes or {}
 
 	-- If the player already has trusted data on this person from within 10 minutes, don't accept the comm
@@ -205,9 +205,9 @@ function Sync:ParseSentGear(sender, data)
 	userData.from = senderName
 	userData.trusted = nil
 		
-	SexyGroup.writeQueue[senderName] = true
-	SexyGroup.userData[senderName] = userData
-	SexyGroup.db.faction.users[senderName] = SexyGroup.db.faction.users[senderName] or ""
+	SimpleGroup.writeQueue[senderName] = true
+	SimpleGroup.userData[senderName] = userData
+	SimpleGroup.db.faction.users[senderName] = SimpleGroup.db.faction.users[senderName] or ""
 
 	self:SendMessage("SG_DATA_UPDATED", "gear", senderName)
 end
@@ -230,22 +230,22 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	local senderName, name, server = getFullName(sender)
 	
 	for noteFor, note in pairs(sentNotes()) do
-		note = self:VerifyTable(note, SexyGroup.VALID_NOTE_FIELDS)
-		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= SexyGroup.MAX_NOTE_LENGTH ) ) then
+		note = self:VerifyTable(note, SimpleGroup.VALID_NOTE_FIELDS)
+		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= SimpleGroup.MAX_NOTE_LENGTH ) ) then
 			local name, server = string.split("-", noteFor, 2)
-			local userData = SexyGroup.userData[noteFor] or {}
+			local userData = SimpleGroup.userData[noteFor] or {}
 			
 			-- If the time drift is over a day, reset the time of the comment to right now
 			note.time = timeDrift > 86400 and time() or note.time + timeDrift
-			note.comment = SexyGroup:SafeEncode(note.comment)
+			note.comment = SimpleGroup:SafeEncode(note.comment)
 			note.from = senderName
 			note.rating = math.max(math.min(5, note.rating), 0)
 			
 			userData.notes[senderName] = note
 			
-			SexyGroup.userData[noteFor] = userData
-			SexyGroup.db.faction.users[noteFor] = SexyGroup.db.faction.users[noteFor] or ""
-			SexyGroup.writeQueue[noteFor] = true
+			SimpleGroup.userData[noteFor] = userData
+			SimpleGroup.db.faction.users[noteFor] = SimpleGroup.db.faction.users[noteFor] or ""
+			SimpleGroup.writeQueue[noteFor] = true
 
 			self:SendMessage("SG_DATA_UPDATED", "note", noteFor)
 		end
@@ -253,7 +253,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 end
 
 function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
-	if( prefix ~= COMM_PREFIX or sender == playerName or not SexyGroup.db.profile.comm.areas[distribution] ) then return end
+	if( prefix ~= COMM_PREFIX or sender == playerName or not SimpleGroup.db.profile.comm.areas[distribution] ) then return end
 	if( InCombatLockdown() ) then
 		if( #(combatQueue) < MAX_QUEUE ) then
 			table.insert(combatQueue, {message, distribution, sender, time()})

@@ -1,6 +1,6 @@
-local SexyGroup = select(2, ...)
-local Summary = SexyGroup:NewModule("Summary", "AceEvent-3.0")
-local L = SexyGroup.L
+local SimpleGroup = select(2, ...)
+local Summary = SimpleGroup:NewModule("Summary", "AceEvent-3.0")
+local L = SimpleGroup.L
 local notesRequested, unitToRow = {}, {}
 local activeGroupID
 
@@ -12,7 +12,7 @@ function Summary:OnInitialize()
 end
 
 function Summary:PLAYER_LEAVING_WORLD()
-	SexyGroup.modules.Scan:ResetQueue()
+	SimpleGroup.modules.Scan:ResetQueue()
 end
 
 -- My theory with this event, and from looking is it seems to only fire when you are using the LFD system
@@ -26,13 +26,13 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 		if( guid ) then
 			groupID = groupID .. guid
 			
-			if( SexyGroup.db.profile.database.autoNotes and IsInGuild() and not notesRequested[guid] ) then
+			if( SimpleGroup.db.profile.database.autoNotes and IsInGuild() and not notesRequested[guid] ) then
 				notesRequested[guid] = true
 				
 				if( notes ) then
-					notes = notes .. "@" .. SexyGroup:GetPlayerID("party" .. i)
+					notes = notes .. "@" .. SimpleGroup:GetPlayerID("party" .. i)
 				else
-					notes = SexyGroup:GetPlayerID("party" .. i)
+					notes = SimpleGroup:GetPlayerID("party" .. i)
 				end
 			end
 		end
@@ -42,18 +42,18 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 	activeGroupID = groupID
 	
 	if( notes ) then
-		SexyGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
+		SimpleGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
 	end
 	
-	if( SexyGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
+	if( SimpleGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
 		self:Setup()
 	end
 	
 	for i=1, GetNumPartyMembers() do
-		SexyGroup.modules.Scan:QueueAdd("party" .. i)
+		SimpleGroup.modules.Scan:QueueAdd("party" .. i)
 	end
 
-	SexyGroup.modules.Scan:QueueStart()
+	SimpleGroup.modules.Scan:QueueStart()
 end
 
 function Summary:Setup()
@@ -78,7 +78,7 @@ end
 
 function Summary:SG_DATA_UPDATED(event, type, name)
 	for unit, row in pairs(unitToRow) do
-		if( row:IsVisible() and SexyGroup:GetPlayerID(unit) == name ) then
+		if( row:IsVisible() and SimpleGroup:GetPlayerID(unit) == name ) then
 			self:UpdateSingle(row)
 		end
 	end
@@ -91,8 +91,8 @@ function Summary:UpdateSingle(row)
 		return
 	end
 	
-	local playerID = SexyGroup:GetPlayerID(row.unitID)
-	local userData = SexyGroup.userData[playerID]
+	local playerID = SimpleGroup:GetPlayerID(row.unitID)
+	local userData = SimpleGroup.userData[playerID]
 	local level = UnitLevel(row.unitID)
 	local classToken = select(2, UnitClass(row.unitID))
 	local name, server = UnitName(row.unitID)
@@ -122,7 +122,7 @@ function Summary:UpdateSingle(row)
 		for _, note in pairs(userData.notes) do totalNotes = totalNotes + 1 end
 		
 		-- Player personally left a note on the person
-		local playerNote = userData.notes[SexyGroup.playerName]
+		local playerNote = userData.notes[SimpleGroup.playerName]
 		if( playerNote ) then
 			local noteAge = (time() - playerNote.time) / 60
 			if( noteAge < 60 ) then
@@ -133,7 +133,7 @@ function Summary:UpdateSingle(row)
 				noteAge = string.format(L["%d days"], noteAge / 1440)
 			end
 			
-			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["Rated %d of %d"], playerNote.rating, SexyGroup.MAX_RATING))
+			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["Rated %d of %d"], playerNote.rating, SimpleGroup.MAX_RATING))
 			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, playerNote.comment or L["No comment"])
 		-- We haven't, but somebody else has left a note on them
 		elseif( totalNotes > 0 ) then
@@ -145,13 +145,13 @@ function Summary:UpdateSingle(row)
 		end
 		
 		-- Make sure they are talented enough
-		local specType, specName, specIcon = SexyGroup:GetPlayerSpec(userData)
+		local specType, specName, specIcon = SimpleGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
 			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
+			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SimpleGroup.TALENT_ROLES[specType])
 		else
 			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
-			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SexyGroup.TALENT_ROLES[specType])
+			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SimpleGroup.TALENT_ROLES[specType])
 		end
 		
 		-- Add trusted info of course
@@ -163,8 +163,8 @@ function Summary:UpdateSingle(row)
 			row.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
 		end
 		
-		local equipmentData, enchantData, gemData = SexyGroup:GetGearSummary(userData)
-		local gemTooltip, enchantTooltip = SexyGroup:GetGearExtraTooltip(gemData, enchantData)
+		local equipmentData, enchantData, gemData = SimpleGroup:GetGearSummary(userData)
+		local gemTooltip, enchantTooltip = SimpleGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 		
 		-- People probably want us to build the gear info, I'd imagine
 		if( equipmentData.totalBad == 0 ) then
@@ -175,7 +175,7 @@ function Summary:UpdateSingle(row)
 			for _, itemLink in pairs(userData.equipment) do
 				local fullItemLink = select(2, GetItemInfo(itemLink))
 				if( fullItemLink and equipmentData[itemLink] ) then
-					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, SexyGroup.TALENT_TYPES[equipmentData[itemLink]] or equipmentData[itemLink])
+					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, SimpleGroup.TALENT_TYPES[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
 
@@ -205,7 +205,7 @@ function Summary:UpdateSingle(row)
 			row.gemInfo.disableWrap = nil
 		end
 
-		SexyGroup:DeleteTables(equipmentData, enchantData, gemData)
+		SimpleGroup:DeleteTables(equipmentData, enchantData, gemData)
 	end
 end
 
@@ -302,18 +302,18 @@ function Summary:CreateUI()
 	self.summaryRows = {}
 	
 	-- Main container
-	local frame = CreateFrame("Frame", "SexyGroupSummaryFrame", UIParent)
+	local frame = CreateFrame("Frame", "SimpleGroupSummaryFrame", UIParent)
 	frame:SetClampedToScreen(true)
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetFrameStrata("HIGH")
-	frame:SetScript("OnHide", function() SexyGroup:DeleteTables(equipmentData, enchantData, gemData) end)
+	frame:SetScript("OnHide", function() SimpleGroup:DeleteTables(equipmentData, enchantData, gemData) end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
-			frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
-			SexyGroup.db.profile.position = nil
+			frame:SetPoint("CENTER", UIParent, "CENTER", SimpleGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+			SimpleGroup.db.profile.position = nil
 			return
 		end
 		
@@ -323,7 +323,7 @@ function Summary:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		SexyGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		SimpleGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -333,11 +333,11 @@ function Summary:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	table.insert(UISpecialFrames, "SexyGroupSummaryFrame")
+	table.insert(UISpecialFrames, "SimpleGroupSummaryFrame")
 	
-	if( SexyGroup.db.profile.positions.summary ) then
+	if( SimpleGroup.db.profile.positions.summary ) then
 		local scale = frame:GetEffectiveScale()
-		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SexyGroup.db.profile.positions.summary.x / scale, SexyGroup.db.profile.positions.summary.y / scale)
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SimpleGroup.db.profile.positions.summary.x / scale, SimpleGroup.db.profile.positions.summary.y / scale)
 	else
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	end
@@ -350,7 +350,7 @@ function Summary:CreateUI()
 
 	frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	frame.title:SetPoint("TOP", 0, 0)
-	frame.title:SetText("Sexy Group")
+	frame.title:SetText("Simple Group")
 
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")

@@ -1,4 +1,4 @@
-package-as: SexyGroup
+package-as: SimpleGroup
 
 externals:
     libs/LibStub:
@@ -34,5 +34,4 @@ externals:
 ignore:
 	- globalcheck.lua
 	- localcheck.lua
-	- strings.rb
 

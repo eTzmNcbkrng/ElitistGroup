@@ -1,9 +1,9 @@
 ## Interface: 30300
-## Title: SexyGroup
+## Title: Simple Group
 ## Notes: Provides quick access to information on your group and their gear/enchant/gem choices
-## Author: Antiarc / Shadowed
+## Author: Shadowed
 ## OptionalDeps: Ace3
-## SavedVariables: SexyGroupDB
+## SavedVariables: SimpleGroupDB
 
 #@no-lib-strip@
 libs\LibStub\LibStub.lua
@@ -19,7 +19,7 @@ libs\AceTimer-3.0\AceTimer-3.0.xml
 
 localization\enUS.lua
 
-SexyGroup.lua
+SimpleGroup.lua
 data\data.lua
 data\dungeon_data.lua
 data\item_data.lua

@@ -1,5 +1,5 @@
-local SexyGroup = select(2, ...)
-local Cache = SexyGroup:NewModule("Cache", "AceEvent-3.0")
+local SimpleGroup = select(2, ...)
+local Cache = SimpleGroup:NewModule("Cache", "AceEvent-3.0")
 
 local CACHE_TIMEOUT = 30 * 60
 local statCache, itemMetaTable, gemMetaTable, emptyGemMetaTable, enchantMetaTable = {}
@@ -17,13 +17,13 @@ function Cache:PLAYER_ENTERING_WORLD()
 	lastCache = GetTime() + CACHE_TIMEOUT
 	
 	statCache = {}
-	SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, enchantMetaTable)
-	SexyGroup.GEM_TALENTTYPE = setmetatable({}, gemMetaTable)
-	SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, emptyGemMetaTable)
-	SexyGroup.ITEM_TALENTTYPE = setmetatable({}, itemMetaTable)
+	SimpleGroup.ENCHANT_TALENTTYPE = setmetatable({}, enchantMetaTable)
+	SimpleGroup.GEM_TALENTTYPE = setmetatable({}, gemMetaTable)
+	SimpleGroup.EMPTY_GEM_SLOTS = setmetatable({}, emptyGemMetaTable)
+	SimpleGroup.ITEM_TALENTTYPE = setmetatable({}, itemMetaTable)
 end
 
-local tooltip = CreateFrame("GameTooltip", "SexyGroupTooltip", UIParent, "GameTooltipTemplate")
+local tooltip = CreateFrame("GameTooltip", "SimpleGroupTooltip", UIParent, "GameTooltipTemplate")
 tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
 local function parseText(text)
@@ -46,7 +46,7 @@ emptyGemMetaTable = {
 
 		local total = 0
 		for i=1, MAX_NUM_SOCKETS do
-			local texture = _G["SexyGroupTooltipTexture" .. i]
+			local texture = _G["SimpleGroupTooltipTexture" .. i]
 			if( texture and texture:IsVisible() ) then
 				total = total + 1
 			end
@@ -60,9 +60,9 @@ emptyGemMetaTable = {
 gemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = link and tonumber(string.match(link, "item:(%d+)"))
-		if( itemID and SexyGroup.OVERRIDE_ITEMS[itemID] ) then
-			rawset(tbl, link, SexyGroup.OVERRIDE_ITEMS[itemID])
-			return SexyGroup.OVERRIDE_ITEMS[itemID]
+		if( itemID and SimpleGroup.OVERRIDE_ITEMS[itemID] ) then
+			rawset(tbl, link, SimpleGroup.OVERRIDE_ITEMS[itemID])
+			return SimpleGroup.OVERRIDE_ITEMS[itemID]
 		elseif( not itemID or not GetItemInfo(itemID) ) then
 			rawset(tbl, link, "unknown")
 			return "unknown"
@@ -75,8 +75,8 @@ gemMetaTable = {
 		tooltip:SetHyperlink(link)
 
 		for i=1, tooltip:NumLines() do
-			local text = string.lower(_G["SexyGroupTooltipTextLeft" .. i]:GetText())
-			for key, stat in pairs(SexyGroup.STAT_MAP) do
+			local text = string.lower(_G["SimpleGroupTooltipTextLeft" .. i]:GetText())
+			for key, stat in pairs(SimpleGroup.STAT_MAP) do
 				if( string.match(text, string.lower(_G[stat])) ) then
 					foundData = true
 					statCache[key] = true
@@ -91,8 +91,8 @@ gemMetaTable = {
 			return "unknown"
 		end
 
-		for i=1, #(SexyGroup.STAT_DATA) do
-			local data = SexyGroup.STAT_DATA[i]
+		for i=1, #(SimpleGroup.STAT_DATA) do
+			local data = SimpleGroup.STAT_DATA[i]
 			local statString = (data.default or "") .. (data.gems or "")
 			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
@@ -114,7 +114,7 @@ gemMetaTable = {
 enchantMetaTable = {
 	__index = function(tbl, link)
 		local enchantID = tonumber(string.match(link, "item:%d+:(%d+)"))
-		local type = not enchantID and "unknown" or enchantID == 0 and "none" or SexyGroup.OVERRIDE_ENCHANTS[enchantID]
+		local type = not enchantID and "unknown" or enchantID == 0 and "none" or SimpleGroup.OVERRIDE_ENCHANTS[enchantID]
 		if( type ) then
 			rawset(tbl, link, type)
 			return type
@@ -129,13 +129,13 @@ enchantMetaTable = {
 
 		local enchantText
 		for i=1, tooltip:NumLines() do
-			local text = string.lower(_G["SexyGroupTooltipTextLeft" .. i]:GetText())
-			local r, g, b = _G["SexyGroupTooltipTextLeft" .. i]:GetTextColor()
+			local text = string.lower(_G["SimpleGroupTooltipTextLeft" .. i]:GetText())
+			local r, g, b = _G["SimpleGroupTooltipTextLeft" .. i]:GetTextColor()
 									
 			-- If we don't find the enchant up top, but we know one exists then it's an engineering enchant, which means the next line will have the enchant in it
 			if( string.match(text, ITEM_SPELL_TRIGGER_ONUSE) ) then
 				if( tooltip:NumLines() > i ) then
-					enchantText = string.lower(_G["SexyGroupTooltipTextLeft" .. i + 1]:GetText())
+					enchantText = string.lower(_G["SimpleGroupTooltipTextLeft" .. i + 1]:GetText())
 				end
 
 				break
@@ -154,7 +154,7 @@ enchantMetaTable = {
 		-- Parse out the stats
 		local foundData
 		table.wipe(statCache)
-		for key, stat in pairs(SexyGroup.STAT_MAP) do
+		for key, stat in pairs(SimpleGroup.STAT_MAP) do
 			if( string.match(enchantText, string.lower(_G[stat])) ) then
 				foundData = true
 				statCache[key] = true
@@ -167,8 +167,8 @@ enchantMetaTable = {
 		end
 		
 		-- Now figure out wehat spec type
-		for i=1, #(SexyGroup.STAT_DATA) do
-			local data = SexyGroup.STAT_DATA[i]
+		for i=1, #(SimpleGroup.STAT_DATA) do
+			local data = SimpleGroup.STAT_DATA[i]
 			local statString = (data.default or "") .. (data.enchants or "")
 			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
@@ -191,7 +191,7 @@ local function getRelicSpecType(link)
 		
 	local equipText
 	for i=tooltip:NumLines(), 1, -1 do
-		local text = string.lower(_G["SexyGroupTooltipTextLeft" .. i]:GetText())
+		local text = string.lower(_G["SimpleGroupTooltipTextLeft" .. i]:GetText())
 		if( string.match(text, ITEM_ONEQUIP) ) then
 			equipText = text
 			break
@@ -207,7 +207,7 @@ local function getRelicSpecType(link)
 	-- Some relics can be forced into a type by spell, eg Rejuvenation means it's obviously for healers
 	-- some relics... actually realy only ferals, are classified as hybrid by doing two things which
 	-- is where the stat scanning comes into play
-	for spell, type in pairs(SexyGroup.RELIC_SPELLTYPES) do
+	for spell, type in pairs(SimpleGroup.RELIC_SPELLTYPES) do
 		if( string.match(equipText, spell) ) then
 			return type
 		end
@@ -219,13 +219,13 @@ end
 itemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = tonumber(string.match(link, "item:(%d+)"))
-		if( itemID and SexyGroup.OVERRIDE_ITEMS[itemID] ) then
-			rawset(tbl, link, SexyGroup.OVERRIDE_ITEMS[itemID])
-			return SexyGroup.OVERRIDE_ITEMS[itemID]
+		if( itemID and SimpleGroup.OVERRIDE_ITEMS[itemID] ) then
+			rawset(tbl, link, SimpleGroup.OVERRIDE_ITEMS[itemID])
+			return SimpleGroup.OVERRIDE_ITEMS[itemID]
 		end
 		
 		local inventoryType = select(9, GetItemInfo(link))
-		local equipType = inventoryType and SexyGroup.EQUIP_TO_TYPE[inventoryType]
+		local equipType = inventoryType and SimpleGroup.EQUIP_TO_TYPE[inventoryType]
 		if( not equipType ) then 
 			rawset(tbl, link, "unknown")
 			return "unknown"
@@ -250,7 +250,7 @@ itemMetaTable = {
 			if( not hasData ) then
 				local statText
 				for i=tooltip:NumLines(), 1, -1 do
-					local row = _G["SexyGroupTooltipTextLeft" .. i]
+					local row = _G["SimpleGroupTooltipTextLeft" .. i]
 					local text = string.lower(row:GetText())
 					local r, g, b = row:GetTextColor()
 					
@@ -264,7 +264,7 @@ itemMetaTable = {
 				
 				-- Yay we found the enchant proc
 				if( statText ) then
-					for key, stat in pairs(SexyGroup.STAT_MAP) do
+					for key, stat in pairs(SimpleGroup.STAT_MAP) do
 						if( string.match(statText, string.lower(_G[stat])) ) then
 							statCache[key] = true
 						end
@@ -274,12 +274,12 @@ itemMetaTable = {
 		end
 
 		-- Now scan and figure out what the spec is
-		for i=1, #(SexyGroup.STAT_DATA) do
-			local data = SexyGroup.STAT_DATA[i]
+		for i=1, #(SimpleGroup.STAT_DATA) do
+			local data = SimpleGroup.STAT_DATA[i]
 			local statString = (data.default or "") .. (data[equipType] or "")
 			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[SexyGroup.STAT_MAP[statKey]] ) then
+					if( statCache[SimpleGroup.STAT_MAP[statKey]] ) then
 						rawset(tbl, link, data.type)
 						return data.type
 					end
@@ -292,7 +292,7 @@ itemMetaTable = {
 	end,
 }
 
-SexyGroup.ENCHANT_TALENTTYPE = setmetatable({}, enchantMetaTable)
-SexyGroup.GEM_TALENTTYPE = setmetatable({}, gemMetaTable)
-SexyGroup.EMPTY_GEM_SLOTS = setmetatable({}, emptyGemMetaTable)
-SexyGroup.ITEM_TALENTTYPE = setmetatable({}, itemMetaTable)
+SimpleGroup.ENCHANT_TALENTTYPE = setmetatable({}, enchantMetaTable)
+SimpleGroup.GEM_TALENTTYPE = setmetatable({}, gemMetaTable)
+SimpleGroup.EMPTY_GEM_SLOTS = setmetatable({}, emptyGemMetaTable)
+SimpleGroup.ITEM_TALENTTYPE = setmetatable({}, itemMetaTable)
