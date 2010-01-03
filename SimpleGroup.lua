@@ -1,8 +1,8 @@
-local SexyGroup = select(2, ...)
-SexyGroup = LibStub("AceAddon-3.0"):NewAddon(SexyGroup, "SexyGroup", "AceEvent-3.0", "AceTimer-3.0")
-local L = SexyGroup.L
+local SimpleGroup = select(2, ...)
+SimpleGroup = LibStub("AceAddon-3.0"):NewAddon(SimpleGroup, "SimpleGroup", "AceEvent-3.0", "AceTimer-3.0")
+local L = SimpleGroup.L
 
-function SexyGroup:OnInitialize()
+function SimpleGroup:OnInitialize()
 	self.defaults = {
 		profile = {
 			expExpanded = {},
@@ -30,7 +30,7 @@ function SexyGroup:OnInitialize()
 		},
 	}
 	
-	self.db = LibStub("AceDB-3.0"):New("SexyGroupDB", self.defaults, true)
+	self.db = LibStub("AceDB-3.0"):New("SimpleGroupDB", self.defaults, true)
 	self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDatabaseShutdown")
 	self.db.RegisterCallback(self, "OnDatabaseReset", "OnProfileReset")
 	self.db.RegisterCallback(self, "OnProfileShutdown", "OnProfileShutdown")
@@ -42,12 +42,12 @@ function SexyGroup:OnInitialize()
 	self.writeQueue = {}
 	self.userData = setmetatable({}, {
 		__index = function(tbl, name)
-			if( not SexyGroup.db.faction.users[name] ) then
+			if( not SimpleGroup.db.faction.users[name] ) then
 				tbl[name] = false
 				return false
 			end
 			
-			local func, msg = loadstring("return " .. SexyGroup.db.faction.users[name])
+			local func, msg = loadstring("return " .. SimpleGroup.db.faction.users[name])
 			if( func ) then
 				func = func()
 			elseif( msg ) then
@@ -109,45 +109,45 @@ function SexyGroup:OnInitialize()
 		end
 	end
 		
-	if( not SexyGroup.db.profile.helped ) then
+	if( not SimpleGroup.db.profile.helped ) then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
-			SexyGroup.db.profile.helped = true
-			SexyGroup:Print(L["Welcome! Type /sexygroup help to see a list of available slash commands."])
-			SexyGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
+			SimpleGroup.db.profile.helped = true
+			SimpleGroup:Print(L["Welcome! Type /SimpleGroup help to see a list of available slash commands."])
+			SimpleGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		end)
 	end
 
 	self.modules.Sync:Setup()
 end
 
-function SexyGroup:GetItemLink(link)
+function SimpleGroup:GetItemLink(link)
 	return link and string.match(link, "|H(.-)|h")
 end
 
 -- These are just parser functions to let me trim down the item links to take better advantage of metatable caching
-function SexyGroup:GetItemWithEnchant(link)
+function SimpleGroup:GetItemWithEnchant(link)
 	return link and string.match(link, "item:%d+:%d+")
 end
 
-function SexyGroup:GetBaseItemLink(link)
+function SimpleGroup:GetBaseItemLink(link)
 	return link and string.match(link, "item:%d+")
 end
 
-function SexyGroup:GetPlayerID(unit)
+function SimpleGroup:GetPlayerID(unit)
 	local name, server = UnitName(unit)
 	return name and string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
 end
 
-function SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel)
+function SimpleGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 	-- Quality 7 is heirloom, apply our modifier based on the item level
 	if( itemQuality == 7 ) then
-		itemLevel = (tonumber(string.match(itemLink, "(%d+)|h")) or 1) * SexyGroup.HEIRLOOM_ILEVEL
+		itemLevel = (tonumber(string.match(itemLink, "(%d+)|h")) or 1) * SimpleGroup.HEIRLOOM_ILEVEL
 	end
 	
 	return itemLevel * (self.QUALITY_MODIFIERS[itemQuality] or 1)
 end
 
-function SexyGroup:GetPlayerSpec(playerData)
+function SimpleGroup:GetPlayerSpec(playerData)
 	local treeOffset
 	if( playerData.talentTree1 > playerData.talentTree2 and playerData.talentTree1 > playerData.talentTree3 ) then
 		treeOffset = 1
@@ -162,31 +162,31 @@ function SexyGroup:GetPlayerSpec(playerData)
 	return playerData.specRole or self.TREE_DATA[playerData.classToken][treeOffset], self.TREE_DATA[playerData.classToken][treeOffset + 1], self.TREE_DATA[playerData.classToken][treeOffset + 2] 
 end
 
-function SexyGroup:IsValidItem(itemLink, playerData)
+function SimpleGroup:IsValidItem(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.ITEM_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
-function SexyGroup:IsValidGem(itemLink, playerData)
+function SimpleGroup:IsValidGem(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.GEM_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
-function SexyGroup:IsValidEnchant(itemLink, playerData)
+function SimpleGroup:IsValidEnchant(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.ENCHANT_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
 -- Handles caching of tables for variable tick spells, like Wild Growth
-local tableCache = setmetatable({}, {__mode = "k"})
+tableCache = setmetatable({}, {__mode = "k"})
 local function getTable()
 	return table.remove(tableCache, 1) or {}
 end
 
-function SexyGroup:DeleteTables(...)	
+function SimpleGroup:DeleteTables(...)	
 	for i=1, select("#", ...) do
 		local tbl = select(i, ...)
 		if( tbl ) then
@@ -196,25 +196,77 @@ function SexyGroup:DeleteTables(...)
 	end
 end
 
-function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
+function SimpleGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
+	local enchantTooltips, gemTooltips = getTable(), getTable()
+	
+	-- Compile all the gems into tooltips per item
+	local lastItemLink, totalBad
+	for i=1, #(gemData), 3 do
+		local itemLink, gemLink, arg = gemData[gemData[i]], gemData[i + 1], gemData[i + 2]
+		
+		if( lastItemLink ~= itemLink ) then
+			if( lastItemLink ) then
+				gemTooltips[lastItemLink] = string.format(L["Gems: |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
+			end
+			
+			gemTooltips[itemLink] = ""
+			lastItemLink = itemLink
+			totalBad = 0
+		end
+		
+		if( arg == "missing" ) then
+			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. L["Unused sockets"]
+		elseif( type(arg) == "string" ) then
+			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, SimpleGroup.TALENT_TYPES[arg] or arg)
+		else
+			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r quality gem"], select(2, GetItemInfo(gemLink)) or gemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"])
+		end
+	end
+	
+	-- And grab the last one
+	if( lastItemLink ) then
+		gemTooltips[lastItemLink] = string.format(L["Gems: |cffffffff%d bad|r"], totalBad)
+	end
+	
+	-- Now compile all the enchants
+	for i=1, #(enchantData), 2 do
+		local itemLink, enchantTalent = enchantData[enchantData[i]], enchantData[i + 1]
+		if( enchantTalent == "missing" ) then
+			enchantTooltips[itemLink] = L["Enchant: |cffffffffNone found|r"]
+		else
+			enchantTooltips[itemLink] = string.format(L["Enchant: |cffffffff%s enchant|r"], SimpleGroup.TALENT_TYPES[enchantTalent] or enchantTalent)
+		end
+	end
+		
+	-- Add the default pass tooltips to anything without them
+	for _, link in pairs(equipment) do
+		gemTooltips[link] = gemTooltips[link] or self.EMPTY_GEM_SLOTS[link] == 0 and L["Gems: |cffffffffNo sockets|r"] or L["Gems: |cffffffffPass|r"]
+		
+		enchantTooltips[link] = enchantTooltips[link] or L["Enchant: |cffffffffPass|r"]
+	end
+	
+	return enchantTooltips, gemTooltips
+end
+
+function SimpleGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 	local tempList = getTable()
 	local gemTooltip, enchantTooltip
 	local totalLines = 0
 	
 	-- Gems
 	if( gemData.noData ) then
-		gemTooltip = L["Gems: |cffffffffNo gems found. Either the player has no enchants or the enchant data was not found.|r"]
+		gemTooltip = L["Gems: |cffffffffFailed to load gem data,\or the player has no gems.|r"]
 	elseif( gemData.totalBad > 0 ) then
 		gemTooltip = string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
 		
-		for i=1, #(gemData), 2 do
-			local fullItemLink, arg = gemData[i], gemData[i + 1]
+		for i=1, #(gemData), 3 do
+			local fullItemLink, arg = gemData[i], gemData[i + 2]
 			if( arg == "buckle" ) then
 				table.insert(tempList, string.format(L["%s - Missing belt buckle or gem"], fullItemLink))
 			elseif( arg == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Missing gems"], fullItemLink))
 			elseif( type(arg) == "string" ) then
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, SexyGroup.TALENT_TYPES[arg] or arg))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, SimpleGroup.TALENT_TYPES[arg] or arg))
 			else
 				table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 			end
@@ -229,7 +281,7 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 	table.wipe(tempList)
 
 	if( enchantData.noData ) then
-		enchantTooltip = L["Enchants: |cffffffffNo enchants found. Either the player has no enchants or the enchant data was not found.|r"]
+		enchantTooltip = L["Enchants: |cffffffffFailed to load enchant data,\nor the player has no enchants.|r"]
 	elseif( enchantData.totalBad > 0 ) then
 		enchantTooltip = string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
 		
@@ -238,7 +290,7 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 			if( enchantTalent == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Unenchanted"], fullItemLink))
 			else
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r enchant"], fullItemLink, SexyGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], fullItemLink, SimpleGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
 			end
 		end
 		
@@ -249,12 +301,12 @@ function SexyGroup:GetGearExtraTooltip(gemData, enchantData)
 	
 	self:DeleteTables(tempList)
 	
-	return gemTooltip or L["Gems: |cffffffffAll good|r"], enchantTooltip or L["Enchants: |cffffffffAll good|r"], totalLines
+	return gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"], totalLines
 end
 
 
 local MAINHAND_SLOT, OFFHAND_SLOT, WAIST_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot"), GetInventorySlotInfo("WaistSlot")
-function SexyGroup:GetGearSummary(userData)
+function SimpleGroup:GetGearSummary(userData)
 	local spec = self:GetPlayerSpec(userData)
 	local validSpecTypes = self.VALID_SPECTYPES[spec]
 	local equipment, gems, enchants = getTable(), getTable(), getTable()
@@ -291,16 +343,17 @@ function SexyGroup:GetGearSummary(userData)
 			end
 			
 			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
-			local unenchantable = SexyGroup.EQUIP_UNECHANTABLE[itemEquipType]
+			local unenchantable = SimpleGroup.EQUIP_UNECHANTABLE[itemEquipType]
 			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
 				enchants.total = enchants.total + 1
 
-				local enchantTalent = SexyGroup.ENCHANT_TALENTTYPE[enchantItemLink]
+				local enchantTalent = SimpleGroup.ENCHANT_TALENTTYPE[enchantItemLink]
 				if( enchantTalent ~= "none" ) then
 					enchants.totalUsed = enchants.totalUsed + 1
 					
 					if( enchantTalent ~= "unknown" and validSpecTypes and not validSpecTypes[enchantTalent] ) then
 						enchants.totalBad = enchants.totalBad + 1
+						enchants[fullItemLink] = itemLink
 						enchants.pass = nil
 						
 						table.insert(enchants, fullItemLink)
@@ -310,6 +363,7 @@ function SexyGroup:GetGearSummary(userData)
 					table.insert(enchants, fullItemLink)
 					table.insert(enchants, "missing")
 					
+					enchants[fullItemLink] = itemLink
 					enchants.totalBad = enchants.totalBad + 1
 					enchants.pass = nil
 				end
@@ -321,29 +375,30 @@ function SexyGroup:GetGearSummary(userData)
 			local itemUnsocketed = self.EMPTY_GEM_SLOTS[itemLink]
 			local alreadyFailed
 			for socketID=1, MAX_NUM_SOCKETS do
-				local gemLink = SexyGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
+				local gemLink = SimpleGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
 				if( gemLink ) then
 					gems.totalUsed = gems.totalUsed + 1
 					itemUnsocketed = itemUnsocketed - 1
 					
 					local gemTalent = self.GEM_TALENTTYPE[gemLink]
-					if( gemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[gemTalent] and not alreadyFailed ) then
+					if( gemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[gemTalent] ) then
 						table.insert(gems, fullItemLink)
+						table.insert(gems, gemLink)
 						table.insert(gems, gemTalent)
 						
+						gems[fullItemLink] = itemLink
 						gems.totalBad = gems.totalBad + 1
 						gems.pass = nil
-						alreadyFailed = true
-						
-					elseif( not alreadyFailed ) then
+					else
 						local gemQuality = select(3, GetItemInfo(gemLink))
-						if( SexyGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < SexyGroup.GEM_THRESHOLDS[itemQuality] ) then
-							table.insert(gems, fullItemLink)
-							table.insert(gems, gemQuality)
-
+						if( SimpleGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < SimpleGroup.GEM_THRESHOLDS[itemQuality] ) then
+							gems[fullItemLink] = itemLink
 							gems.totalBad = gems.totalBad + 1
 							gems.pass = nil
-							alreadyFailed = true
+
+							table.insert(gems, fullItemLink)
+							table.insert(gems, gemLink)
+							table.insert(gems, gemQuality)
 						end
 					end
 				end
@@ -351,9 +406,12 @@ function SexyGroup:GetGearSummary(userData)
 
 			if( itemUnsocketed > 0 ) then
 				table.insert(gems, fullItemLink)
+				table.insert(gems, false)
 				table.insert(gems, "missing")
+				
 				gems.pass = nil
 				gems.totalBad = gems.totalBad + 1
+				gems[fullItemLink] = itemLink
 			end
 		end
 	end
@@ -399,7 +457,7 @@ local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}")
 				['"'] = "\\" .. string.byte('"'), [";"] = "\\" .. string.byte(";"),
 				["%["] = "\\" .. string.byte("["), ["%]"] = "\\" .. string.byte("]"),
 				["@"] = "\\" .. string.byte("@")}
-function SexyGroup:SafeEncode(text)
+function SimpleGroup:SafeEncode(text)
 	if( not text ) then return text end
 	
 	for find, replace in pairs(map) do
@@ -409,7 +467,7 @@ function SexyGroup:SafeEncode(text)
 	return text
 end
 
-function SexyGroup:WriteTable(tbl, skipNotes)
+function SimpleGroup:WriteTable(tbl, skipNotes)
 	local data = ""
 	for key, value in pairs(tbl) do
 		if( not skipNotes or key ~= "notes" ) then
@@ -440,13 +498,13 @@ function SexyGroup:WriteTable(tbl, skipNotes)
 end
 
 -- db:ResetProfile or db:ResetDB called
-function SexyGroup:OnProfileReset()
+function SimpleGroup:OnProfileReset()
 	table.wipe(self.writeQueue)
 	table.wipe(self.userData)
 end
 
 -- db:SetProfile called, this is the old profile before it gets switched
-function SexyGroup:OnProfileShutdown()
+function SimpleGroup:OnProfileShutdown()
 	self:OnDatabaseShutdown()
 
 	table.wipe(self.writeQueue)
@@ -454,7 +512,7 @@ function SexyGroup:OnProfileShutdown()
 end
 
 -- Player is logging out, write the cache
-function SexyGroup:OnDatabaseShutdown()
+function SimpleGroup:OnDatabaseShutdown()
 	for name in pairs(self.writeQueue) do
 		-- We need to make sure what we are writing has data, for example if we inspect scan someone we create the template
 		-- if we fail to find talent data for them, and we don't have notes then will just throw out their data and not bother writing it
@@ -477,17 +535,17 @@ function SexyGroup:OnDatabaseShutdown()
 	end
 end
 
-function SexyGroup:Print(msg)
-	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Sexy Group|r: " .. msg)
+function SimpleGroup:Print(msg)
+	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Simple Group|r: " .. msg)
 end
 
 --@debug@
-SexyGroup.L = setmetatable(SexyGroup.L, {
+SimpleGroup.L = setmetatable(SimpleGroup.L, {
 	__index = function(tbl, value)
 		rawset(tbl, value, value)
 		return value
 	end,
 })
 
-_G.SexyGroup = SexyGroup
+_G.SimpleGroup = SimpleGroup
 --@end-debug@
