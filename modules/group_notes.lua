@@ -82,7 +82,6 @@ function History:PARTY_MEMBERS_CHANGED(event)
 			instanceName = nil
 		end
 		
-		instanceName = instanceName or GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetRealZoneText()
 		self.haveActiveGroup = true
 		
 		for i=1, GetNumPartyMembers() do
@@ -97,11 +96,9 @@ function History:LFG_COMPLETION_REWARD()
 		self:LogGroup()
 	else
 		local name, typeID = GetLFGCompletionReward()
-		if( typeID == TYPEID_HEROIC_DIFFICULTY ) then
-			name = string.format(HEROIC_PREFIX, name)
-		end
+		instanceName = typeID == TYPEID_HEROIC_DIFFICULTY and string.format("%s (%s)", name, PLAYER_DIFFICULTY2) or name
 		
-		ElitistGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], name))
+		ElitistGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], instanceName))
 	end
 end
 
@@ -134,12 +131,14 @@ local function OnHide(self)
 		ElitistGroup:Print(string.format(L["Defaulting to no comment on %d players, type /rate to set a specific comment."], missing))
 	end
 	
+	wasAutoPopped = nil
 	surveyFrame = nil
 	AceGUI:Release(self)
 end
 
 function History:InitFrame()
 	local perRow = totalGroupMembers <= 4 and 2 or 3
+	instanceName = instanceName or GetInstanceDifficulty() > 1 and string.format("%s (%s)", GetRealZoneText(), PLAYER_DIFFICULTY2) or GetRealZoneText()
 	
 	surveyFrame = AceGUI:Create("Frame")	
 	surveyFrame:SetCallback("OnClose", OnHide)
