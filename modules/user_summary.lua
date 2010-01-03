@@ -1,6 +1,7 @@
 local SimpleGroup = select(2, ...)
 local Summary = SimpleGroup:NewModule("Summary", "AceEvent-3.0")
 local L = SimpleGroup.L
+local buttonList = {"playerInfo", "talentInfo", "trustedInfo", "notesInfo", "gearInfo", "enchantInfo", "gemInfo"}
 local notesRequested, unitToRow = {}, {}
 local activeGroupID
 
@@ -101,21 +102,24 @@ function Summary:UpdateSingle(row)
 	-- Build the players info
 	local coords = CLASS_BUTTONS[classToken]
 	if( coords ) then
-		row.playerInfo:SetFormattedText("|TInterface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes:16:16:-1:0:%s:%s:%s:%s:%s:%s|t %s (%s)", 256, 256, coords[1] * 256, coords[2] * 256, coords[3] * 256, coords[4] * 256, name, level)
+		row.playerInfo:SetFormattedText("%s (%s)", name, level)
 		row.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken])
+		row.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
+		row.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 	else
-		row.playerInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s (%s)", name, level)
+		row.playerInfo:SetFormattedText("%s (%s)", name, level)
 		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], name, server, level)
+		row.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 	end
 
 	-- No data yet, show the basic info then tell them we're loading
 	if( not userData ) then
-		row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
-		row.trustedInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
-		row.talentInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
-		row.gearInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
-		row.enchantInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
-		row.gemInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
+		for _, key in pairs(buttonList) do
+			if( key ~= "playerInfo" ) then
+				row[key]:SetText(L["Loading"])
+				row[key].icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
+			end
+		end
 	else
 		-- Setup notes
 		local totalNotes = 0
@@ -148,19 +152,23 @@ function Summary:UpdateSingle(row)
 		local specType, specName, specIcon = SimpleGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
 			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
+			row.talentInfo.icon:SetTexture(specIcon)
 			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SimpleGroup.TALENT_ROLES[specType])
 		else
 			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
+			row.talentInfo.icon:SetTexture(specIcon)
 			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SimpleGroup.TALENT_ROLES[specType])
 		end
 		
 		-- Add trusted info of course
 		if( userData.trusted ) then
-			row.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, string.match(userData.from, "(.-)%-"), L["Trusted"])
+			row.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
 			row.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
+			row.trustedInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 		else
-			row.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, string.match(userData.from, "(.-)%-"), L["Untrusted"])
+			row.trustedInfo:SetFormattedText(L["%s (Untrusted)"], string.match(userData.from, "(.-)%-"))
 			row.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
+			row.trustedInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 		end
 		
 		local equipmentData, enchantData, gemData = SimpleGroup:GetGearSummary(userData)
@@ -168,7 +176,8 @@ function Summary:UpdateSingle(row)
 		
 		-- People probably want us to build the gear info, I'd imagine
 		if( equipmentData.totalBad == 0 ) then
-			row.gearInfo:SetFormattedText("|T%s:14:14|t %s (%d)", READY_CHECK_READY_TEXTURE, L["Equipment"], equipmentData.totalScore)
+			row.gearInfo:SetFormattedText(L["Equipment (%d)"], equipmentData.totalScore)
+			row.gearInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 			row.gearInfo.tooltip = string.format(L["Equipment: |cffffffffAll good|r"], equipmentData.totalEquipped)
 		else
 			local gearTooltip = string.format(L["Equipment: |cffffffff%d bad items found|r"], equipmentData.totalBad)
@@ -179,28 +188,33 @@ function Summary:UpdateSingle(row)
 				end
 			end
 
-			row.gearInfo:SetFormattedText("|T%s:14:14|t %s (%d)", READY_CHECK_NOT_READY_TEXTURE, L["Equipment"], equipmentData.totalScore)
+			row.gearInfo:SetFormattedText(L["Equipment (%d)"], L["Equipment"], equipmentData.totalScore)
+			row.gearInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 			row.gearInfo.tooltip = gearTooltip
 		end
 		
 		-- Build enchants
 		if( not enchantData.noData ) then
-			row.enchantInfo:SetFormattedText("|T%s:14:14|t %s", enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, L["Enchants"])
+			row.enchantInfo:SetText(L["Enchants"])
+			row.enchantInfo.icon:SetTexture(enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 			row.enchantInfo.tooltip = enchantTooltip
 			row.enchantInfo.disableWrap = not enchantData.noData
 		else
-			row.enchantInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
+			row.enchantInfo:SetText(L["Loading"])
+			row.enchantInfo.icon:SetTexture(enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 			row.enchantInfo.tooltip = L["Enchant information is still loading, you need to be within inspection range for data to become available."]
 			row.enchantInfo.disableWrap = nil
 		end
 
 		-- Build gems
 		if( not gemData.noData ) then
-			row.gemInfo:SetFormattedText("|T%s:14:14|t %s", gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, L["Gems"])
+			row.gemInfo:SetText(L["Gems"])
+			row.gemInfo.icon:SetTexture(gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 			row.gemInfo.tooltip = gemTooltip
 			row.gemInfo.disableWrap = not gemData.noData
 		else
-			row.gemInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_WAITING_TEXTURE, L["Loading..."])
+			row.gemInfo:SetText(L["Loading"])
+			row.gemInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
 			row.gemInfo.tooltip = L["Gem information is still loading, you need to be within inspection range for data to become available."]
 			row.gemInfo.disableWrap = nil
 		end
@@ -236,7 +250,6 @@ local function OnLeave(self)
 end
 
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local buttonList = {"playerInfo", "talentInfo", "trustedInfo", "notesInfo", "gearInfo", "enchantInfo", "gemInfo"}
 function Summary:CreateSingle(id)
 	if( self.summaryRows[id] ) then
 		return self.summaryRows[id]
@@ -260,10 +273,13 @@ function Summary:CreateSingle(id)
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
-		button:GetFontString():SetPoint("LEFT", button, "LEFT", 0, 0)
+		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
+		button.icon:SetSize(16, 16)
+		button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
 		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
-		button:GetFontString():SetWidth(row:GetWidth() - 5)
+		button:GetFontString():SetWidth(row:GetWidth() - 23)
 		button:GetFontString():SetHeight(15)
 		
 		if( i > 1 ) then
