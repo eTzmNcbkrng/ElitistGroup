@@ -98,9 +98,15 @@ hooksecurefunc("NotifyInspect", function(unit)
 		pending.talents = true
 		pending.unit = unit
 		pending.guid = UnitGUID(unit)
-
+		pending.achievements = true
+		
 		Scan:UpdateUnitData(unit)
+		
+		if( AchievementFrameComparison ) then
+			AchievementFrameComparison:UnregisterEvent("INSPECT_ACHIEVEMENT_READY")
+		end
 		SetAchievementComparisonUnit(unit)
+		
 
 		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
 		Scan.frame:Show()
@@ -112,8 +118,15 @@ hooksecurefunc("NotifyInspect", function(unit)
 	end
 end)
 
-hooksecurefunc("SetAchievementComparisonUnit", function(unit) pending.achievements = true end)
-hooksecurefunc("ClearAchievementComparisonUnit", function(unit) pending.achievements = nil end)
+hooksecurefunc("ClearAchievementComparisonUnit", function(unit)
+	if( pending.achievements ) then
+		pending.achievements = nil
+	
+		if( AchievementFrameComparison ) then
+			AchievementFrameComparison:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
+		end
+	end
+end)
 
 function Scan:CheckInspectGear()
 	if( not pending.playerID or pending.totalChecks >= 25 or UnitGUID(pending.unit) ~= pending.guid ) then
@@ -148,8 +161,6 @@ end
 
 function Scan:INSPECT_ACHIEVEMENT_READY()
 	if( pending.playerID and pending.achievements and ElitistGroup.userData[pending.playerID] ) then
-		pending.achievements = nil
-		
 		local userData = ElitistGroup.userData[pending.playerID]
 		for achievementID in pairs(ElitistGroup.VALID_ACHIEVEMENTS) do
 			local id, _, _, _, _, _, _, _, flags = GetAchievementInfo(achievementID)
@@ -160,6 +171,7 @@ function Scan:INSPECT_ACHIEVEMENT_READY()
 			end
 		end
 		
+		ClearAchievementComparisonUnit()
 		self:SendMessage("SG_DATA_UPDATED", "achievements", pending.playerID)
 	end
 end
