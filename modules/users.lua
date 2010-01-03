@@ -41,7 +41,6 @@ function Users:LoadData(userData)
 				local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
 				if( itemQuality and itemLevel ) then
 					local baseItemLink = SimpleGroup:GetBaseItemLink(itemLink)
-					local enhanceStatus = ( enchantData.noData or gemData.noData ) and "pending" or ( enchantData[fullItemLink] or gemData[fullItemLink] ) and "fail"
 					
 					-- Now sum it all up
 					slot.tooltip = nil
@@ -50,16 +49,31 @@ function Users:LoadData(userData)
 					slot.enchantTooltip = enchantTooltips[itemLink]
 					slot.itemTalentType = SimpleGroup.TALENT_TYPES[SimpleGroup.ITEM_TALENTTYPE[baseItemLink]] or SimpleGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
-					slot.extraText:SetText(L["Enhancements"])
-					slot.extraText.icon:SetTexture(enhanceStatus == "pending" and READY_CHECK_WAITING_TEXTURE or enhanceStatus == "fail" and READY_CHECK_NOT_READY_TEXTURE or READY_CHECK_READY_TEXTURE)
 					slot.typeText:SetText(slot.itemTalentType)
 					slot.typeText.icon:SetTexture(not equipmentData[itemLink] and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 					slot:Enable()
 					slot:Show()
+
+					if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
+						slot.typeText.icon:ClearAllPoints()
+						slot.typeText.icon:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", -1, 0)
+
+						slot.extraText:SetText(L["Enhancements"])
+						slot.extraText.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
+						slot.extraText.icon:Show()
+						slot.extraText:Show()
+					else
+						slot.typeText.icon:ClearAllPoints()
+						slot.typeText.icon:SetPoint("LEFT", slot.icon, "RIGHT", -1, 0)
+						slot.extraText:Hide()
+						slot.extraText.icon:Hide()
+					end
 				else
 					slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-					slot.extraText:SetText("----")
-					slot.typeText:SetText("----")
+					slot.extraText:SetText("")
+					slot.extraText.icon:SetTexture(nil)
+					slot.typeText:SetText("")
+					slot.typeText.icon:SetTexture(nil)
 					slot.equippedItem = nil
 					slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
 					slot:Disable()
