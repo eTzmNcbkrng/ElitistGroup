@@ -254,7 +254,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 	
 	-- Gems
 	if( gemData.noData ) then
-		gemTooltip = L["Gems: |cffffffffFailed to load gem data,\or the player has no gems.|r"]
+		gemTooltip = L["Gems: |cffffffffFailed to find any gems|r"]
 	elseif( gemData.totalBad > 0 ) then
 		gemTooltip = string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
 		
@@ -280,7 +280,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 	table.wipe(tempList)
 
 	if( enchantData.noData ) then
-		enchantTooltip = L["Enchants: |cffffffffFailed to load enchant data,\nor the player has no enchants.|r"]
+		enchantTooltip = L["Enchants: |cffffffffThe player does not have any enchants|r"]
 	elseif( enchantData.totalBad > 0 ) then
 		enchantTooltip = string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
 		
