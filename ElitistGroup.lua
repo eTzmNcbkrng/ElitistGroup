@@ -212,7 +212,8 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 			lastItemLink = itemLink
 			totalBad = 0
 		end
-		
+		totalBad = totalBad + 1
+				
 		if( arg == "missing" ) then
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. L["Unused sockets"]
 		elseif( type(arg) == "string" ) then
@@ -224,7 +225,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	
 	-- And grab the last one
 	if( lastItemLink ) then
-		gemTooltips[lastItemLink] = string.format(L["Gems: |cffffffff%d bad|r"], totalBad)
+		gemTooltips[lastItemLink] = string.format(L["Gems: |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
 	end
 	
 	-- Now compile all the enchants
