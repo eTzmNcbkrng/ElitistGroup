@@ -112,7 +112,7 @@ function ElitistGroup:OnInitialize()
 	if( not ElitistGroup.db.profile.helped ) then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
 			ElitistGroup.db.profile.helped = true
-			ElitistGroup:Print(L["Welcome! Type /ElitistGroup help to see a list of available slash commands."])
+			ElitistGroup:Print(L["Welcome! Type /elitistgroup help (or /eg help) to see a list of available slash commands."])
 			ElitistGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		end)
 	end
