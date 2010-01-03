@@ -180,8 +180,7 @@ function SimpleGroup:IsValidEnchant(itemLink, playerData)
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
--- Handles caching of tables for variable tick spells, like Wild Growth
-tableCache = setmetatable({}, {__mode = "k"})
+local tableCache = setmetatable({}, {__mode = "k"})
 local function getTable()
 	return table.remove(tableCache, 1) or {}
 end
