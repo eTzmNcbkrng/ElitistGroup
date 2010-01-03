@@ -147,7 +147,7 @@ end
 SLASH_ELITISTGROUP1 = "/elitistgroup"
 SLASH_ELITISTGROUP2 = "/elitistgroups"
 SLASH_ELITISTGROUP3 = "/eg"
-SlashCmdList["ELISTIGROUP"] = function(msg)
+SlashCmdList["ELITISTGROUP"] = function(msg)
 	local cmd, arg = string.split(" ", msg or "", 2)
 	cmd = string.lower(cmd or "")
 
