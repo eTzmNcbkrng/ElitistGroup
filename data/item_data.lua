@@ -163,6 +163,7 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 	[930] = "never", -- Riding Skill
 	[803] = "melee-dps", -- Fiery Weapon
 	[3731] = "tank/pvp", -- Titanium Weapon Chain
+	[3788] = "tank", -- Accuracy
 	[3728] = "caster", -- Darkglow Embroidery
 	[3730] = "physical-dps", -- Swordguard Embroidery
 	[3722] = "caster", -- Lightweave Embroidery
