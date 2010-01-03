@@ -1,12 +1,12 @@
-local SimpleGroup = select(2, ...)
-local Scan = SimpleGroup:NewModule("Scan", "AceEvent-3.0")
-local L = SimpleGroup.L
+local ElitistGroup = select(2, ...)
+local Scan = ElitistGroup:NewModule("Scan", "AceEvent-3.0")
+local L = ElitistGroup.L
 
 -- These are the fields that comm are allowed to send, this is used so people don't try and make super complex tables to send to the user and either crash or lag them.
-SimpleGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number"}
-SimpleGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
-SimpleGroup.MAX_LINK_LENGTH = 80
-SimpleGroup.MAX_NOTE_LENGTH = 256
+ElitistGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number"}
+ElitistGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
+ElitistGroup.MAX_LINK_LENGTH = 80
+ElitistGroup.MAX_NOTE_LENGTH = 256
 
 local MAX_QUEUE_RETRIES = 20
 local QUEUE_RETRY_TIME = 2
@@ -92,7 +92,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 	end
 	
 	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN and not pending.playerID and not pending.activeInspect ) then
-		pending.playerID = SimpleGroup:GetPlayerID(unit)
+		pending.playerID = ElitistGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
 		pending.talents = true
@@ -128,7 +128,7 @@ function Scan:CheckInspectGear()
 		local currentLink = GetInventoryItemLink(pending.unit, inventoryID)
 		if( currentLink ~= itemLink ) then
 			pendingGear[inventoryID] = nil
-			SimpleGroup.userData[pending.playerID].equipment[inventoryID] = SimpleGroup:GetItemLink(currentLink)
+			ElitistGroup.userData[pending.playerID].equipment[inventoryID] = ElitistGroup:GetItemLink(currentLink)
 		else
 			totalPending = totalPending + 1
 		end
@@ -137,15 +137,21 @@ function Scan:CheckInspectGear()
 	if( totalPending == 0 ) then
 		self.frame.gearTimer = nil
 		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
+
+		-- If achievements and talent data is already available, we have all the info we need and it can be unblocked
+		if( not pending.achievements and not pending.talents ) then
+			self:ProcessQueue()
+			pending.activeInspect = nil
+		end
 	end
 end
 
 function Scan:INSPECT_ACHIEVEMENT_READY()
-	if( pending.playerID and pending.achievements and SimpleGroup.userData[pending.playerID] ) then
+	if( pending.playerID and pending.achievements and ElitistGroup.userData[pending.playerID] ) then
 		pending.achievements = nil
 		
-		local userData = SimpleGroup.userData[pending.playerID]
-		for achievementID in pairs(SimpleGroup.VALID_ACHIEVEMENTS) do
+		local userData = ElitistGroup.userData[pending.playerID]
+		for achievementID in pairs(ElitistGroup.VALID_ACHIEVEMENTS) do
 			local id, _, _, _, _, _, _, _, flags = GetAchievementInfo(achievementID)
 			if( flags == ACHIEVEMENT_FLAGS_STATISTIC ) then
 				userData.achievements[achievementID] = tonumber(GetComparisonStatistic(id)) or nil
@@ -158,11 +164,12 @@ function Scan:INSPECT_ACHIEVEMENT_READY()
 	end
 end
 
+-- Inspection seems to block until INSPECT_TALENT_READY is fired, then it unblocks
 function Scan:INSPECT_TALENT_READY()
-	if( pending.playerID and pending.talents and SimpleGroup.userData[pending.playerID] ) then
+	if( pending.playerID and pending.talents and ElitistGroup.userData[pending.playerID] ) then
 		pending.talents = nil
 		
-		local userData = SimpleGroup.userData[pending.playerID]
+		local userData = ElitistGroup.userData[pending.playerID]
 		local first, second, third, unspentPoints, specRole = self:GetTalentData(pending.classToken, true)
 		userData.talentTree1 = first
 		userData.talentTree2 = second
@@ -176,7 +183,7 @@ end
 
 function Scan:GetTalentData(classToken, inspect)
 	local specRole
-	local forceData = SimpleGroup.FORCE_SPECROLE[classToken]
+	local forceData = ElitistGroup.FORCE_SPECROLE[classToken]
 	local activeTalentGroup = GetActiveTalentGroup(inspect)
 	if( forceData ) then
 		local talentMatches = 0
@@ -203,35 +210,35 @@ end
 
 function Scan:CreateCoreTable(unit)
 	local name, server = UnitName(unit)
-	local playerID = SimpleGroup:GetPlayerID(unit)
-	local userData = SimpleGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = SimpleGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	local playerID = ElitistGroup:GetPlayerID(unit)
+	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
 	userData.name = name
 	userData.server = server and server ~= "" and server or GetRealmName()
 	userData.level = UnitLevel(unit)
 	userData.classToken = select(2, UnitClass(unit))
 	
-	SimpleGroup.userData[playerID] = userData
-	SimpleGroup.writeQueue[playerID] = true
+	ElitistGroup.userData[playerID] = userData
+	ElitistGroup.writeQueue[playerID] = true
 	
 	-- This is just so loops to find players can be simplified to only look through one table
-	SimpleGroup.db.faction.users[playerID] = SimpleGroup.db.faction.users[playerID] or ""
+	ElitistGroup.db.faction.users[playerID] = ElitistGroup.db.faction.users[playerID] or ""
 end
 
 function Scan:UpdateUnitData(unit)
 	self:CreateCoreTable(unit)
 
-	local userData = SimpleGroup.userData[SimpleGroup:GetPlayerID(unit)]
+	local userData = ElitistGroup.userData[ElitistGroup:GetPlayerID(unit)]
 	userData.scanned = time()
 
 	table.wipe(userData.equipment)
-	for itemType in pairs(SimpleGroup.INVENTORY_TO_TYPE) do
+	for itemType in pairs(ElitistGroup.INVENTORY_TO_TYPE) do
 		local inventoryID = GetInventorySlotInfo(itemType)
 		local itemLink = GetInventoryItemLink(unit, inventoryID)
-		userData.equipment[inventoryID] = SimpleGroup:GetItemLink(itemLink)
+		userData.equipment[inventoryID] = ElitistGroup:GetItemLink(itemLink)
 				
 		-- Basically, this makes sure that either the item has no sockets that need to be loaded, or that the data isn't already present
 		if( pending.unit == unit and itemLink ) then
-			local totalSockets = SimpleGroup.EMPTY_GEM_SLOTS[itemLink]
+			local totalSockets = ElitistGroup.EMPTY_GEM_SLOTS[itemLink]
 			if( totalSockets > 0 ) then
 				local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
 				local totalUsed = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
@@ -246,7 +253,7 @@ end
 function Scan:UpdatePlayerData()
 	self:UpdateUnitData("player")
 	
-	local userData = SimpleGroup.userData[SimpleGroup.playerName]
+	local userData = ElitistGroup.userData[ElitistGroup.playerName]
 	local first, second, third, unspentPoints, specRole = self:GetTalentData(select(2, UnitClass("player")), nil)
 	userData.talentTree1 = first
 	userData.talentTree2 = second
@@ -255,7 +262,7 @@ function Scan:UpdatePlayerData()
 	userData.specRole = specRole
 
 	table.wipe(userData.achievements)
-	for achievementID in pairs(SimpleGroup.VALID_ACHIEVEMENTS) do
+	for achievementID in pairs(ElitistGroup.VALID_ACHIEVEMENTS) do
 		local id, _, _, completed, _, _, _, _, flags = GetAchievementInfo(achievementID)
 		if( flags == ACHIEVEMENT_FLAGS_STATISTIC ) then
 			userData.achievements[id] = tonumber(GetStatistic(id)) or nil

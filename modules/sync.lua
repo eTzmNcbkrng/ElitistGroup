@@ -1,8 +1,8 @@
 -- Some of the sanity checks in this are a bit unnecessary and me being super paranoid
 -- but I know how much people will love to try and break this, so I am going to give them as little way to break it as possible
-local SimpleGroup = select(2, ...)
-local Sync = SimpleGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
-local L = SimpleGroup.L
+local ElitistGroup = select(2, ...)
+local Sync = ElitistGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
+local L = ElitistGroup.L
 local playerName = UnitName("player")
 local combatQueue, requestThrottle, cachedPlayerData, blockOfflineMessage = {}, {}
 local COMM_PREFIX = "SMPGRP"
@@ -12,7 +12,7 @@ local REQUEST_TIMEOUT = 10
 local REQUEST_THROTTLE = 5
 
 function Sync:Setup()
-	if( SimpleGroup.db.profile.comm.enabled ) then
+	if( ElitistGroup.db.profile.comm.enabled ) then
 		self:RegisterComm(COMM_PREFIX)
 		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetCacheData")
 		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetCacheData")
@@ -68,13 +68,13 @@ end
 
 -- This will have to be changed, I'm not quite sure a good way of doing it yet
 function Sync:RequestSuccessful(event, type, name)
-	SimpleGroup:Print(string.format(L["Successfully got data on %s, type /SimpleGroup %s to view!"], name, name))
+	ElitistGroup:Print(string.format(L["Successfully got data on %s, type /ElitistGroup %s to view!"], name, name))
 	self:UnregisterMessage("SG_DATA_UPDATED")
 end
 
 function Sync:SendGearRequest(gearFor)
 	if( not gearFor or gearFor == "" ) then
-		SimpleGroup:Print(L["Invalid name entered."])
+		ElitistGroup:Print(L["Invalid name entered."])
 		return
 	elseif( gearFor == "target" or gearFor == "focus" or gearFor == "mouseover" ) then
 		local server
@@ -82,7 +82,7 @@ function Sync:SendGearRequest(gearFor)
 		if( server and server ~= "" ) then gearFor = string.format("%s-%s", gearFor, server) end
 
 		if( not gearFor ) then
-			SimpleGroup:Print(L["No name found for unit."])
+			ElitistGroup:Print(L["No name found for unit."])
 			return
 		end
 	end
@@ -94,15 +94,15 @@ end
 
 function Sync:SendNoteRequest(notesOn)
 	if( not IsInGuild() ) then
-		SimpleGroup:Print(L["You need to be in a guild to request notes on players."])
+		ElitistGroup:Print(L["You need to be in a guild to request notes on players."])
 		return
 	elseif( not notesOn or notesOn == "" ) then
-		SimpleGroup:Print(L["Invalid name entered."])
+		ElitistGroup:Print(L["Invalid name entered."])
 		return
 	elseif( notesOn == "target" or notesOn == "focus" or notesOn == "mouseover" ) then
-		notesOn = SimpleGroup:GetPlayerID(notesOn)
+		notesOn = ElitistGroup:GetPlayerID(notesOn)
 		if( not notesOn ) then
-			SimpleGroup:Print(L["No name found for unit."])
+			ElitistGroup:Print(L["No name found for unit."])
 			return
 		end
 	elseif( not string.match(notesOn, "%-") ) then
@@ -115,12 +115,12 @@ function Sync:SendNoteRequest(notesOn)
 end
 
 function Sync:ParseGearRequest(sender)
-	if( not SimpleGroup.db.profile.comm.gearRequests ) then return end
+	if( not ElitistGroup.db.profile.comm.gearRequests ) then return end
 	
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
-		SimpleGroup.modules.Scan:UpdatePlayerData("player")
-		cachedPlayerData = string.format("GEAR@%s", SimpleGroup:WriteTable(SimpleGroup.userData[SimpleGroup.playerName], true))
+		ElitistGroup.modules.Scan:UpdatePlayerData("player")
+		cachedPlayerData = string.format("GEAR@%s", ElitistGroup:WriteTable(ElitistGroup.userData[ElitistGroup.playerName], true))
 	end
 	
 	self:CommMessage(cachedPlayerData, "WHISPER", sender)
@@ -137,11 +137,11 @@ function Sync:ParseNotesRequest(sender, ...)
 	local queuedData = ""
 	for i=1, select("#", ...) do
 		local name = select(i, ...)
-		if( not tempList[name] and name ~= SimpleGroup.playerName ) then
-			local userData = SimpleGroup.userData[name]
-			local note = userData and userData.notes[SimpleGroup.playerName]
+		if( not tempList[name] and name ~= ElitistGroup.playerName ) then
+			local userData = ElitistGroup.userData[name]
+			local note = userData and userData.notes[ElitistGroup.playerName]
 			if( note ) then
-				queuedData = string.format('%s["%s"] = %s;', queuedData, name, SimpleGroup:WriteTable(note))
+				queuedData = string.format('%s["%s"] = %s;', queuedData, name, ElitistGroup:WriteTable(note))
 			end
 			
 			tempList[name] = true
@@ -166,26 +166,26 @@ function Sync:ParseSentGear(sender, data)
 		return
 	end
 	
-	sentData = self:VerifyTable(sentData(), SimpleGroup.VALID_DB_FIELDS)
+	sentData = self:VerifyTable(sentData(), ElitistGroup.VALID_DB_FIELDS)
 	if( not sentData or not sentData.achievements or not sentData.equipment ) then return end
 	
 	-- Verify gear
 	for key, value in pairs(sentData.equipment) do
-		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > SimpleGroup.MAX_LINK_LENGTH or not SimpleGroup.VALID_INVENTORY_SLOTS ) then
+		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > ElitistGroup.MAX_LINK_LENGTH or not ElitistGroup.VALID_INVENTORY_SLOTS ) then
 			sentData.equipment[key] = nil
 		end
 	end
 	
 	-- Verify achievements
 	for key, value in pairs(sentData.achievements) do
-		if( type(key) ~= "number" or type(value) ~= "number" or not SimpleGroup.VALID_ACHIEVEMENTS[key] ) then
+		if( type(key) ~= "number" or type(value) ~= "number" or not ElitistGroup.VALID_ACHIEVEMENTS[key] ) then
 			sentData.achievements[key] = nil
 		end
 	end
 		
 	-- Merge everything into the current table
 	local senderName, name, server = getFullName(sender)
-	local userData = SimpleGroup.userData[senderName] or {}
+	local userData = ElitistGroup.userData[senderName] or {}
 	local notes = userData.notes or {}
 
 	-- If the player already has trusted data on this person from within 10 minutes, don't accept the comm
@@ -205,9 +205,9 @@ function Sync:ParseSentGear(sender, data)
 	userData.from = senderName
 	userData.trusted = nil
 		
-	SimpleGroup.writeQueue[senderName] = true
-	SimpleGroup.userData[senderName] = userData
-	SimpleGroup.db.faction.users[senderName] = SimpleGroup.db.faction.users[senderName] or ""
+	ElitistGroup.writeQueue[senderName] = true
+	ElitistGroup.userData[senderName] = userData
+	ElitistGroup.db.faction.users[senderName] = ElitistGroup.db.faction.users[senderName] or ""
 
 	self:SendMessage("SG_DATA_UPDATED", "gear", senderName)
 end
@@ -230,22 +230,22 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	local senderName, name, server = getFullName(sender)
 	
 	for noteFor, note in pairs(sentNotes()) do
-		note = self:VerifyTable(note, SimpleGroup.VALID_NOTE_FIELDS)
-		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= SimpleGroup.MAX_NOTE_LENGTH ) ) then
+		note = self:VerifyTable(note, ElitistGroup.VALID_NOTE_FIELDS)
+		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= ElitistGroup.MAX_NOTE_LENGTH ) ) then
 			local name, server = string.split("-", noteFor, 2)
-			local userData = SimpleGroup.userData[noteFor] or {}
+			local userData = ElitistGroup.userData[noteFor] or {}
 			
 			-- If the time drift is over a day, reset the time of the comment to right now
 			note.time = timeDrift > 86400 and time() or note.time + timeDrift
-			note.comment = SimpleGroup:SafeEncode(note.comment)
+			note.comment = ElitistGroup:SafeEncode(note.comment)
 			note.from = senderName
 			note.rating = math.max(math.min(5, note.rating), 0)
 			
 			userData.notes[senderName] = note
 			
-			SimpleGroup.userData[noteFor] = userData
-			SimpleGroup.db.faction.users[noteFor] = SimpleGroup.db.faction.users[noteFor] or ""
-			SimpleGroup.writeQueue[noteFor] = true
+			ElitistGroup.userData[noteFor] = userData
+			ElitistGroup.db.faction.users[noteFor] = ElitistGroup.db.faction.users[noteFor] or ""
+			ElitistGroup.writeQueue[noteFor] = true
 
 			self:SendMessage("SG_DATA_UPDATED", "note", noteFor)
 		end
@@ -253,7 +253,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 end
 
 function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
-	if( prefix ~= COMM_PREFIX or sender == playerName or not SimpleGroup.db.profile.comm.areas[distribution] ) then return end
+	if( prefix ~= COMM_PREFIX or sender == playerName or not ElitistGroup.db.profile.comm.areas[distribution] ) then return end
 	if( InCombatLockdown() ) then
 		if( #(combatQueue) < MAX_QUEUE ) then
 			table.insert(combatQueue, {message, distribution, sender, time()})

@@ -1,6 +1,6 @@
-local SimpleGroup = select(2, ...)
-local Summary = SimpleGroup:NewModule("Summary", "AceEvent-3.0")
-local L = SimpleGroup.L
+local ElitistGroup = select(2, ...)
+local Summary = ElitistGroup:NewModule("Summary", "AceEvent-3.0")
+local L = ElitistGroup.L
 local buttonList = {"playerInfo", "talentInfo", "trustedInfo", "notesInfo", "gearInfo", "enchantInfo", "gemInfo"}
 local notesRequested, unitToRow = {}, {}
 local activeGroupID
@@ -13,7 +13,7 @@ function Summary:OnInitialize()
 end
 
 function Summary:PLAYER_LEAVING_WORLD()
-	SimpleGroup.modules.Scan:ResetQueue()
+	ElitistGroup.modules.Scan:ResetQueue()
 end
 
 -- My theory with this event, and from looking is it seems to only fire when you are using the LFD system
@@ -27,13 +27,13 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 		if( guid ) then
 			groupID = groupID .. guid
 			
-			if( SimpleGroup.db.profile.database.autoNotes and IsInGuild() and not notesRequested[guid] ) then
+			if( ElitistGroup.db.profile.database.autoNotes and IsInGuild() and not notesRequested[guid] ) then
 				notesRequested[guid] = true
 				
 				if( notes ) then
-					notes = notes .. "@" .. SimpleGroup:GetPlayerID("party" .. i)
+					notes = notes .. "@" .. ElitistGroup:GetPlayerID("party" .. i)
 				else
-					notes = SimpleGroup:GetPlayerID("party" .. i)
+					notes = ElitistGroup:GetPlayerID("party" .. i)
 				end
 			end
 		end
@@ -43,18 +43,18 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 	activeGroupID = groupID
 	
 	if( notes ) then
-		SimpleGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
+		ElitistGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
 	end
 	
-	if( SimpleGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
+	if( ElitistGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
 		self:Setup()
 	end
 	
 	for i=1, GetNumPartyMembers() do
-		SimpleGroup.modules.Scan:QueueAdd("party" .. i)
+		ElitistGroup.modules.Scan:QueueAdd("party" .. i)
 	end
 
-	SimpleGroup.modules.Scan:QueueStart()
+	ElitistGroup.modules.Scan:QueueStart()
 end
 
 function Summary:Setup()
@@ -79,7 +79,7 @@ end
 
 function Summary:SG_DATA_UPDATED(event, type, name)
 	for unit, row in pairs(unitToRow) do
-		if( row:IsVisible() and SimpleGroup:GetPlayerID(unit) == name ) then
+		if( row:IsVisible() and ElitistGroup:GetPlayerID(unit) == name ) then
 			self:UpdateSingle(row)
 		end
 	end
@@ -92,8 +92,8 @@ function Summary:UpdateSingle(row)
 		return
 	end
 	
-	local playerID = SimpleGroup:GetPlayerID(row.unitID)
-	local userData = SimpleGroup.userData[playerID]
+	local playerID = ElitistGroup:GetPlayerID(row.unitID)
+	local userData = ElitistGroup.userData[playerID]
 	local level = UnitLevel(row.unitID)
 	local classToken = select(2, UnitClass(row.unitID))
 	local name, server = UnitName(row.unitID)
@@ -126,7 +126,7 @@ function Summary:UpdateSingle(row)
 		for _, note in pairs(userData.notes) do totalNotes = totalNotes + 1 end
 		
 		-- Player personally left a note on the person
-		local playerNote = userData.notes[SimpleGroup.playerName]
+		local playerNote = userData.notes[ElitistGroup.playerName]
 		if( playerNote ) then
 			local noteAge = (time() - playerNote.time) / 60
 			if( noteAge < 60 ) then
@@ -137,7 +137,7 @@ function Summary:UpdateSingle(row)
 				noteAge = string.format(L["%d days"], noteAge / 1440)
 			end
 			
-			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["Rated %d of %d"], playerNote.rating, SimpleGroup.MAX_RATING))
+			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["Rated %d of %d"], playerNote.rating, ElitistGroup.MAX_RATING))
 			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, playerNote.comment or L["No comment"])
 		-- We haven't, but somebody else has left a note on them
 		elseif( totalNotes > 0 ) then
@@ -149,15 +149,15 @@ function Summary:UpdateSingle(row)
 		end
 		
 		-- Make sure they are talented enough
-		local specType, specName, specIcon = SimpleGroup:GetPlayerSpec(userData)
+		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
 			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
 			row.talentInfo.icon:SetTexture(specIcon)
-			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SimpleGroup.TALENT_ROLES[specType])
+			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
 		else
 			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
 			row.talentInfo.icon:SetTexture(specIcon)
-			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SimpleGroup.TALENT_ROLES[specType])
+			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
 		end
 		
 		-- Add trusted info of course
@@ -171,8 +171,8 @@ function Summary:UpdateSingle(row)
 			row.trustedInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 		end
 		
-		local equipmentData, enchantData, gemData = SimpleGroup:GetGearSummary(userData)
-		local gemTooltip, enchantTooltip = SimpleGroup:GetGeneralSummaryTooltip(gemData, enchantData)
+		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
+		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 		
 		-- People probably want us to build the gear info, I'd imagine
 		if( equipmentData.totalBad == 0 ) then
@@ -184,7 +184,7 @@ function Summary:UpdateSingle(row)
 			for _, itemLink in pairs(userData.equipment) do
 				local fullItemLink = select(2, GetItemInfo(itemLink))
 				if( fullItemLink and equipmentData[itemLink] ) then
-					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, SimpleGroup.TALENT_TYPES[equipmentData[itemLink]] or equipmentData[itemLink])
+					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.TALENT_TYPES[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
 
@@ -219,7 +219,7 @@ function Summary:UpdateSingle(row)
 			row.gemInfo.disableWrap = nil
 		end
 
-		SimpleGroup:DeleteTables(equipmentData, enchantData, gemData)
+		ElitistGroup:DeleteTables(equipmentData, enchantData, gemData)
 	end
 end
 
@@ -318,18 +318,18 @@ function Summary:CreateUI()
 	self.summaryRows = {}
 	
 	-- Main container
-	local frame = CreateFrame("Frame", "SimpleGroupSummaryFrame", UIParent)
+	local frame = CreateFrame("Frame", "ElitistGroupSummaryFrame", UIParent)
 	frame:SetClampedToScreen(true)
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetFrameStrata("HIGH")
-	frame:SetScript("OnHide", function() SimpleGroup:DeleteTables(equipmentData, enchantData, gemData) end)
+	frame:SetScript("OnHide", function() ElitistGroup:DeleteTables(equipmentData, enchantData, gemData) end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
-			frame:SetPoint("CENTER", UIParent, "CENTER", SimpleGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
-			SimpleGroup.db.profile.position = nil
+			frame:SetPoint("CENTER", UIParent, "CENTER", ElitistGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+			ElitistGroup.db.profile.position = nil
 			return
 		end
 		
@@ -339,7 +339,7 @@ function Summary:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		SimpleGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		ElitistGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -349,11 +349,11 @@ function Summary:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	table.insert(UISpecialFrames, "SimpleGroupSummaryFrame")
+	table.insert(UISpecialFrames, "ElitistGroupSummaryFrame")
 	
-	if( SimpleGroup.db.profile.positions.summary ) then
+	if( ElitistGroup.db.profile.positions.summary ) then
 		local scale = frame:GetEffectiveScale()
-		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SimpleGroup.db.profile.positions.summary.x / scale, SimpleGroup.db.profile.positions.summary.y / scale)
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", ElitistGroup.db.profile.positions.summary.x / scale, ElitistGroup.db.profile.positions.summary.y / scale)
 	else
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	end
@@ -366,7 +366,7 @@ function Summary:CreateUI()
 
 	frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	frame.title:SetPoint("TOP", 0, 0)
-	frame.title:SetText("Simple Group")
+	frame.title:SetText("Elitist Group")
 
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")

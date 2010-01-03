@@ -1,4 +1,4 @@
-package-as: SimpleGroup
+package-as: ElitistGroup
 
 externals:
     libs/LibStub:

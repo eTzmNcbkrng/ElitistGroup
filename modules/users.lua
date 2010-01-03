@@ -1,6 +1,6 @@
-local SimpleGroup = select(2, ...)
-local Users = SimpleGroup:NewModule("Users", "AceEvent-3.0")
-local L = SimpleGroup.L
+local ElitistGroup = select(2, ...)
+local Users = ElitistGroup:NewModule("Users", "AceEvent-3.0")
+local L = ElitistGroup.L
 
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
@@ -12,7 +12,7 @@ function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		local self = Users
 		if( self.activeUserID and user == self.activeUserID and self.frame and self.frame:IsVisible() ) then
-			self:LoadData(SimpleGroup.userData[user])
+			self:LoadData(ElitistGroup.userData[user])
 		end
 	end)
 end
@@ -27,11 +27,11 @@ function Users:LoadData(userData)
 	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
 
 	-- Build score as well as figure out their score
-	SimpleGroup:DeleteTables(equipmentData, enchantData, gemData, gemTooltips, enchantTooltips)
+	ElitistGroup:DeleteTables(equipmentData, enchantData, gemData, gemTooltips, enchantTooltips)
 
 	if( not userData.pruned ) then
-		equipmentData, enchantData, gemData = SimpleGroup:GetGearSummary(userData)
-		enchantTooltips, gemTooltips = SimpleGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
+		equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
+		enchantTooltips, gemTooltips = ElitistGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
 		
 		frame.pruneInfo:Hide()
 		
@@ -40,14 +40,14 @@ function Users:LoadData(userData)
 				local itemLink = userData.equipment[slot.inventoryID]
 				local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
 				if( itemQuality and itemLevel ) then
-					local baseItemLink = SimpleGroup:GetBaseItemLink(itemLink)
+					local baseItemLink = ElitistGroup:GetBaseItemLink(itemLink)
 					
 					-- Now sum it all up
 					slot.tooltip = nil
 					slot.equippedItem = itemLink
 					slot.gemTooltip = gemTooltips[itemLink]
 					slot.enchantTooltip = enchantTooltips[itemLink]
-					slot.itemTalentType = SimpleGroup.TALENT_TYPES[SimpleGroup.ITEM_TALENTTYPE[baseItemLink]] or SimpleGroup.ITEM_TALENTTYPE[baseItemLink]
+					slot.itemTalentType = ElitistGroup.TALENT_TYPES[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
 					slot.typeText:SetText(slot.itemTalentType)
 					slot.typeText.icon:SetTexture(not equipmentData[itemLink] and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
@@ -127,14 +127,14 @@ function Users:LoadData(userData)
 	
 	self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
 	if( not userData.pruned ) then
-		local specType, specName, specIcon = SimpleGroup:GetPlayerSpec(userData)
+		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
 			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SimpleGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		else
 			frame.userFrame.talentInfo:SetFormattedText("%d %s", userData.unspentPoints, L["unspent points"])
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SimpleGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		end
 	else
@@ -170,7 +170,7 @@ function Users:LoadData(userData)
 	
 	-- Build the necessary experience data based on the players achievements, this is fun!
 	self.experienceData = {}
-	for _, data in pairs(SimpleGroup.EXPERIENCE_POINTS) do
+	for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
 		self.experienceData[data.id] = self.experienceData[data.id] or 0
 				
 		for id, points in pairs(data) do
@@ -194,8 +194,8 @@ function Users:LoadData(userData)
 	-- Find where the players score lets them into at least
 	local lockedScore
 	if( equipmentData ) then
-		for i=#(SimpleGroup.DUNGEON_DATA), 1, -4 do
-			local score = SimpleGroup.DUNGEON_DATA[i - 2]
+		for i=#(ElitistGroup.DUNGEON_DATA), 1, -4 do
+			local score = ElitistGroup.DUNGEON_DATA[i - 2]
 			if( lockedScore and lockedScore ~= score ) then
 				self.forceOffset = math.ceil((i + 1) / 4)
 				break
@@ -226,7 +226,7 @@ function Users:UpdateDatabasePage()
 		local search = not self.frame.databaseFrame.search.searchText and string.gsub(string.lower(self.frame.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
 	
 		table.wipe(userList)
-		for name in pairs(SimpleGroup.db.faction.users) do
+		for name in pairs(ElitistGroup.db.faction.users) do
 			if( search == "" or string.match(string.lower(name), search) ) then
 				table.insert(userList, name)
 			end
@@ -297,8 +297,8 @@ end
 function Users:UpdateAchievementInfo()
 	local self = Users
 	local totalEntries = 0
-	for id, data in pairs(SimpleGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and SimpleGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SimpleGroup.db.profile.expExpanded[SimpleGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+	for id, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
+		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( data.tier or ElitistGroup.db.profile.expExpanded[ElitistGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			totalEntries = totalEntries + 1
 		end
 	end
@@ -311,8 +311,8 @@ function Users:UpdateAchievementInfo()
 	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
 	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
-	for _, data in pairs(SimpleGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and SimpleGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SimpleGroup.db.profile.expExpanded[SimpleGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+	for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
+		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( data.tier or ElitistGroup.db.profile.expExpanded[ElitistGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			id = id + 1
 			if( id >= offset ) then
 				local row = self.frame.achievementFrame.rows[rowID]
@@ -324,8 +324,8 @@ function Users:UpdateAchievementInfo()
 				end
 				
 				-- Setup toggle button
-				if( not data.childless and ( SimpleGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
-					local type = not SimpleGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
+				if( not data.childless and ( ElitistGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
+					local type = not ElitistGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
 					row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
 					row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
 					row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
@@ -379,15 +379,15 @@ function Users:UpdateNoteInfo()
 		if( id >= offset ) then
 			local row = self.frame.noteFrame.rows[rowID]
 
-			local percent = (note.rating - 1) / (SimpleGroup.MAX_RATING - 1)
+			local percent = (note.rating - 1) / (ElitistGroup.MAX_RATING - 1)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local roles = ""
-			if( bit.band(note.role, SimpleGroup.ROLE_HEALER) > 0 ) then roles = HEALER end
-			if( bit.band(note.role, SimpleGroup.ROLE_TANK) > 0 ) then roles = roles .. ", " .. TANK end
-			if( bit.band(note.role, SimpleGroup.ROLE_DAMAGE) > 0 ) then roles = roles .. ", " .. DAMAGE end
+			if( bit.band(note.role, ElitistGroup.ROLE_HEALER) > 0 ) then roles = HEALER end
+			if( bit.band(note.role, ElitistGroup.ROLE_TANK) > 0 ) then roles = roles .. ", " .. TANK end
+			if( bit.band(note.role, ElitistGroup.ROLE_DAMAGE) > 0 ) then roles = roles .. ", " .. DAMAGE end
 			
-			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SimpleGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
+			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, ElitistGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment or L["No comment"])
 			row.tooltip = string.format(L["Seen as %s - %s:\n|cffffffff%s|r"], string.trim(string.gsub(roles, "^, ", "")), date("%m/%d/%Y", note.time), note.comment or L["No comment"])
 			row:SetWidth(rowWidth)
@@ -401,7 +401,7 @@ function Users:UpdateNoteInfo()
 	end
 end
 
-local TOTAL_DUNGEONS = #(SimpleGroup.DUNGEON_DATA) / 4
+local TOTAL_DUNGEONS = #(ElitistGroup.DUNGEON_DATA) / 4
 function Users:UpdateDungeonInfo()
 	local self = Users
 
@@ -417,20 +417,20 @@ function Users:UpdateDungeonInfo()
 
 	local id, rowID = 1, 1
 	local offset = FauxScrollFrame_GetOffset(self.frame.dungeonFrame.scroll)
-	for dataID=1, #(SimpleGroup.DUNGEON_DATA), 4 do
+	for dataID=1, #(ElitistGroup.DUNGEON_DATA), 4 do
 		if( id >= offset ) then
 			local row = self.frame.dungeonFrame.rows[rowID]
 			
-			local name, score, players, type = SimpleGroup.DUNGEON_DATA[dataID], SimpleGroup.DUNGEON_DATA[dataID + 1], SimpleGroup.DUNGEON_DATA[dataID + 2], SimpleGroup.DUNGEON_DATA[dataID + 3]
-			local percent = 1.0 - ((score - SimpleGroup.DUNGEON_MIN) / SimpleGroup.DUNGEON_DIFF)
+			local name, score, players, type = ElitistGroup.DUNGEON_DATA[dataID], ElitistGroup.DUNGEON_DATA[dataID + 1], ElitistGroup.DUNGEON_DATA[dataID + 2], ElitistGroup.DUNGEON_DATA[dataID + 3]
+			local percent = 1.0 - ((score - ElitistGroup.DUNGEON_MIN) / ElitistGroup.DUNGEON_DIFF)
 			-- This shows colors relative to how close the player is to the score, not sure if we want to use this.
-			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / SimpleGroup.DUNGEON_DIFF), 1), 0)
+			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / ElitistGroup.DUNGEON_DIFF), 1), 0)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local heroicIcon = (type == "heroic" or type == "hard") and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
 			
 			row.dungeonName:SetFormattedText("%s|cff%02x%02x00%s|r", heroicIcon, r, g, name)
-			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %s-man (%s)"], r, g, score, players, SimpleGroup.DUNGEON_TYPES[type])
+			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %s-man (%s)"], r, g, score, players, ElitistGroup.DUNGEON_TYPES[type])
 			row:Show()
 
 			rowID = rowID + 1
@@ -460,7 +460,7 @@ function Users:CreateUI()
 			GameTooltip:SetHyperlink(self.equippedItem)
 			GameTooltip:Show()
 
-			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "SimpleGroupUserTooltip", UIParent, "GameTooltipTemplate")
+			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "ElitistGroupUserTooltip", UIParent, "GameTooltipTemplate")
 			extraTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
 			extraTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
 			
@@ -487,7 +487,7 @@ function Users:CreateUI()
 	end
 		
 	-- Main container
-	local frame = CreateFrame("Frame", "SimpleGroupUserInfo", UIParent)
+	local frame = CreateFrame("Frame", "ElitistGroupUserInfo", UIParent)
 	self.frame = frame
 	frame:SetClampedToScreen(true)
 	frame:SetWidth(675)
@@ -500,8 +500,8 @@ function Users:CreateUI()
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
-			frame:SetPoint("CENTER", UIParent, "CENTER", SimpleGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
-			SimpleGroup.db.profile.positions.user = nil
+			frame:SetPoint("CENTER", UIParent, "CENTER", ElitistGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+			ElitistGroup.db.profile.positions.user = nil
 			return
 		end
 		
@@ -511,7 +511,7 @@ function Users:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		SimpleGroup.db.profile.positions.user = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		ElitistGroup.db.profile.positions.user = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -521,13 +521,13 @@ function Users:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	table.insert(UISpecialFrames, "SimpleGroupUserInfo")
+	table.insert(UISpecialFrames, "ElitistGroupUserInfo")
 	
-	if( SimpleGroup.db.profile.positions.user ) then
+	if( ElitistGroup.db.profile.positions.user ) then
 		local scale = frame:GetEffectiveScale()
-		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SimpleGroup.db.profile.positions.user.x / scale, SimpleGroup.db.profile.positions.user.y / scale)
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", ElitistGroup.db.profile.positions.user.x / scale, ElitistGroup.db.profile.positions.user.y / scale)
 	else
-		frame:SetPoint("CENTER", UIParent, "CENTER", SimpleGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+		frame:SetPoint("CENTER", UIParent, "CENTER", ElitistGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
 	end
 
 	frame.titleBar = frame:CreateTexture(nil, "ARTWORK")
@@ -538,7 +538,7 @@ function Users:CreateUI()
 
 	frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	frame.title:SetPoint("TOP", 0, 0)
-	frame.title:SetText("Simple Group")
+	frame.title:SetText("Elitist Group")
 
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -563,7 +563,7 @@ function Users:CreateUI()
 	frame.databaseFrame.fadeFrame:SetAllPoints(frame.databaseFrame)
 	frame.databaseFrame.fadeFrame:SetFrameLevel(3)
 
-	if( SimpleGroup.db.profile.general.databaseExpanded ) then
+	if( ElitistGroup.db.profile.general.databaseExpanded ) then
 		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -10, -3)
 	else
 		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -230, -3)
@@ -584,8 +584,8 @@ function Users:CreateUI()
 		end
 	end
 
-	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameDatabase", frame.databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
-	frame.databaseFrame.scroll.bar = SimpleGroupUserFrameDatabase
+	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameDatabase", frame.databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
+	frame.databaseFrame.scroll.bar = ElitistGroupUserFrameDatabase
 	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -7)
 	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -28, 6)
 	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage); Users.scrollUpdate = nil end)
@@ -595,7 +595,7 @@ function Users:CreateUI()
 	frame.databaseFrame.toggle:SetFrameLevel(frame:GetFrameLevel() + 2)
 	frame.databaseFrame.toggle:SetHeight(128)
 	frame.databaseFrame.toggle:SetWidth(8)
-	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\SimpleGroup\\media\\tabhandle")
+	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\ElitistGroup\\media\\tabhandle")
 	frame.databaseFrame.toggle:SetScript("OnEnter", function(self)
 		SetCursor("INTERACT_CURSOR")
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -607,7 +607,7 @@ function Users:CreateUI()
 		SetCursor(nil)
 	end)
 	frame.databaseFrame.toggle:SetScript("OnClick", function(self)
-		if( SimpleGroup.db.profile.general.databaseExpanded ) then
+		if( ElitistGroup.db.profile.general.databaseExpanded ) then
 			frame.databaseFrame.startOffset = -10
 			frame.databaseFrame.endOffset = -220
 
@@ -619,11 +619,11 @@ function Users:CreateUI()
 			UIFrameFadeIn(frame.databaseFrame.fadeFrame, 0.50, 0, 1)
 		end
 		
-		SimpleGroup.db.profile.general.databaseExpanded = not SimpleGroup.db.profile.general.databaseExpanded
+		ElitistGroup.db.profile.general.databaseExpanded = not ElitistGroup.db.profile.general.databaseExpanded
 		frame.databaseFrame:SetScript("OnUpdate", frameAnimator)
 	end)
 
-	frame.databaseFrame.search = CreateFrame("EditBox", "SimpleGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
+	frame.databaseFrame.search = CreateFrame("EditBox", "ElitistGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
 	frame.databaseFrame.search:SetHeight(18)
 	frame.databaseFrame.search:SetWidth(150)
 	frame.databaseFrame.search:SetAutoFocus(false)
@@ -651,7 +651,7 @@ function Users:CreateUI()
 	end)
 
 	local function viewUserData(self)
-		Users:LoadData(SimpleGroup.userData[self.userID])
+		Users:LoadData(ElitistGroup.userData[self.userID])
 	end
 
 	frame.databaseFrame.rows = {}
@@ -694,7 +694,7 @@ function Users:CreateUI()
 	frame.pruneInfo:SetPoint("BOTTOMRIGHT", frame.gearFrame, "BOTTOMRIGHT", -4, 4)
 	frame.pruneInfo:SetJustifyH("LEFT")
 	frame.pruneInfo:SetJustifyV("TOP")
-	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /SimpleGroup and change the value."])
+	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /ElitistGroup and change the value."])
 
 	local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
 	frame.gearFrame.equipSlots = {}
@@ -750,7 +750,7 @@ function Users:CreateUI()
 
 		if( inventoryMap[i] ) then
 			slot.inventorySlot = inventoryMap[i]
-			slot.inventoryType = SimpleGroup.INVENTORY_TO_TYPE[inventoryMap[i]]
+			slot.inventoryType = ElitistGroup.INVENTORY_TO_TYPE[inventoryMap[i]]
 			slot.inventoryID, slot.emptyTexture, slot.checkRelic = GetInventorySlotInfo(inventoryMap[i])
 		end
 		
@@ -811,8 +811,8 @@ function Users:CreateUI()
 	frame.dungeonFrame.headerText:SetPoint("BOTTOMLEFT", frame.dungeonFrame, "TOPLEFT", 0, 5)
 	frame.dungeonFrame.headerText:SetText(L["Suggested dungeons"])
 
-	frame.dungeonFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameDungeon", frame.dungeonFrame, "FauxScrollFrameTemplate")
-	frame.dungeonFrame.scroll.bar = SimpleGroupUserFrameDungeonScrollBar
+	frame.dungeonFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameDungeon", frame.dungeonFrame, "FauxScrollFrameTemplate")
+	frame.dungeonFrame.scroll.bar = ElitistGroupUserFrameDungeonScrollBar
 	frame.dungeonFrame.scroll:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 0, -2)
 	frame.dungeonFrame.scroll:SetPoint("BOTTOMRIGHT", frame.dungeonFrame, "BOTTOMRIGHT", -24, 1)
 	frame.dungeonFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 28, Users.UpdateDungeonInfo) end)
@@ -892,8 +892,8 @@ function Users:CreateUI()
 	frame.achievementFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
 	frame.achievementFrame:SetAllPoints(frame.userTabFrame)
 
-	frame.achievementFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameAchievements", frame.achievementFrame, "FauxScrollFrameTemplate")
-	frame.achievementFrame.scroll.bar = SimpleGroupUserFrameAchievementsScrollBar
+	frame.achievementFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameAchievements", frame.achievementFrame, "FauxScrollFrameTemplate")
+	frame.achievementFrame.scroll.bar = ElitistGroupUserFrameAchievementsScrollBar
 	frame.achievementFrame.scroll:SetPoint("TOPLEFT", frame.achievementFrame, "TOPLEFT", 0, -2)
 	frame.achievementFrame.scroll:SetPoint("BOTTOMRIGHT", frame.achievementFrame, "BOTTOMRIGHT", -24, 1)
 	frame.achievementFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateAchievementInfo) end)
@@ -902,7 +902,7 @@ function Users:CreateUI()
 		local id = self.toggle and self.toggle.id or self.id
 		if( not id ) then return end
 		
-		SimpleGroup.db.profile.expExpanded[id] = not SimpleGroup.db.profile.expExpanded[id]
+		ElitistGroup.db.profile.expExpanded[id] = not ElitistGroup.db.profile.expExpanded[id]
 		Users:UpdateAchievementInfo()
 	end
 	
@@ -932,8 +932,8 @@ function Users:CreateUI()
 	frame.noteFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
 	frame.noteFrame:SetAllPoints(frame.userTabFrame)
 	
-	frame.noteFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameNotes", frame.noteFrame, "FauxScrollFrameTemplate")
-	frame.noteFrame.scroll.bar = SimpleGroupUserFrameNotesScrollBar
+	frame.noteFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameNotes", frame.noteFrame, "FauxScrollFrameTemplate")
+	frame.noteFrame.scroll.bar = ElitistGroupUserFrameNotesScrollBar
 	frame.noteFrame.scroll:SetPoint("TOPLEFT", frame.noteFrame, "TOPLEFT", 0, -2)
 	frame.noteFrame.scroll:SetPoint("BOTTOMRIGHT", frame.noteFrame, "BOTTOMRIGHT", -24, 1)
 	frame.noteFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 46, Users.UpdateNoteInfo) end)

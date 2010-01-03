@@ -1,6 +1,6 @@
-local SimpleGroup = select(2, ...)
-local History = SimpleGroup:NewModule("History", "AceEvent-3.0")
-local L = SimpleGroup.L
+local ElitistGroup = select(2, ...)
+local History = ElitistGroup:NewModule("History", "AceEvent-3.0")
+local L = ElitistGroup.L
 
 local AceGUI = LibStub("AceGUI-3.0")
 local surveyFrame, SpecialFrame, instanceName, wasAutoPopped
@@ -11,19 +11,19 @@ function History:OnInitialize()
 	self:RegisterEvent("LFG_COMPLETION_REWARD")
 	self:RegisterEvent("PARTY_MEMBERS_CHANGED")
 
-	SpecialFrame = CreateFrame("Frame", "SimpleGroupHistoryHider")
+	SpecialFrame = CreateFrame("Frame", "ElitistGroupHistoryHider")
 	SpecialFrame:SetScript("OnHide", function()
 		if( surveyFrame ) then
 			surveyFrame:Hide()
 		end
 	end)
 
-	table.insert(UISpecialFrames, "SimpleGroupHistoryHider")
+	table.insert(UISpecialFrames, "ElitistGroupHistoryHider")
 	
-	SLASH_SimpleGroupRATE1 = "/rate"
-	SlashCmdList["SimpleGroupRATE"] = function(msg, editbox)
+	SLASH_ELITISTGROUPRATE1 = "/rate"
+	SlashCmdList["ELITISTGROUPRATE"] = function(msg, editbox)
 		if( GetNumPartyMembers() == 0 and not self.haveActiveGroup ) then
-			SimpleGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
+			ElitistGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
 			return
 		end
 		
@@ -38,19 +38,19 @@ function History:UpdateUnitData(unit)
 		return 
 	end
 	
-	SimpleGroup.modules.Scan:CreateCoreTable(unit)
+	ElitistGroup.modules.Scan:CreateCoreTable(unit)
 
-	local partyID = SimpleGroup:GetPlayerID(unit)
+	local partyID = ElitistGroup:GetPlayerID(unit)
 	if( not groupData[partyID] ) then
 		totalGroupMembers = totalGroupMembers + 1
 		
-		local userData = SimpleGroup.userData[partyID]
-		local playerNote = userData.notes[SimpleGroup.playerName]
+		local userData = ElitistGroup.userData[partyID]
+		local playerNote = userData.notes[ElitistGroup.playerName]
 		groupData[partyID] = {name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
 	end
 	
 	local isTank, isHealer, isDamage = UnitGroupRolesAssigned(unit)
-	local role = bit.bor(isTank and SimpleGroup.ROLE_TANK or 0, isHealer and SimpleGroup.ROLE_HEALER or 0, isDamage and SimpleGroup.ROLE_DAMAGE or 0)
+	local role = bit.bor(isTank and ElitistGroup.ROLE_TANK or 0, isHealer and ElitistGroup.ROLE_HEALER or 0, isDamage and ElitistGroup.ROLE_DAMAGE or 0)
 	local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
 	
 	groupData[partyID].role = role
@@ -92,7 +92,7 @@ function History:PARTY_MEMBERS_CHANGED(event)
 end
 
 function History:LFG_COMPLETION_REWARD()
-	if( SimpleGroup.db.profile.general.autoPopup ) then
+	if( ElitistGroup.db.profile.general.autoPopup ) then
 		wasAutoPopped = true
 		self:LogGroup()
 	else
@@ -101,7 +101,7 @@ function History:LFG_COMPLETION_REWARD()
 			name = string.format(HEROIC_PREFIX, name)
 		end
 		
-		SimpleGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], name))
+		ElitistGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], name))
 	end
 end
 
@@ -120,18 +120,18 @@ local function OnHide(self)
 			missing = missing + 1
 		end
 
-		local note = SimpleGroup.userData[partyID].notes[SimpleGroup.playerName] or {}
+		local note = ElitistGroup.userData[partyID].notes[ElitistGroup.playerName] or {}
 		note.role = note.role and bit.bor(note.role, data.role) or data.role
 		note.rating = data.rating
-		note.comment = SimpleGroup:SafeEncode(data.comment and data.comment ~= "" and data.comment)
+		note.comment = ElitistGroup:SafeEncode(data.comment and data.comment ~= "" and data.comment)
 		note.time = time()
 		
-		SimpleGroup.userData[partyID].notes[SimpleGroup.playerName] = note
+		ElitistGroup.userData[partyID].notes[ElitistGroup.playerName] = note
 	end
 	
 	-- Remind people to rate their group if they have it on auto popup that they didn't rate everyone
 	if( missing > 0 and wasAutoPopped ) then
-		SimpleGroup:Print(string.format(L["Defaulting to no comment on %d players, type /rate to set a specific comment."], missing))
+		ElitistGroup:Print(string.format(L["Defaulting to no comment on %d players, type /rate to set a specific comment."], missing))
 	end
 	
 	surveyFrame = nil
@@ -143,7 +143,7 @@ function History:InitFrame()
 	
 	surveyFrame = AceGUI:Create("Frame")	
 	surveyFrame:SetCallback("OnClose", OnHide)
-	surveyFrame:SetTitle("Simple Group")
+	surveyFrame:SetTitle("Elitist Group")
 	surveyFrame:SetStatusText("")
 	surveyFrame:SetLayout("Flow")
 	surveyFrame:SetWidth(35 + (perRow * 230))
@@ -153,7 +153,7 @@ function History:InitFrame()
 
 	-- Be do be do be dooooo
 	SpecialFrame:Show()
-	PlaySoundFile("Interface\\AddOns\\SimpleGroup\\question.mp3")
+	PlaySoundFile("Interface\\AddOns\\ElitistGroup\\question.mp3")
 
 	local header = AceGUI:Create("Heading")
 	header:SetText(L["Rate and comment on the players in your group."])
@@ -172,7 +172,7 @@ function History:InitFrame()
 		end
 		
 		local rating = AceGUI:Create("Slider")
-		rating:SetSliderValues(1, SimpleGroup.MAX_RATING, 1)
+		rating:SetSliderValues(1, ElitistGroup.MAX_RATING, 1)
 		rating:SetValue(groupData[partyID].rating)
 		rating:SetCallback("OnValueChanged", OnValueChanged)
 		rating:SetUserData("partyID", partyID)
@@ -203,7 +203,7 @@ function test(num)
 	GetNumPartyMembers = function() return num end
 	table.wipe(groupData)
 	for i=1, GetNumPartyMembers() do
-		groupData["Test" .. i .. "-Mal'Ganis"] = {role = SimpleGroup.ROLE_TANK, roleText = "Tank", name = "Test" .. i, classToken = "DRUID", rating = 3}
+		groupData["Test" .. i .. "-Mal'Ganis"] = {role = ElitistGroup.ROLE_TANK, roleText = "Tank", name = "Test" .. i, classToken = "DRUID", rating = 3}
 	end
 	
 	instanceName = "Test"

@@ -1,8 +1,8 @@
-local SimpleGroup = select(2, ...)
-SimpleGroup = LibStub("AceAddon-3.0"):NewAddon(SimpleGroup, "SimpleGroup", "AceEvent-3.0", "AceTimer-3.0")
-local L = SimpleGroup.L
+local ElitistGroup = select(2, ...)
+ElitistGroup = LibStub("AceAddon-3.0"):NewAddon(ElitistGroup, "ElitistGroup", "AceEvent-3.0", "AceTimer-3.0")
+local L = ElitistGroup.L
 
-function SimpleGroup:OnInitialize()
+function ElitistGroup:OnInitialize()
 	self.defaults = {
 		profile = {
 			expExpanded = {},
@@ -30,7 +30,7 @@ function SimpleGroup:OnInitialize()
 		},
 	}
 	
-	self.db = LibStub("AceDB-3.0"):New("SimpleGroupDB", self.defaults, true)
+	self.db = LibStub("AceDB-3.0"):New("ElitistGroupDB", self.defaults, true)
 	self.db.RegisterCallback(self, "OnDatabaseShutdown", "OnDatabaseShutdown")
 	self.db.RegisterCallback(self, "OnDatabaseReset", "OnProfileReset")
 	self.db.RegisterCallback(self, "OnProfileShutdown", "OnProfileShutdown")
@@ -42,12 +42,12 @@ function SimpleGroup:OnInitialize()
 	self.writeQueue = {}
 	self.userData = setmetatable({}, {
 		__index = function(tbl, name)
-			if( not SimpleGroup.db.faction.users[name] ) then
+			if( not ElitistGroup.db.faction.users[name] ) then
 				tbl[name] = false
 				return false
 			end
 			
-			local func, msg = loadstring("return " .. SimpleGroup.db.faction.users[name])
+			local func, msg = loadstring("return " .. ElitistGroup.db.faction.users[name])
 			if( func ) then
 				func = func()
 			elseif( msg ) then
@@ -109,45 +109,45 @@ function SimpleGroup:OnInitialize()
 		end
 	end
 		
-	if( not SimpleGroup.db.profile.helped ) then
+	if( not ElitistGroup.db.profile.helped ) then
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
-			SimpleGroup.db.profile.helped = true
-			SimpleGroup:Print(L["Welcome! Type /SimpleGroup help to see a list of available slash commands."])
-			SimpleGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
+			ElitistGroup.db.profile.helped = true
+			ElitistGroup:Print(L["Welcome! Type /ElitistGroup help to see a list of available slash commands."])
+			ElitistGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		end)
 	end
 
 	self.modules.Sync:Setup()
 end
 
-function SimpleGroup:GetItemLink(link)
+function ElitistGroup:GetItemLink(link)
 	return link and string.match(link, "|H(.-)|h")
 end
 
 -- These are just parser functions to let me trim down the item links to take better advantage of metatable caching
-function SimpleGroup:GetItemWithEnchant(link)
+function ElitistGroup:GetItemWithEnchant(link)
 	return link and string.match(link, "item:%d+:%d+")
 end
 
-function SimpleGroup:GetBaseItemLink(link)
+function ElitistGroup:GetBaseItemLink(link)
 	return link and string.match(link, "item:%d+")
 end
 
-function SimpleGroup:GetPlayerID(unit)
+function ElitistGroup:GetPlayerID(unit)
 	local name, server = UnitName(unit)
 	return name and string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
 end
 
-function SimpleGroup:CalculateScore(itemLink, itemQuality, itemLevel)
+function ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 	-- Quality 7 is heirloom, apply our modifier based on the item level
 	if( itemQuality == 7 ) then
-		itemLevel = (tonumber(string.match(itemLink, "(%d+)|h")) or 1) * SimpleGroup.HEIRLOOM_ILEVEL
+		itemLevel = (tonumber(string.match(itemLink, "(%d+)|h")) or 1) * ElitistGroup.HEIRLOOM_ILEVEL
 	end
 	
 	return itemLevel * (self.QUALITY_MODIFIERS[itemQuality] or 1)
 end
 
-function SimpleGroup:GetPlayerSpec(playerData)
+function ElitistGroup:GetPlayerSpec(playerData)
 	local treeOffset
 	if( playerData.talentTree1 > playerData.talentTree2 and playerData.talentTree1 > playerData.talentTree3 ) then
 		treeOffset = 1
@@ -162,19 +162,19 @@ function SimpleGroup:GetPlayerSpec(playerData)
 	return playerData.specRole or self.TREE_DATA[playerData.classToken][treeOffset], self.TREE_DATA[playerData.classToken][treeOffset + 1], self.TREE_DATA[playerData.classToken][treeOffset + 2] 
 end
 
-function SimpleGroup:IsValidItem(itemLink, playerData)
+function ElitistGroup:IsValidItem(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.ITEM_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
-function SimpleGroup:IsValidGem(itemLink, playerData)
+function ElitistGroup:IsValidGem(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.GEM_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
 end
 
-function SimpleGroup:IsValidEnchant(itemLink, playerData)
+function ElitistGroup:IsValidEnchant(itemLink, playerData)
 	local spec = self:GetPlayerSpec(playerData)
 	local itemType = self.ENCHANT_TALENTTYPE[itemLink]
 	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
@@ -185,7 +185,7 @@ local function getTable()
 	return table.remove(tableCache, 1) or {}
 end
 
-function SimpleGroup:DeleteTables(...)	
+function ElitistGroup:DeleteTables(...)	
 	for i=1, select("#", ...) do
 		local tbl = select(i, ...)
 		if( tbl ) then
@@ -195,7 +195,7 @@ function SimpleGroup:DeleteTables(...)
 	end
 end
 
-function SimpleGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
+function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	local enchantTooltips, gemTooltips = getTable(), getTable()
 	
 	-- Compile all the gems into tooltips per item
@@ -216,7 +216,7 @@ function SimpleGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		if( arg == "missing" ) then
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. L["Unused sockets"]
 		elseif( type(arg) == "string" ) then
-			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, SimpleGroup.TALENT_TYPES[arg] or arg)
+			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, ElitistGroup.TALENT_TYPES[arg] or arg)
 		else
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r quality gem"], select(2, GetItemInfo(gemLink)) or gemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"])
 		end
@@ -233,7 +233,7 @@ function SimpleGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		if( enchantTalent == "missing" ) then
 			enchantTooltips[itemLink] = L["Enchant: |cffffffffNone found|r"]
 		else
-			enchantTooltips[itemLink] = string.format(L["Enchant: |cffffffff%s enchant|r"], SimpleGroup.TALENT_TYPES[enchantTalent] or enchantTalent)
+			enchantTooltips[itemLink] = string.format(L["Enchant: |cffffffff%s enchant|r"], ElitistGroup.TALENT_TYPES[enchantTalent] or enchantTalent)
 		end
 	end
 		
@@ -247,7 +247,7 @@ function SimpleGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	return enchantTooltips, gemTooltips
 end
 
-function SimpleGroup:GetGeneralSummaryTooltip(gemData, enchantData)
+function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 	local tempList = getTable()
 	local gemTooltip, enchantTooltip
 	local totalLines = 0
@@ -265,7 +265,7 @@ function SimpleGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			elseif( arg == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Missing gems"], fullItemLink))
 			elseif( type(arg) == "string" ) then
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, SimpleGroup.TALENT_TYPES[arg] or arg))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, ElitistGroup.TALENT_TYPES[arg] or arg))
 			else
 				table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 			end
@@ -289,7 +289,7 @@ function SimpleGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			if( enchantTalent == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Unenchanted"], fullItemLink))
 			else
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], fullItemLink, SimpleGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], fullItemLink, ElitistGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
 			end
 		end
 		
@@ -305,7 +305,7 @@ end
 
 
 local MAINHAND_SLOT, OFFHAND_SLOT, WAIST_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot"), GetInventorySlotInfo("WaistSlot")
-function SimpleGroup:GetGearSummary(userData)
+function ElitistGroup:GetGearSummary(userData)
 	local spec = self:GetPlayerSpec(userData)
 	local validSpecTypes = self.VALID_SPECTYPES[spec]
 	local equipment, gems, enchants = getTable(), getTable(), getTable()
@@ -342,11 +342,11 @@ function SimpleGroup:GetGearSummary(userData)
 			end
 			
 			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
-			local unenchantable = SimpleGroup.EQUIP_UNECHANTABLE[itemEquipType]
+			local unenchantable = ElitistGroup.EQUIP_UNECHANTABLE[itemEquipType]
 			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
 				enchants.total = enchants.total + 1
 
-				local enchantTalent = SimpleGroup.ENCHANT_TALENTTYPE[enchantItemLink]
+				local enchantTalent = ElitistGroup.ENCHANT_TALENTTYPE[enchantItemLink]
 				if( enchantTalent ~= "none" ) then
 					enchants.totalUsed = enchants.totalUsed + 1
 					
@@ -374,7 +374,7 @@ function SimpleGroup:GetGearSummary(userData)
 			local itemUnsocketed = self.EMPTY_GEM_SLOTS[itemLink]
 			local alreadyFailed
 			for socketID=1, MAX_NUM_SOCKETS do
-				local gemLink = SimpleGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
+				local gemLink = ElitistGroup:GetBaseItemLink(select(2, GetItemGem(itemLink, socketID)))
 				if( gemLink ) then
 					gems.totalUsed = gems.totalUsed + 1
 					itemUnsocketed = itemUnsocketed - 1
@@ -390,7 +390,7 @@ function SimpleGroup:GetGearSummary(userData)
 						gems.pass = nil
 					else
 						local gemQuality = select(3, GetItemInfo(gemLink))
-						if( SimpleGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < SimpleGroup.GEM_THRESHOLDS[itemQuality] ) then
+						if( ElitistGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < ElitistGroup.GEM_THRESHOLDS[itemQuality] ) then
 							gems[fullItemLink] = itemLink
 							gems.totalBad = gems.totalBad + 1
 							gems.pass = nil
@@ -456,7 +456,7 @@ local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}")
 				['"'] = "\\" .. string.byte('"'), [";"] = "\\" .. string.byte(";"),
 				["%["] = "\\" .. string.byte("["), ["%]"] = "\\" .. string.byte("]"),
 				["@"] = "\\" .. string.byte("@")}
-function SimpleGroup:SafeEncode(text)
+function ElitistGroup:SafeEncode(text)
 	if( not text ) then return text end
 	
 	for find, replace in pairs(map) do
@@ -466,7 +466,7 @@ function SimpleGroup:SafeEncode(text)
 	return text
 end
 
-function SimpleGroup:WriteTable(tbl, skipNotes)
+function ElitistGroup:WriteTable(tbl, skipNotes)
 	local data = ""
 	for key, value in pairs(tbl) do
 		if( not skipNotes or key ~= "notes" ) then
@@ -497,13 +497,13 @@ function SimpleGroup:WriteTable(tbl, skipNotes)
 end
 
 -- db:ResetProfile or db:ResetDB called
-function SimpleGroup:OnProfileReset()
+function ElitistGroup:OnProfileReset()
 	table.wipe(self.writeQueue)
 	table.wipe(self.userData)
 end
 
 -- db:SetProfile called, this is the old profile before it gets switched
-function SimpleGroup:OnProfileShutdown()
+function ElitistGroup:OnProfileShutdown()
 	self:OnDatabaseShutdown()
 
 	table.wipe(self.writeQueue)
@@ -511,7 +511,7 @@ function SimpleGroup:OnProfileShutdown()
 end
 
 -- Player is logging out, write the cache
-function SimpleGroup:OnDatabaseShutdown()
+function ElitistGroup:OnDatabaseShutdown()
 	for name in pairs(self.writeQueue) do
 		-- We need to make sure what we are writing has data, for example if we inspect scan someone we create the template
 		-- if we fail to find talent data for them, and we don't have notes then will just throw out their data and not bother writing it
@@ -534,17 +534,17 @@ function SimpleGroup:OnDatabaseShutdown()
 	end
 end
 
-function SimpleGroup:Print(msg)
-	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Simple Group|r: " .. msg)
+function ElitistGroup:Print(msg)
+	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Elitist Group|r: " .. msg)
 end
 
 --@debug@
-SimpleGroup.L = setmetatable(SimpleGroup.L, {
+ElitistGroup.L = setmetatable(ElitistGroup.L, {
 	__index = function(tbl, value)
 		rawset(tbl, value, value)
 		return value
 	end,
 })
 
-_G.SimpleGroup = SimpleGroup
+_G.ElitistGroup = ElitistGroup
 --@end-debug@

@@ -122,7 +122,6 @@ SexyGroup.L = {
 	["Koralon the Flame Watcher"] = "Koralon the Flame Watcher",
 	["Koralon, Vault"] = "Koralon, Vault",
 	["Loading"] = "Loading",
-	["Loading..."] = "Loading...",
 	["Malygos"] = "Malygos",
 	["Marksmanship"] = "Marksmanship",
 	["Melee (All)"] = "Melee (All)",
