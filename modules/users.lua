@@ -1,20 +1,18 @@
-local SexyGroup = select(2, ...)
-local Users = SexyGroup:NewModule("Users", "AceEvent-3.0")
-local L = SexyGroup.L
+local SimpleGroup = select(2, ...)
+local Users = SimpleGroup:NewModule("Users", "AceEvent-3.0")
+local L = SimpleGroup.L
 
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local gemData, enchantData, equipmentData
-
-local function sortTable(a, b) return a < b end
+local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips
 
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		local self = Users
 		if( self.activeUserID and user == self.activeUserID and self.frame and self.frame:IsVisible() ) then
-			self:LoadData(SexyGroup.userData[user])
+			self:LoadData(SimpleGroup.userData[user])
 		end
 	end)
 end
@@ -29,30 +27,38 @@ function Users:LoadData(userData)
 	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
 
 	-- Build score as well as figure out their score
-	SexyGroup:DeleteTables(equipmentData, enchantData, gemData)
+	SimpleGroup:DeleteTables(equipmentData, enchantData, gemData, gemTooltips, enchantTooltips)
 
 	if( not userData.pruned ) then
-		equipmentData, enchantData, gemData = SexyGroup:GetGearSummary(userData)
+		equipmentData, enchantData, gemData = SimpleGroup:GetGearSummary(userData)
+		enchantTooltips, gemTooltips = SimpleGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
+		
 		frame.pruneInfo:Hide()
 		
 		for _, slot in pairs(frame.gearFrame.equipSlots) do
 			if( slot.inventoryID and userData.equipment[slot.inventoryID] ) then
 				local itemLink = userData.equipment[slot.inventoryID]
-				local itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(3, GetItemInfo(itemLink))
+				local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
 				if( itemQuality and itemLevel ) then
-					local baseItemLink = SexyGroup:GetBaseItemLink(itemLink)
+					local baseItemLink = SimpleGroup:GetBaseItemLink(itemLink)
+					local enhanceStatus = ( enchantData.noData or gemData.noData ) and "pending" or ( enchantData[fullItemLink] or gemData[fullItemLink] ) and "fail"
 					
+					-- Now sum it all up
 					slot.tooltip = nil
 					slot.equippedItem = itemLink
-					slot.itemTalentType = SexyGroup.TALENT_TYPES[SexyGroup.ITEM_TALENTTYPE[baseItemLink]] or SexyGroup.ITEM_TALENTTYPE[baseItemLink]
+					slot.gemTooltip = gemTooltips[itemLink]
+					slot.enchantTooltip = enchantTooltips[itemLink]
+					slot.itemTalentType = SimpleGroup.TALENT_TYPES[SimpleGroup.ITEM_TALENTTYPE[baseItemLink]] or SimpleGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
-					slot.levelText:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[itemQuality] and ITEM_QUALITY_COLORS[itemQuality].hex or "", SexyGroup:CalculateScore(itemLink, itemQuality, itemLevel))
-					slot.typeText:SetFormattedText("|T%s:16:16:-1:0|t%s", not equipmentData[itemLink] and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE, slot.itemTalentType)
+					slot.extraText:SetText(L["Enhancements"])
+					slot.extraText.icon:SetTexture(enhanceStatus == "pending" and READY_CHECK_WAITING_TEXTURE or enhanceStatus == "fail" and READY_CHECK_NOT_READY_TEXTURE or READY_CHECK_READY_TEXTURE)
+					slot.typeText:SetText(slot.itemTalentType)
+					slot.typeText.icon:SetTexture(not equipmentData[itemLink] and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 					slot:Enable()
 					slot:Show()
 				else
 					slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-					slot.levelText:SetText("----")
+					slot.extraText:SetText("----")
 					slot.typeText:SetText("----")
 					slot.equippedItem = nil
 					slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
@@ -66,8 +72,10 @@ function Users:LoadData(userData)
 				end
 				
 				slot.icon:SetTexture(texture)
-				slot.levelText:SetText("---")
-				slot.typeText:SetText("---")
+				slot.extraText:SetText("")
+				slot.extraText.icon:SetTexture(nil)
+				slot.typeText:SetText("")
+				slot.typeText.icon:SetTexture(nil)
 				slot.tooltip = L["No item equipped"]
 				slot:Disable()
 				slot:Show()
@@ -76,28 +84,15 @@ function Users:LoadData(userData)
 				
 		-- Now combine these too, in the same way you combine to make a better and more powerful robot
 		local equipSlot = frame.gearFrame.equipSlots[18]
-		equipSlot.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_42")
-		equipSlot.levelText:SetFormattedText(L["|T%s:14:14|t Enchants"], enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-		equipSlot.typeText:SetFormattedText(L["|T%s:14:14|t Gems"], gemData.noData and READY_CHECK_WAITING_TEXTURE or gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-		equipSlot:Show()
-	
-		local gemTooltip, enchantTooltip, totalLines = SexyGroup:GetGearExtraTooltip(gemData, enchantData)
+		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
+		local quality = equipmentData.totalScore >= 210 and ITEM_QUALITY_EPIC or equipmentData.totalScore >= 195 and ITEM_QUALITY_RARE or equipmentData.totalScore >= 170 and ITEM_QUALITY_UNCOMMON or ITEM_QUALITY_COMMON
 		
-		-- Switch to using two tooltips if we're trying to show too much data to make it easier to read
-		if( totalLines > 10 ) then
-			equipSlot.tooltip1 = enchantTooltip
-			equipSlot.tooltip2 = gemTooltip
-			equipSlot.tooltip = nil
-		else
-			local spacing = (gemTooltip and enchantTooltip) and "\n\n" or "\n"
-			
-			equipSlot.tooltip1 = nil
-			equipSlot.tooltip2 = nil
-			equipSlot.tooltip = enchantTooltip .. spacing .. gemTooltip
-			equipSlot.disableWrap = true
-		end
+		equipSlot.text:SetFormattedText(L["%s%d|r score"], ITEM_QUALITY_COLORS[quality].hex, equipmentData.totalScore)
+		equipSlot.icon:SetTexture("Interface\\Icons\\" .. scoreIcon)
+		equipSlot.tooltip = L["Score is the average item level of all the players equipped items."]
+		equipSlot:Show()
 	else
-		equipmentData, gemData, enchantData = nil, nil, nil
+		equipmentData, gemData, enchantData, gemTooltips, enchantTooltips = nil, nil, nil, nil, nil
 		
 		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
 		frame.pruneInfo:Show()
@@ -106,55 +101,62 @@ function Users:LoadData(userData)
 	-- Build the players info
 	local coords = CLASS_BUTTONS[userData.classToken]
 	if( coords ) then
-		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes:16:16:-1:0:%s:%s:%s:%s:%s:%s|t %s (%s)", 256, 256, coords[1] * 256, coords[2] * 256, coords[3] * 256, coords[4] * 256, userData.name, userData.level)
+		frame.userFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
 		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], userData.name, userData.server, userData.level, LOCALIZED_CLASS_NAMES_MALE[userData.classToken])
+		frame.userFrame.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
+		frame.userFrame.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 	else
-		frame.userFrame.playerInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s (%s)", userData.name, userData.level)
+		frame.userFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
+		frame.userFrame.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
 	end
 	
 	self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
 	if( not userData.pruned ) then
-		local specType, specName, specIcon = SexyGroup:GetPlayerSpec(userData)
+		local specType, specName, specIcon = SimpleGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
-			frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SexyGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, SimpleGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		else
-			frame.userFrame.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SexyGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo:SetFormattedText("%d %s", userData.unspentPoints, L["unspent points"])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, SimpleGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		end
-			
-		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
-		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\%s:16:16:-1:0|t %d %s", scoreIcon, equipmentData.totalScore, L["score"])
 	else
-		frame.userFrame.scoreInfo:SetFormattedText("|TInterface\\Icons\\INV_Shield_36:16:16:-1:0|t %s", L["Score unavailable"])
-		frame.userFrame.talentInfo:SetFormattedText("|TInterface\\Icons\\INV_Misc_QuestionMark:16:16:-1:0|t %s", L["Talents unavailable"])
+		frame.userFrame.talentInfo:SetText(L["Talents unavailable"])
+		frame.userFrame.talentInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 	end
 		
 	local scanAge = (time() - userData.scanned) / 60
-	local scanIcon = scanAge >= 1440 and 37 or scanAge >= 60 and 39 or scanAge >= 30 and 38 or 41
 	
 	if( scanAge <= 5 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, L["Just now"])
+		frame.userFrame.scannedInfo:SetText(L["Just now"])
+		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_41")
 	elseif( scanAge < 60 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d minutes old"], scanAge))
+		frame.userFrame.scannedInfo:SetFormattedText(L["%d minutes old"], scanAge)
+		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_" .. (scanAge < 30 and 41 or 38))
 	elseif( scanAge <= 1440 ) then
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d hours old"], scanAge / 60))
+		frame.userFrame.scannedInfo:SetFormattedText(L["%d hours old"], scanAge / 60)
+		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_39")
 	else
-		frame.userFrame.scannedInfo:SetFormattedText("|TInterface\\Icons\\INV_JewelCrafting_Gem_%s:16:16:-1:0|t %s", scanIcon, string.format(L["%d days old"], scanAge / 1440))
+		frame.userFrame.scannedInfo:SetFormattedText(L["%d days old"], scanAge / 1440)
+		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_37")
 	end
 	
 	if( userData.trusted ) then
-		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_READY_TEXTURE, string.match(userData.from, "(.-)%-"), L["Trusted"])
+		frame.userFrame.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
 		frame.userFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
+		frame.userFrame.trustedInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 	else
-		frame.userFrame.trustedInfo:SetFormattedText("|T%s:16:16:-1:0|t %s (%s)", READY_CHECK_NOT_READY_TEXTURE, string.match(userData.from, "(.-)%-"), L["Untrusted"])
+		frame.userFrame.trustedInfo:SetFormattedText(L["%s (Untrusted)"], string.match(userData.from, "(.-)%-"))
 		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
+		frame.userFrame.trustedInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 	end
 	
 	-- Build the necessary experience data based on the players achievements, this is fun!
 	self.experienceData = {}
-	for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+	for _, data in pairs(SimpleGroup.EXPERIENCE_POINTS) do
 		self.experienceData[data.id] = self.experienceData[data.id] or 0
 				
 		for id, points in pairs(data) do
@@ -178,8 +180,8 @@ function Users:LoadData(userData)
 	-- Find where the players score lets them into at least
 	local lockedScore
 	if( equipmentData ) then
-		for i=#(SexyGroup.DUNGEON_DATA), 1, -4 do
-			local score = SexyGroup.DUNGEON_DATA[i - 2]
+		for i=#(SimpleGroup.DUNGEON_DATA), 1, -4 do
+			local score = SimpleGroup.DUNGEON_DATA[i - 2]
 			if( lockedScore and lockedScore ~= score ) then
 				self.forceOffset = math.ceil((i + 1) / 4)
 				break
@@ -210,7 +212,7 @@ function Users:UpdateDatabasePage()
 		local search = not self.frame.databaseFrame.search.searchText and string.gsub(string.lower(self.frame.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
 	
 		table.wipe(userList)
-		for name in pairs(SexyGroup.db.faction.users) do
+		for name in pairs(SimpleGroup.db.faction.users) do
 			if( search == "" or string.match(string.lower(name), search) ) then
 				table.insert(userList, name)
 			end
@@ -281,8 +283,8 @@ end
 function Users:UpdateAchievementInfo()
 	local self = Users
 	local totalEntries = 0
-	for id, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and SexyGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SexyGroup.db.profile.expExpanded[SexyGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+	for id, data in pairs(SimpleGroup.EXPERIENCE_POINTS) do
+		if( not data.childOf or ( data.childOf and SimpleGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SimpleGroup.db.profile.expExpanded[SimpleGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			totalEntries = totalEntries + 1
 		end
 	end
@@ -295,8 +297,8 @@ function Users:UpdateAchievementInfo()
 	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
 	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
-	for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and SexyGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SexyGroup.db.profile.expExpanded[SexyGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+	for _, data in pairs(SimpleGroup.EXPERIENCE_POINTS) do
+		if( not data.childOf or ( data.childOf and SimpleGroup.db.profile.expExpanded[data.childOf] and ( data.tier or SimpleGroup.db.profile.expExpanded[SimpleGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			id = id + 1
 			if( id >= offset ) then
 				local row = self.frame.achievementFrame.rows[rowID]
@@ -308,8 +310,8 @@ function Users:UpdateAchievementInfo()
 				end
 				
 				-- Setup toggle button
-				if( not data.childless and ( SexyGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
-					local type = not SexyGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
+				if( not data.childless and ( SimpleGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
+					local type = not SimpleGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
 					row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
 					row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
 					row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
@@ -363,15 +365,15 @@ function Users:UpdateNoteInfo()
 		if( id >= offset ) then
 			local row = self.frame.noteFrame.rows[rowID]
 
-			local percent = (note.rating - 1) / (SexyGroup.MAX_RATING - 1)
+			local percent = (note.rating - 1) / (SimpleGroup.MAX_RATING - 1)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local roles = ""
-			if( bit.band(note.role, SexyGroup.ROLE_HEALER) > 0 ) then roles = HEALER end
-			if( bit.band(note.role, SexyGroup.ROLE_TANK) > 0 ) then roles = roles .. ", " .. TANK end
-			if( bit.band(note.role, SexyGroup.ROLE_DAMAGE) > 0 ) then roles = roles .. ", " .. DAMAGE end
+			if( bit.band(note.role, SimpleGroup.ROLE_HEALER) > 0 ) then roles = HEALER end
+			if( bit.band(note.role, SimpleGroup.ROLE_TANK) > 0 ) then roles = roles .. ", " .. TANK end
+			if( bit.band(note.role, SimpleGroup.ROLE_DAMAGE) > 0 ) then roles = roles .. ", " .. DAMAGE end
 			
-			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SexyGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
+			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, SimpleGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment or L["No comment"])
 			row.tooltip = string.format(L["Seen as %s - %s:\n|cffffffff%s|r"], string.trim(string.gsub(roles, "^, ", "")), date("%m/%d/%Y", note.time), note.comment or L["No comment"])
 			row:SetWidth(rowWidth)
@@ -385,7 +387,7 @@ function Users:UpdateNoteInfo()
 	end
 end
 
-local TOTAL_DUNGEONS = #(SexyGroup.DUNGEON_DATA) / 4
+local TOTAL_DUNGEONS = #(SimpleGroup.DUNGEON_DATA) / 4
 function Users:UpdateDungeonInfo()
 	local self = Users
 
@@ -401,20 +403,20 @@ function Users:UpdateDungeonInfo()
 
 	local id, rowID = 1, 1
 	local offset = FauxScrollFrame_GetOffset(self.frame.dungeonFrame.scroll)
-	for dataID=1, #(SexyGroup.DUNGEON_DATA), 4 do
+	for dataID=1, #(SimpleGroup.DUNGEON_DATA), 4 do
 		if( id >= offset ) then
 			local row = self.frame.dungeonFrame.rows[rowID]
 			
-			local name, score, players, type = SexyGroup.DUNGEON_DATA[dataID], SexyGroup.DUNGEON_DATA[dataID + 1], SexyGroup.DUNGEON_DATA[dataID + 2], SexyGroup.DUNGEON_DATA[dataID + 3]
-			local percent = 1.0 - ((score - SexyGroup.DUNGEON_MIN) / SexyGroup.DUNGEON_DIFF)
+			local name, score, players, type = SimpleGroup.DUNGEON_DATA[dataID], SimpleGroup.DUNGEON_DATA[dataID + 1], SimpleGroup.DUNGEON_DATA[dataID + 2], SimpleGroup.DUNGEON_DATA[dataID + 3]
+			local percent = 1.0 - ((score - SimpleGroup.DUNGEON_MIN) / SimpleGroup.DUNGEON_DIFF)
 			-- This shows colors relative to how close the player is to the score, not sure if we want to use this.
-			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / SexyGroup.DUNGEON_DIFF), 1), 0)
+			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / SimpleGroup.DUNGEON_DIFF), 1), 0)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
-			local heroicIcon = type == "heroic" and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
+			local heroicIcon = (type == "heroic" or type == "hard") and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
 			
 			row.dungeonName:SetFormattedText("%s|cff%02x%02x00%s|r", heroicIcon, r, g, name)
-			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %s-man (%s)"], r, g, score, players, SexyGroup.DUNGEON_TYPES[type])
+			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %s-man (%s)"], r, g, score, players, SimpleGroup.DUNGEON_TYPES[type])
 			row:Show()
 
 			rowID = rowID + 1
@@ -434,18 +436,7 @@ function Users:CreateUI()
 
 	local extraTooltip
 	local function OnEnter(self)
-		if( self.tooltip1 and self.tooltip2 ) then
-			GameTooltip:SetOwner(self, "ANCHOR_TOPRIGHT")
-			GameTooltip:SetText(self.tooltip1)
-			GameTooltip:Show()
-			
-			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "SexyGroupUserTooltip", UIParent, "GameTooltipTemplate")
-			extraTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-			extraTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
-			extraTooltip:SetText(self.tooltip2)
-			extraTooltip:Show()
-
-		elseif( self.tooltip ) then
+		if( self.tooltip ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
 			GameTooltip:Show()
@@ -453,12 +444,23 @@ function Users:CreateUI()
 		elseif( self.equippedItem ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetHyperlink(self.equippedItem)
+			GameTooltip:Show()
+
+			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "SimpleGroupUserTooltip", UIParent, "GameTooltipTemplate")
+			extraTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
+			extraTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
 			
 			if( self.itemTalentType ) then
-				GameTooltip:AddLine(" ")
-				GameTooltip:AddLine(string.format(L["|cfffed000Item Type:|r %s"], self.itemTalentType), 1, 1, 1, 1, true)
-				GameTooltip:Show()
+				extraTooltip:SetText(string.format(L["|cfffed000Item Type:|r %s"], self.itemTalentType), 1, 1, 1)
 			end
+			if( self.enchantTooltip ) then
+				extraTooltip:AddLine(self.enchantTooltip)
+			end
+			if( self.gemTooltip ) then
+				extraTooltip:AddLine(self.gemTooltip)
+			end
+			
+			extraTooltip:Show()
 		end
 	end
 
@@ -471,7 +473,7 @@ function Users:CreateUI()
 	end
 		
 	-- Main container
-	local frame = CreateFrame("Frame", "SexyGroupUserInfo", UIParent)
+	local frame = CreateFrame("Frame", "SimpleGroupUserInfo", UIParent)
 	self.frame = frame
 	frame:SetClampedToScreen(true)
 	frame:SetWidth(675)
@@ -484,8 +486,8 @@ function Users:CreateUI()
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
-			frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
-			SexyGroup.db.profile.positions.user = nil
+			frame:SetPoint("CENTER", UIParent, "CENTER", SimpleGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+			SimpleGroup.db.profile.positions.user = nil
 			return
 		end
 		
@@ -495,7 +497,7 @@ function Users:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		SexyGroup.db.profile.positions.user = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		SimpleGroup.db.profile.positions.user = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -505,13 +507,13 @@ function Users:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	table.insert(UISpecialFrames, "SexyGroupUserInfo")
+	table.insert(UISpecialFrames, "SimpleGroupUserInfo")
 	
-	if( SexyGroup.db.profile.positions.user ) then
+	if( SimpleGroup.db.profile.positions.user ) then
 		local scale = frame:GetEffectiveScale()
-		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SexyGroup.db.profile.positions.user.x / scale, SexyGroup.db.profile.positions.user.y / scale)
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", SimpleGroup.db.profile.positions.user.x / scale, SimpleGroup.db.profile.positions.user.y / scale)
 	else
-		frame:SetPoint("CENTER", UIParent, "CENTER", SexyGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+		frame:SetPoint("CENTER", UIParent, "CENTER", SimpleGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
 	end
 
 	frame.titleBar = frame:CreateTexture(nil, "ARTWORK")
@@ -522,7 +524,7 @@ function Users:CreateUI()
 
 	frame.title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	frame.title:SetPoint("TOP", 0, 0)
-	frame.title:SetText("Sexy Group")
+	frame.title:SetText("Simple Group")
 
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
@@ -547,7 +549,7 @@ function Users:CreateUI()
 	frame.databaseFrame.fadeFrame:SetAllPoints(frame.databaseFrame)
 	frame.databaseFrame.fadeFrame:SetFrameLevel(3)
 
-	if( SexyGroup.db.profile.general.databaseExpanded ) then
+	if( SimpleGroup.db.profile.general.databaseExpanded ) then
 		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -10, -3)
 	else
 		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -230, -3)
@@ -568,8 +570,8 @@ function Users:CreateUI()
 		end
 	end
 
-	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameDatabase", frame.databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
-	frame.databaseFrame.scroll.bar = SexyGroupUserFrameDatabase
+	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameDatabase", frame.databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
+	frame.databaseFrame.scroll.bar = SimpleGroupUserFrameDatabase
 	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -7)
 	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -28, 6)
 	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage); Users.scrollUpdate = nil end)
@@ -579,7 +581,7 @@ function Users:CreateUI()
 	frame.databaseFrame.toggle:SetFrameLevel(frame:GetFrameLevel() + 2)
 	frame.databaseFrame.toggle:SetHeight(128)
 	frame.databaseFrame.toggle:SetWidth(8)
-	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\SexyGroup\\media\\tabhandle")
+	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\SimpleGroup\\media\\tabhandle")
 	frame.databaseFrame.toggle:SetScript("OnEnter", function(self)
 		SetCursor("INTERACT_CURSOR")
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -591,7 +593,7 @@ function Users:CreateUI()
 		SetCursor(nil)
 	end)
 	frame.databaseFrame.toggle:SetScript("OnClick", function(self)
-		if( SexyGroup.db.profile.general.databaseExpanded ) then
+		if( SimpleGroup.db.profile.general.databaseExpanded ) then
 			frame.databaseFrame.startOffset = -10
 			frame.databaseFrame.endOffset = -220
 
@@ -603,11 +605,11 @@ function Users:CreateUI()
 			UIFrameFadeIn(frame.databaseFrame.fadeFrame, 0.50, 0, 1)
 		end
 		
-		SexyGroup.db.profile.general.databaseExpanded = not SexyGroup.db.profile.general.databaseExpanded
+		SimpleGroup.db.profile.general.databaseExpanded = not SimpleGroup.db.profile.general.databaseExpanded
 		frame.databaseFrame:SetScript("OnUpdate", frameAnimator)
 	end)
 
-	frame.databaseFrame.search = CreateFrame("EditBox", "SexyGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
+	frame.databaseFrame.search = CreateFrame("EditBox", "SimpleGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
 	frame.databaseFrame.search:SetHeight(18)
 	frame.databaseFrame.search:SetWidth(150)
 	frame.databaseFrame.search:SetAutoFocus(false)
@@ -635,7 +637,7 @@ function Users:CreateUI()
 	end)
 
 	local function viewUserData(self)
-		Users:LoadData(SexyGroup.userData[self.userID])
+		Users:LoadData(SimpleGroup.userData[self.userID])
 	end
 
 	frame.databaseFrame.rows = {}
@@ -678,38 +680,54 @@ function Users:CreateUI()
 	frame.pruneInfo:SetPoint("BOTTOMRIGHT", frame.gearFrame, "BOTTOMRIGHT", -4, 4)
 	frame.pruneInfo:SetJustifyH("LEFT")
 	frame.pruneInfo:SetJustifyV("TOP")
-	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /sexygroup and change the value."])
+	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /SimpleGroup and change the value."])
 
 	local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
 	frame.gearFrame.equipSlots = {}
 	for i=1, 18 do
-	   local slot = CreateFrame("Button", nil, frame.gearFrame)
-	   slot:SetHeight(30)
-	   slot:SetWidth(70)
-	   slot:SetScript("OnEnter", OnEnter)
-	   slot:SetScript("OnLeave", OnLeave)
-	   slot:SetMotionScriptsWhileDisabled(true)
-	   slot.icon = slot:CreateTexture(nil, "BACKGROUND")
-	   slot.icon:SetHeight(30)
-	   slot.icon:SetWidth(30)
-	   slot.icon:SetPoint("TOPLEFT", slot)
-	   
-	   slot.levelText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	   slot.levelText:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", 2, -3)
-	   slot.levelText:SetJustifyV("CENTER")
-	   slot.levelText:SetJustifyH("LEFT")
-	   slot.levelText:SetWidth(75)
-	   slot.levelText:SetHeight(11)
+		local slot = CreateFrame("Button", nil, frame.gearFrame)
+		slot:SetHeight(30)
+		slot:SetWidth(100)
+		slot:SetScript("OnEnter", OnEnter)
+		slot:SetScript("OnLeave", OnLeave)
+		slot:SetMotionScriptsWhileDisabled(true)
+		slot.icon = slot:CreateTexture(nil, "BACKGROUND")
+		slot.icon:SetHeight(30)
+		slot.icon:SetWidth(30)
+		slot.icon:SetPoint("TOPLEFT", slot)
 
-	   slot.typeText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	   slot.typeText:SetPoint("BOTTOMLEFT", slot.icon, "BOTTOMRIGHT", 2, 3)
-	   slot.typeText:SetJustifyV("CENTER")
-	   slot.typeText:SetJustifyH("LEFT")
-	   slot.typeText:SetWidth(75)
-	   slot.typeText:SetHeight(11)
-	   
+		if( i < 18 ) then
+			slot.typeText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+			slot.typeText.icon = slot:CreateTexture(nil, "ARTWORK")
+			slot.typeText.icon:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", -1, 0)
+			slot.typeText.icon:SetSize(14, 14)
+			slot.typeText:SetPoint("LEFT", slot.typeText.icon, "RIGHT", 0, 0)
+			slot.typeText:SetJustifyV("CENTER")
+			slot.typeText:SetJustifyH("LEFT")
+			slot.typeText:SetWidth(60)
+			slot.typeText:SetHeight(11)
+
+			slot.extraText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+			slot.extraText.icon = slot:CreateTexture(nil, "ARTWORK")
+			slot.extraText.icon:SetPoint("BOTTOMLEFT", slot.icon, "BOTTOMRIGHT", -1, 1)
+			slot.extraText.icon:SetSize(12, 12)
+			slot.extraText:SetPoint("LEFT", slot.extraText.icon, "RIGHT", 2, 0)
+			slot.extraText:SetJustifyV("CENTER")
+			slot.extraText:SetJustifyH("LEFT")
+			slot.extraText:SetWidth(60)
+			slot.extraText:SetHeight(11)
+			slot.extraText:SetTextColor(0.85, 0.85, 0.85, 0.95)
+		else
+			slot.text = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+			slot.text:SetPoint("LEFT", slot.icon, "RIGHT", 2, 0)
+			slot.text:SetWidth(72)
+			slot.text:SetHeight(14)
+			slot.text:SetJustifyV("CENTER")
+			slot.text:SetJustifyH("LEFT")
+		end
+			
 	   if( i == 10 ) then
-		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 40, 0)    
+		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 9, 0)    
 	   elseif( i > 1 ) then
 		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[i - 1], "BOTTOMLEFT", 0, -9)
 	   else
@@ -718,7 +736,7 @@ function Users:CreateUI()
 
 		if( inventoryMap[i] ) then
 			slot.inventorySlot = inventoryMap[i]
-			slot.inventoryType = SexyGroup.INVENTORY_TO_TYPE[inventoryMap[i]]
+			slot.inventoryType = SimpleGroup.INVENTORY_TO_TYPE[inventoryMap[i]]
 			slot.inventoryID, slot.emptyTexture, slot.checkRelic = GetInventorySlotInfo(inventoryMap[i])
 		end
 		
@@ -731,14 +749,14 @@ function Users:CreateUI()
 	frame.userFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 	frame.userFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.userFrame:SetWidth(175)
-	frame.userFrame:SetHeight(100)
+	frame.userFrame:SetHeight(80)
 	frame.userFrame:SetPoint("TOPLEFT", frame.gearFrame, "TOPRIGHT", 10, -8)
 
 	frame.userFrame.headerText = frame.userFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
 	frame.userFrame.headerText:SetPoint("BOTTOMLEFT", frame.userFrame, "TOPLEFT", 0, 5)
 	frame.userFrame.headerText:SetText(L["Player info"])
 
-	local buttonList = {"playerInfo", "talentInfo", "scoreInfo", "scannedInfo", "trustedInfo"}
+	local buttonList = {"playerInfo", "talentInfo", "scannedInfo", "trustedInfo"}
 	for i, key in pairs(buttonList) do
 		local button = CreateFrame("Button", nil, frame.userFrame)
 		button:SetNormalFontObject(GameFontHighlight)
@@ -746,10 +764,13 @@ function Users:CreateUI()
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
-		button:GetFontString():SetPoint("LEFT", button, "LEFT", 0, 0)
+		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
+		button.icon:SetSize(16, 16)
+		button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
 		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
-		button:GetFontString():SetWidth(frame.userFrame:GetWidth() - 5)
+		button:GetFontString():SetWidth(frame.userFrame:GetWidth() - 23)
 		button:GetFontString():SetHeight(15)
 		
 		if( i > 1 ) then
@@ -769,15 +790,15 @@ function Users:CreateUI()
 	frame.dungeonFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 	frame.dungeonFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.dungeonFrame:SetWidth(175)
-	frame.dungeonFrame:SetHeight(223)
+	frame.dungeonFrame:SetHeight(243)
 	frame.dungeonFrame:SetPoint("TOPLEFT", frame.userFrame, "BOTTOMLEFT", 0, -24)
 
 	frame.dungeonFrame.headerText = frame.dungeonFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
 	frame.dungeonFrame.headerText:SetPoint("BOTTOMLEFT", frame.dungeonFrame, "TOPLEFT", 0, 5)
 	frame.dungeonFrame.headerText:SetText(L["Suggested dungeons"])
 
-	frame.dungeonFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameDungeon", frame.dungeonFrame, "FauxScrollFrameTemplate")
-	frame.dungeonFrame.scroll.bar = SexyGroupUserFrameDungeonScrollBar
+	frame.dungeonFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameDungeon", frame.dungeonFrame, "FauxScrollFrameTemplate")
+	frame.dungeonFrame.scroll.bar = SimpleGroupUserFrameDungeonScrollBar
 	frame.dungeonFrame.scroll:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 0, -2)
 	frame.dungeonFrame.scroll:SetPoint("BOTTOMRIGHT", frame.dungeonFrame, "BOTTOMRIGHT", -24, 1)
 	frame.dungeonFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 28, Users.UpdateDungeonInfo) end)
@@ -800,9 +821,9 @@ function Users:CreateUI()
 		button.dungeonInfo:SetPoint("TOPRIGHT", button.dungeonName, "BOTTOMRIGHT", 0, 2)
 
 		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.dungeonFrame.rows[i - 1], "BOTTOMLEFT", 0, -4)
+			button:SetPoint("TOPLEFT", frame.dungeonFrame.rows[i - 1], "BOTTOMLEFT", 0, -7)
 		else
-			button:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 3, -1)
+			button:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 3, -2)
 		end
 
 		frame.dungeonFrame.rows[i] = button
@@ -857,8 +878,8 @@ function Users:CreateUI()
 	frame.achievementFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
 	frame.achievementFrame:SetAllPoints(frame.userTabFrame)
 
-	frame.achievementFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameAchievements", frame.achievementFrame, "FauxScrollFrameTemplate")
-	frame.achievementFrame.scroll.bar = SexyGroupUserFrameAchievementsScrollBar
+	frame.achievementFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameAchievements", frame.achievementFrame, "FauxScrollFrameTemplate")
+	frame.achievementFrame.scroll.bar = SimpleGroupUserFrameAchievementsScrollBar
 	frame.achievementFrame.scroll:SetPoint("TOPLEFT", frame.achievementFrame, "TOPLEFT", 0, -2)
 	frame.achievementFrame.scroll:SetPoint("BOTTOMRIGHT", frame.achievementFrame, "BOTTOMRIGHT", -24, 1)
 	frame.achievementFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateAchievementInfo) end)
@@ -867,7 +888,7 @@ function Users:CreateUI()
 		local id = self.toggle and self.toggle.id or self.id
 		if( not id ) then return end
 		
-		SexyGroup.db.profile.expExpanded[id] = not SexyGroup.db.profile.expExpanded[id]
+		SimpleGroup.db.profile.expExpanded[id] = not SimpleGroup.db.profile.expExpanded[id]
 		Users:UpdateAchievementInfo()
 	end
 	
@@ -897,8 +918,8 @@ function Users:CreateUI()
 	frame.noteFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
 	frame.noteFrame:SetAllPoints(frame.userTabFrame)
 	
-	frame.noteFrame.scroll = CreateFrame("ScrollFrame", "SexyGroupUserFrameNotes", frame.noteFrame, "FauxScrollFrameTemplate")
-	frame.noteFrame.scroll.bar = SexyGroupUserFrameNotesScrollBar
+	frame.noteFrame.scroll = CreateFrame("ScrollFrame", "SimpleGroupUserFrameNotes", frame.noteFrame, "FauxScrollFrameTemplate")
+	frame.noteFrame.scroll.bar = SimpleGroupUserFrameNotesScrollBar
 	frame.noteFrame.scroll:SetPoint("TOPLEFT", frame.noteFrame, "TOPLEFT", 0, -2)
 	frame.noteFrame.scroll:SetPoint("BOTTOMRIGHT", frame.noteFrame, "BOTTOMRIGHT", -24, 1)
 	frame.noteFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 46, Users.UpdateNoteInfo) end)
