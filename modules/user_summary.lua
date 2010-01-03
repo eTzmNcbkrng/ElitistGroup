@@ -137,25 +137,28 @@ function Summary:UpdateSingle(row)
 				noteAge = string.format(L["%d days"], noteAge / 1440)
 			end
 			
-			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["Rated %d of %d"], playerNote.rating, ElitistGroup.MAX_RATING))
+			row.notesInfo:SetFormattedText(L["Rated %d of %d"], playerNote.rating, ElitistGroup.MAX_RATING)
+			row.notesInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, playerNote.comment or L["No comment"])
 		-- We haven't, but somebody else has left a note on them
 		elseif( totalNotes > 0 ) then
-			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_READY_TEXTURE, string.format(L["%d notes found"], totalNotes))
+			row.notesInfo:SetFormattedText("%d notes found", string.format(L["%d notes found"], totalNotes))
+			row.notesInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 			row.notesInfo.tooltip = L["Other players have left a note on this person."]
 		else
-			row.notesInfo:SetFormattedText("|T%s:14:14|t %s", READY_CHECK_NOT_READY_TEXTURE, L["No notes found"])
+			row.notesInfo:SetText(L["No notes found"])
+			row.notesInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 			row.notesInfo.tooltip = L["No notes were found for this player."]
 		end
 		
 		-- Make sure they are talented enough
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
-			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d/%d/%d (%s)", specIcon, userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
+			row.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
 			row.talentInfo.icon:SetTexture(specIcon)
 			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
 		else
-			row.talentInfo:SetFormattedText("|T%s:16:16:-1:0|t %d %s", specIcon, userData.unspentPoints, L["unspent points"])
+			row.talentInfo:SetFormattedText(L["%d unspent points"], userData.unspentPoints)
 			row.talentInfo.icon:SetTexture(specIcon)
 			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
 		end
@@ -188,7 +191,7 @@ function Summary:UpdateSingle(row)
 				end
 			end
 
-			row.gearInfo:SetFormattedText(L["Equipment (%d)"], L["Equipment"], equipmentData.totalScore)
+			row.gearInfo:SetFormattedText(L["Equipment (%d)"], equipmentData.totalScore)
 			row.gearInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 			row.gearInfo.tooltip = gearTooltip
 		end
