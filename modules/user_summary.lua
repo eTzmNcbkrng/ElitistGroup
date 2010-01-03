@@ -204,8 +204,8 @@ function Summary:UpdateSingle(row)
 			row.enchantInfo.disableWrap = not enchantData.noData
 		else
 			row.enchantInfo:SetText(L["Loading"])
-			row.enchantInfo.icon:SetTexture(enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-			row.enchantInfo.tooltip = L["Enchant information is still loading, you need to be within inspection range for data to become available."]
+			row.enchantInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
+			row.enchantInfo.tooltip = L["No enchants found."]
 			row.enchantInfo.disableWrap = nil
 		end
 
@@ -218,7 +218,7 @@ function Summary:UpdateSingle(row)
 		else
 			row.gemInfo:SetText(L["Loading"])
 			row.gemInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
-			row.gemInfo.tooltip = L["Gem information is still loading, you need to be within inspection range for data to become available."]
+			row.gemInfo.tooltip = L["No gems found. It is possible data failed to load, however it is more likely the player has no gems."]
 			row.gemInfo.disableWrap = nil
 		end
 
