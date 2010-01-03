@@ -244,9 +244,14 @@ function Users:UpdateDatabasePage()
 		if( id > offset ) then
 			local row = self.frame.databaseFrame.rows[rowID]
 			row.userID = userList[id]
-			row:SetText(userList[id])
 			row:SetWidth(rowWidth)
 			row:Show()
+			
+			if( userList[id] ~= ElitistGroup.playerName and UnitExists(string.match(userList[id], "(.-)%-")) ) then
+				row:SetFormattedText("|cffffffff[%s]|r %s", GROUP, userList[id])
+			else
+				row:SetText(userList[id])
+			end
 			
 			if( self.activeData and row.userID == self.activeUserID ) then
 				row:LockHighlight()
