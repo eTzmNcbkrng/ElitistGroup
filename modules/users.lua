@@ -730,7 +730,7 @@ function Users:CreateUI()
 			slot.extraText:SetJustifyH("LEFT")
 			slot.extraText:SetWidth(60)
 			slot.extraText:SetHeight(11)
-			slot.extraText:SetTextColor(0.85, 0.85, 0.85, 0.95)
+			slot.extraText:SetTextColor(0.90, 0.90, 0.90)
 		else
 			slot.text = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 			slot.text:SetPoint("LEFT", slot.icon, "RIGHT", 2, 0)
