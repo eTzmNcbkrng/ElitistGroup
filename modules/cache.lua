@@ -242,32 +242,30 @@ itemMetaTable = {
 
 		-- Failed to identify the item, check everything
 		if( inventoryType == "INVTYPE_TRINKET" ) then
-			local hasData
-			for _ in pairs(statCache) do hasData = true; break end
-			
 			-- Basically. 99% of trinkets say the stat they increase, regardless of whether it's "chance to increase spell power by X every 20 seconds"
 			-- so will find that part of the text and scan it to try and identify what kind of item it is, we only do this if we failed to find it through the stats
-			if( not hasData ) then
-				local statText
-				for i=tooltip:NumLines(), 1, -1 do
-					local row = _G["ElitistGroupTooltipTextLeft" .. i]
-					local text = string.lower(row:GetText())
-					local r, g, b = row:GetTextColor()
-					
-					if( r == 0 and g > 0.97 and b == 0 ) then
-						if( string.match(text, ITEM_SPELL_TRIGGER_ONEQUIP) or string.match(text, ITEM_SPELL_TRIGGER_ONPROC) or string.match(text, ITEM_SPELL_TRIGGER_ONUSE) ) then
-							statText = text
-							break
-						end
+			tooltip:SetOwner(UIParent, "ANCHOR_NONE")
+			tooltip:SetHyperlink(link)
+			
+			local statText
+			for i=tooltip:NumLines(), 1, -1 do
+				local row = _G["ElitistGroupTooltipTextLeft" .. i]
+				local text = string.lower(row:GetText())
+				local r, g, b = row:GetTextColor()
+				
+				if( r == 0 and g > 0.97 and b == 0 ) then
+					if( string.match(text, ITEM_SPELL_TRIGGER_ONEQUIP) or string.match(text, ITEM_SPELL_TRIGGER_ONPROC) or string.match(text, ITEM_SPELL_TRIGGER_ONUSE) ) then
+						statText = text
+						break
 					end
 				end
-				
-				-- Yay we found the enchant proc
-				if( statText ) then
-					for key, stat in pairs(ElitistGroup.STAT_MAP) do
-						if( string.match(statText, string.lower(_G[stat])) ) then
-							statCache[key] = true
-						end
+			end
+			
+			-- Yay we found the enchant proc
+			if( statText ) then
+				for key, stat in pairs(ElitistGroup.STAT_MAP) do
+					if( string.match(statText, string.lower(_G[stat])) ) then
+						statCache[stat] = true
 					end
 				end
 			end
