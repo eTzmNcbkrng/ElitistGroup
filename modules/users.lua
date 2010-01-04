@@ -50,30 +50,28 @@ function Users:LoadData(userData)
 					slot.itemTalentType = ElitistGroup.TALENT_TYPES[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
 					slot.typeText:SetText(slot.itemTalentType)
-					slot.typeText.icon:SetTexture(not equipmentData[itemLink] and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
 					slot:Enable()
 					slot:Show()
+					
+					if( equipmentData[itemLink] ) then
+						slot.typeText:SetTextColor(1, 0.15, 0.15)
+					else
+						slot.typeText:SetTextColor(1, 1, 1)
+					end
+					
 
 					if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
-						slot.typeText.icon:ClearAllPoints()
-						slot.typeText.icon:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", -1, 0)
-
 						slot.extraText:SetText(L["Enhancements"])
-						slot.extraText.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
-						slot.extraText.icon:Show()
-						slot.extraText:Show()
+						slot.extraText:SetTextColor(1, 0.15, 0.15)
 					else
-						slot.typeText.icon:ClearAllPoints()
-						slot.typeText.icon:SetPoint("LEFT", slot.icon, "RIGHT", -1, 0)
-						slot.extraText:Hide()
-						slot.extraText.icon:Hide()
+						local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[-1]
+						slot.extraText:SetText(math.floor(ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)))
+						slot.extraText:SetTextColor(color.r, color.g, color.b)
 					end
 				else
 					slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 					slot.extraText:SetText("")
-					slot.extraText.icon:SetTexture(nil)
 					slot.typeText:SetText("")
-					slot.typeText.icon:SetTexture(nil)
 					slot.equippedItem = nil
 					slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
 					slot:Disable()
@@ -87,9 +85,7 @@ function Users:LoadData(userData)
 				
 				slot.icon:SetTexture(texture)
 				slot.extraText:SetText("")
-				slot.extraText.icon:SetTexture(nil)
 				slot.typeText:SetText("")
-				slot.typeText.icon:SetTexture(nil)
 				slot.tooltip = L["No item equipped"]
 				slot:Disable()
 				slot:Show()
@@ -717,23 +713,17 @@ function Users:CreateUI()
 
 		if( i < 18 ) then
 			slot.typeText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-			slot.typeText.icon = slot:CreateTexture(nil, "ARTWORK")
-			slot.typeText.icon:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", -1, 0)
-			slot.typeText.icon:SetSize(14, 14)
-			slot.typeText:SetPoint("LEFT", slot.typeText.icon, "RIGHT", 0, 0)
+			slot.typeText:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", 2, -1)
 			slot.typeText:SetJustifyV("CENTER")
 			slot.typeText:SetJustifyH("LEFT")
-			slot.typeText:SetWidth(64)
+			slot.typeText:SetWidth(74)
 			slot.typeText:SetHeight(11)
 
 			slot.extraText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-			slot.extraText.icon = slot:CreateTexture(nil, "ARTWORK")
-			slot.extraText.icon:SetPoint("BOTTOMLEFT", slot.icon, "BOTTOMRIGHT", -1, 1)
-			slot.extraText.icon:SetSize(12, 12)
-			slot.extraText:SetPoint("LEFT", slot.extraText.icon, "RIGHT", 2, 0)
+			slot.extraText:SetPoint("BOTTOMLEFT", slot.icon, "BOTTOMRIGHT", 2, 2)
 			slot.extraText:SetJustifyV("CENTER")
 			slot.extraText:SetJustifyH("LEFT")
-			slot.extraText:SetWidth(64)
+			slot.extraText:SetWidth(74)
 			slot.extraText:SetHeight(11)
 			slot.extraText:SetTextColor(0.90, 0.90, 0.90)
 		else
@@ -746,11 +736,11 @@ function Users:CreateUI()
 		end
 			
 	   if( i == 10 ) then
-		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 11, 0)    
+		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 10, 0)    
 	   elseif( i > 1 ) then
 		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[i - 1], "BOTTOMLEFT", 0, -9)
 	   else
-		  slot:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 2, -8)
+		  slot:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 3, -8)
 	   end
 
 		if( inventoryMap[i] ) then
