@@ -237,7 +237,7 @@ function Users:UpdateDatabasePage()
 	
 	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS, 16)
 	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
-	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 10)
+	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 24)
 	
 	local rowID = 1
 	for id=1, #(userList) do
@@ -723,7 +723,7 @@ function Users:CreateUI()
 			slot.typeText:SetPoint("LEFT", slot.typeText.icon, "RIGHT", 0, 0)
 			slot.typeText:SetJustifyV("CENTER")
 			slot.typeText:SetJustifyH("LEFT")
-			slot.typeText:SetWidth(60)
+			slot.typeText:SetWidth(64)
 			slot.typeText:SetHeight(11)
 
 			slot.extraText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
@@ -733,7 +733,7 @@ function Users:CreateUI()
 			slot.extraText:SetPoint("LEFT", slot.extraText.icon, "RIGHT", 2, 0)
 			slot.extraText:SetJustifyV("CENTER")
 			slot.extraText:SetJustifyH("LEFT")
-			slot.extraText:SetWidth(60)
+			slot.extraText:SetWidth(64)
 			slot.extraText:SetHeight(11)
 			slot.extraText:SetTextColor(0.90, 0.90, 0.90)
 		else
@@ -746,11 +746,11 @@ function Users:CreateUI()
 		end
 			
 	   if( i == 10 ) then
-		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 9, 0)    
+		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 11, 0)    
 	   elseif( i > 1 ) then
 		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[i - 1], "BOTTOMLEFT", 0, -9)
 	   else
-		  slot:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 5, -8)
+		  slot:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 2, -8)
 	   end
 
 		if( inventoryMap[i] ) then
