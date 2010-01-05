@@ -129,7 +129,7 @@ function Users:LoadData(userData)
 			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		else
-			frame.userFrame.talentInfo:SetFormattedText("%d %s", userData.unspentPoints, L["unspent points"])
+			frame.userFrame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
 			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		end
@@ -144,13 +144,13 @@ function Users:LoadData(userData)
 		frame.userFrame.scannedInfo:SetText(L["<1 minute old"])
 		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_41")
 	elseif( scanAge < 60 ) then
-		frame.userFrame.scannedInfo:SetFormattedText(L["%d minutes old"], scanAge)
+		frame.userFrame.scannedInfo:SetFormattedText(L["%d |4minute:minutes; old"], scanAge)
 		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_" .. (scanAge < 30 and 41 or 38))
 	elseif( scanAge <= 1440 ) then
-		frame.userFrame.scannedInfo:SetFormattedText(L["%d hours old"], scanAge / 60)
+		frame.userFrame.scannedInfo:SetFormattedText(L["%d |4hour:hours; old"], scanAge / 60)
 		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_39")
 	else
-		frame.userFrame.scannedInfo:SetFormattedText(L["%d days old"], scanAge / 1440)
+		frame.userFrame.scannedInfo:SetFormattedText(L["%d |4day:days; old"], scanAge / 1440)
 		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_37")
 	end
 	
@@ -433,7 +433,7 @@ function Users:UpdateDungeonInfo()
 			local heroicIcon = (type == "heroic" or type == "hard") and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
 			
 			row.dungeonName:SetFormattedText("%s|cff%02x%02x00%s|r", heroicIcon, r, g, name)
-			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %s-man (%s)"], r, g, score, players, ElitistGroup.DUNGEON_TYPES[type])
+			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %d-man (%s)"], r, g, score, players, ElitistGroup.DUNGEON_TYPES[type])
 			row:Show()
 
 			rowID = rowID + 1

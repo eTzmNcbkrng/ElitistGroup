@@ -123,11 +123,11 @@ function Summary:UpdateSingle(row)
 		if( playerNote ) then
 			local noteAge = (time() - playerNote.time) / 60
 			if( noteAge < 60 ) then
-				noteAge = string.format(L["%d minutes"], noteAge)
+				noteAge = string.format(L["%d |4minute:minutes;"], noteAge)
 			elseif( noteAge < 1440 ) then
-				noteAge = string.format(L["%d hours"], noteAge / 60)
+				noteAge = string.format(L["%d |4hour:hours;"], noteAge / 60)
 			else
-				noteAge = string.format(L["%d days"], noteAge / 1440)
+				noteAge = string.format(L["%d |4day:days;"], noteAge / 1440)
 			end
 			
 			row.notesInfo:SetFormattedText(L["Rated %d of %d"], playerNote.rating, ElitistGroup.MAX_RATING)
@@ -151,7 +151,7 @@ function Summary:UpdateSingle(row)
 			row.talentInfo.icon:SetTexture(specIcon)
 			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
 		else
-			row.talentInfo:SetFormattedText(L["%d unspent points"], userData.unspentPoints)
+			row.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
 			row.talentInfo.icon:SetTexture(specIcon)
 			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
 		end
