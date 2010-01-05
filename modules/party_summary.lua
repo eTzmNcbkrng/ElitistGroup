@@ -37,13 +37,17 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 	if( activeGroupID == groupID or GetNumPartyMembers() < 4 ) then return end
 	activeGroupID = groupID
 	
-	-- Send a note request for people	if( notes ) then
+	-- Send a note request for people
+	if( notes ) then
 		ElitistGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
 	end
 	
-	-- Setup the actual UI	if( ElitistGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
+	-- Setup the actual UI
+	if( ElitistGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
 		self:Show()
-	else		ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())	end
+	else
+		ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())
+	end
 end
 
 function Summary:Show()
