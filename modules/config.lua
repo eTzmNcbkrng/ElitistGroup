@@ -49,14 +49,19 @@ local function loadOptions()
 				inline = true,
 				name = L["Database"],
 				args = {
-					ignoreBelow = {
+					saveForeign = {
 						order = 1,
+						type = "toggle",
+						name = L["Save foreign server data"],
+						desc = L["Any data from another server will not be saved, this includes notes! If you would like most of the data to be pruned but notes kept intact change basic pruning and leave this on."],
+					},
+					ignoreBelow = {
+						order = 2,
 						type = "range",
 						name = L["Ignore below level"],
 						desc = L["Do not require players who are below the given level."],
 						min = 0, max = MAX_PLAYER_LEVEL, step = 5,
 					},
-					sep = {order = 1.5, type = "description", name = ""},
 					pruneBasic = {
 						order = 2,
 						type = "range",
@@ -155,33 +160,39 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		InterfaceOptionsFrame:Show()
 		InterfaceOptionsFrame_OpenToCategory("Elitist Group")
 		return
+	elseif( cmd == "send" and arg ) then
+		ElitistGroup.modules.Sync:SendCmdGear(arg)
+		return
 	elseif( cmd == "gear" and arg ) then
-		ElitistGroup.modules.Sync:SendGearRequest(arg)
+		ElitistGroup.modules.Sync:RequestGear(arg)
 		return
 	elseif( cmd == "notes" and arg ) then
-		ElitistGroup.modules.Sync:SendNoteRequest(arg)
+		ElitistGroup.modules.Sync:RequestNotes(arg)
 		return
 	elseif( cmd == "summary" ) then
-		if( GetNumPartyMembers() == 0 ) then
-			ElitistGroup:Print(L["You must be in a party to use this."])
+		local instanceType = select(2, IsInInstance())
+		if( GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 ) then
+			ElitistGroup:Print(L["You must be in a group to use this."])
 			return
-		elseif( select(2, IsInInstance()) ~= "party" ) then
-			ElitistGroup:Print(L["You must be inside a raid or party instance to use this feature."])
+		elseif( instanceType ~= "party" and instanceType ~= "raid" ) then
+			ElitistGroup:Print(L["You must be inside a party or raid instance to use this feature."])
 			return
 		end
 	
-		ElitistGroup.modules.Summary:PLAYER_ROLES_ASSIGNED()
-		if( not ElitistGroup.modules.Summary.frame or not ElitistGroup.modules.Summary.frame:IsVisible() ) then
-			ElitistGroup.modules.Summary:Setup()
+		if( instanceType == "party" ) then
+			ElitistGroup.modules.PartySummary:Show()
+		else
+			ElitistGroup.modules.RaidSummary:Show()
 		end
 		return
-	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" ) then
+	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" or cmd == "send" ) then
 		ElitistGroup:Print(L["Slash commands"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup config - Opens the configuration"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup gear <name> - Requests gear from another Elitist Group user without inspecting"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup send <name> - Sends your gear to another Elitist Group user"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup notes <for> - Requests all notes that people have for the name entered"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup summary - Displays the summary page for your party or raid"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup summary - Displays the summary page for your party"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/rate - Opens the rating panel for your group"])
 		return
 	end
