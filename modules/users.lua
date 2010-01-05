@@ -140,8 +140,8 @@ function Users:LoadData(userData)
 		
 	local scanAge = (time() - userData.scanned) / 60
 	
-	if( scanAge <= 5 ) then
-		frame.userFrame.scannedInfo:SetText(L["Just now"])
+	if( scanAge <= 2 ) then
+		frame.userFrame.scannedInfo:SetText(L["<1 minute old"])
 		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_41")
 	elseif( scanAge < 60 ) then
 		frame.userFrame.scannedInfo:SetFormattedText(L["%d minutes old"], scanAge)
