@@ -541,12 +541,5 @@ function ElitistGroup:Print(msg)
 end
 
 --@debug@
-ElitistGroup.L = setmetatable(ElitistGroup.L, {
-	__index = function(tbl, value)
-		rawset(tbl, value, value)
-		return value
-	end,
-})
-
 _G.ElitistGroup = ElitistGroup
 --@end-debug@
