@@ -195,6 +195,10 @@ ElitistGroup.OVERRIDE_ENCHANTS = {
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 ElitistGroup.OVERRIDE_ITEMS = {
+	[44255] = "caster", -- Darkmoon Card: Greatness (+90 INT)
+	[44254] = "caster", -- Darkmoon Card: Greatness (+90 SPI)
+	[44253] = "tank/dps", -- Darkmoon Card: Greantess (+90 AGI)
+	[42987] = "tank/dps", -- Darkmoon Card: Greatness (+90 STR)
 	[49464] = "caster", -- Shiny Shard of the Flame, this would be only useful if you have both trinkets, but still
 	[47668] = "tank/dps", -- Idol of Mutilation
 	[50456] = "tank/dps", -- Idol of the Crying Moon
