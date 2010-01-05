@@ -195,6 +195,7 @@ ElitistGroup.OVERRIDE_ENCHANTS = {
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 ElitistGroup.OVERRIDE_ITEMS = {
+	[47661] = "tank/dps", -- Libram of Valiance
 	[44255] = "caster", -- Darkmoon Card: Greatness (+90 INT)
 	[44254] = "caster", -- Darkmoon Card: Greatness (+90 SPI)
 	[44253] = "tank/dps", -- Darkmoon Card: Greantess (+90 AGI)
