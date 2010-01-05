@@ -1,8 +1,9 @@
 local ElitistGroup = select(2, ...)
-ElitistGroup.L = {
---@localization(locale="enUS", format="lua_table", same-key-is-true=true)@
-}
+local L = {}
+--@localization(locale="enUS", format="lua_additive_table")@
 
+
+ElitistGroup.L = L
 --@debug@
 ElitistGroup.L = setmetatable(ElitistGroup.L, {
 	__index = function(tbl, value)
