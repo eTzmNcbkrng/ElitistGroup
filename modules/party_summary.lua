@@ -135,7 +135,7 @@ function Summary:UpdateSingle(row)
 			row.notesInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, playerNote.comment or L["No comment"])
 		-- We haven't, but somebody else has left a note on them
 		elseif( totalNotes > 0 ) then
-			row.notesInfo:SetFormattedText("%d notes found", string.format(L["%d notes found"], totalNotes))
+			row.notesInfo:SetFormattedText("%d |4note:notes; found", string.format(L["%d notes found"], totalNotes))
 			row.notesInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 			row.notesInfo.tooltip = L["Other players have left a note on this person."]
 		else
