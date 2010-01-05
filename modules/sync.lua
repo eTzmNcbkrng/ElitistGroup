@@ -68,54 +68,60 @@ end
 
 -- This will have to be changed, I'm not quite sure a good way of doing it yet
 function Sync:RequestSuccessful(event, type, name)
-	ElitistGroup:Print(string.format(L["Successfully got data on %s, type /ElitistGroup %s to view!"], name, name))
+	ElitistGroup:Print(string.format(L["Successfully got data on %s, type /elitistgroup %s to view!"], name, name))
 	self:UnregisterMessage("SG_DATA_UPDATED")
 end
 
-function Sync:SendGearRequest(gearFor)
-	if( not gearFor or gearFor == "" ) then
-		ElitistGroup:Print(L["Invalid name entered."])
-		return
-	elseif( gearFor == "target" or gearFor == "focus" or gearFor == "mouseover" ) then
+local function verifyInput(name, forceServer)
+	if( not name or name == "" ) then
+		ElitistGroup:Print(L["You have to enter a name for this to work."])
+		return nil
+	elseif( name == "target" or name == "focus" or name == "mouseover" ) then
+		local unit = name
 		local server
-		gearFor, server = UnitName(gearFor)
-		if( server and server ~= "" ) then gearFor = string.format("%s-%s", gearFor, server) end
-
-		if( not gearFor ) then
-			ElitistGroup:Print(L["No name found for unit."])
-			return
+		name, server = UnitName(name)
+		if( not UnitExists(name) or name == UNKNOWN ) then
+			ElitistGroup:Print(string.format(L["No player found for unit %s."], unit))
+			return nil
 		end
+
+		return ( server and server ~= "" ) and string.format("%s-%s", name, server) or forceServer and string.format("%s-%s", name, GetRealmName()) or name
 	end
 	
-	self:CommMessage("REQGEAR", "WHISPER", gearFor)
-	self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
-	self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
+	return name
 end
 
-function Sync:SendNoteRequest(notesOn)
-	if( not IsInGuild() ) then
+function Sync:SendCmdGear(name)
+	local name = verifyInput(name)
+	if( name ) then
+		self:SendGearData(name, true)
+		ElitistGroup:Print(string.format(L["Sent your gear to %s! It will arrive in a few seconds"], name))
+	end
+end
+
+function Sync:RequestGear(name)
+	local name = verifyInput(name)
+	if( name ) then
+		self:CommMessage("REQGEAR", "WHISPER", name)
+		self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
+		self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
+	end
+end
+
+function Sync:RequestNotes(name)
+	local name = verifyInput(name, true)
+	if( name and not IsInGuild() ) then
 		ElitistGroup:Print(L["You need to be in a guild to request notes on players."])
 		return
-	elseif( not notesOn or notesOn == "" ) then
-		ElitistGroup:Print(L["Invalid name entered."])
-		return
-	elseif( notesOn == "target" or notesOn == "focus" or notesOn == "mouseover" ) then
-		notesOn = ElitistGroup:GetPlayerID(notesOn)
-		if( not notesOn ) then
-			ElitistGroup:Print(L["No name found for unit."])
-			return
-		end
-	elseif( not string.match(notesOn, "%-") ) then
-		notesOn = string.format("%s-%s", notesOn, GetRealmName())
+	elseif( name ) then
+		self:CommMessage(string.format("REQNOTES@%s", name), "GUILD")
+		self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
+		self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
 	end
-		
-	self:CommMessage(string.format("REQNOTES@%s", notesOn), "GUILD")
-	self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
-	self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
 end
 
-function Sync:ParseGearRequest(sender)
-	if( not ElitistGroup.db.profile.comm.gearRequests ) then return end
+function Sync:SendGearData(sender, override)
+	if( not override and not ElitistGroup.db.profile.comm.gearRequests ) then return end
 	
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
@@ -265,7 +271,7 @@ function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	local cmd, args = string.split("@", message, 2)
 	-- REQGEAR - Requests your currently equipped data in case you are out of inspection range
 	if( cmd == "REQGEAR" ) then
-		self:ParseGearRequest(sender)
+		self:SendGearData(sender)
 	-- REQNOTES:playerA@playerBplayerC@etc - Request notes on the given players
 	elseif( cmd == "REQNOTES" and args ) then
 		self:ParseNotesRequest(sender, string.split("@", args))
@@ -290,5 +296,7 @@ function Sync:DelayedComm(data)
 end
 
 function Sync:CommMessage(message, channel, target)
-	self:SendCommMessage(COMM_PREFIX, message, channel, target)
+	if( ElitistGroup.db.profile.comm.enabled ) then
+		self:SendCommMessage(COMM_PREFIX, message, channel, target)
+	end
 end
