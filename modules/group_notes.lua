@@ -73,7 +73,7 @@ end
 function History:PARTY_MEMBERS_CHANGED(event)
 	if( GetNumPartyMembers() == 0 ) then
 		self.resetGroup = true
-	elseif( GetNumPartyMembers() == MAX_PARTY_MEMBERS and ( not event or select(2, IsInInstance()) == "party" ) ) then
+	elseif( not event or ( GetNumPartyMembers() == MAX_PARTY_MEMBERS and select(2, IsInInstance()) == "party" ) ) then
 		if( self.resetGroup ) then
 			groupData = {}
 			
