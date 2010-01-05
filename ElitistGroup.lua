@@ -15,6 +15,7 @@ function ElitistGroup:OnInitialize()
 			database = {
 				pruneBasic = 30,
 				pruneFull = 120,
+				saveForeign = false,
 				ignoreBelow = 80,
 				autoNotes = true,
 			},
@@ -135,7 +136,7 @@ end
 
 function ElitistGroup:GetPlayerID(unit)
 	local name, server = UnitName(unit)
-	return name and string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
+	return name and name ~= UNKNOWN and string.format("%s-%s", name, server and server ~= "" and server or GetRealmName())
 end
 
 function ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)
@@ -185,7 +186,7 @@ local function getTable()
 	return table.remove(tableCache, 1) or {}
 end
 
-function ElitistGroup:DeleteTables(...)	
+function ElitistGroup:ReleaseTables(...)	
 	for i=1, select("#", ...) do
 		local tbl = select(i, ...)
 		if( tbl ) then
@@ -299,7 +300,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 		totalLines = totalLines + #(tempList)
 	end
 	
-	self:DeleteTables(tempList)
+	self:ReleaseTables(tempList)
 	
 	return gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"], totalLines
 end
@@ -525,7 +526,7 @@ function ElitistGroup:OnDatabaseShutdown()
 			end
 		end
 		
-		if( hasData and userData.level and userData.level >= self.db.profile.database.ignoreBelow ) then
+		if( hasData and userData.level and userData.level >= self.db.profile.database.ignoreBelow and ( self.db.profile.database.saveForeign or userData.server == GetRealmName() ) ) then
 			self.db.faction.lastModified[name] = time()
 			self.db.faction.users[name] = self:WriteTable(userData)
 		else
