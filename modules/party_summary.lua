@@ -1,5 +1,5 @@
 local ElitistGroup = select(2, ...)
-local Summary = ElitistGroup:NewModule("Summary", "AceEvent-3.0")
+local Summary = ElitistGroup:NewModule("PartySummary", "AceEvent-3.0")
 local L = ElitistGroup.L
 local buttonList = {"playerInfo", "talentInfo", "trustedInfo", "notesInfo", "gearInfo", "enchantInfo", "gemInfo"}
 local notesRequested, unitToRow = {}, {}
@@ -7,13 +7,8 @@ local activeGroupID
 
 function Summary:OnInitialize()
 	self:RegisterEvent("PLAYER_ROLES_ASSIGNED")
-	self:RegisterEvent("PLAYER_LEAVING_WORLD")
 	self:RegisterEvent("UNIT_NAME_UPDATE")
 	self:RegisterMessage("SG_DATA_UPDATED")
-end
-
-function Summary:PLAYER_LEAVING_WORLD()
-	ElitistGroup.modules.Scan:ResetQueue()
 end
 
 -- My theory with this event, and from looking is it seems to only fire when you are using the LFD system
@@ -29,38 +24,32 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 			
 			if( ElitistGroup.db.profile.database.autoNotes and IsInGuild() and not notesRequested[guid] ) then
 				notesRequested[guid] = true
-				
-				if( notes ) then
-					notes = notes .. "@" .. ElitistGroup:GetPlayerID("party" .. i)
-				else
-					notes = ElitistGroup:GetPlayerID("party" .. i)
+				local name = ElitistGroup:GetPlayerID("party" .. i)
+				if( name ) then					if( notes ) then
+						notes = notes .. "@" .. name
+					else
+						notes = name
+					end
 				end
 			end
 		end
-	end
-	
+	end	
 	if( activeGroupID == groupID or GetNumPartyMembers() < 4 ) then return end
 	activeGroupID = groupID
 	
-	if( notes ) then
+	-- Send a note request for people	if( notes ) then
 		ElitistGroup.modules.Sync:CommMessage(string.format("REQNOTES@%s", notes), "GUILD")
 	end
 	
-	if( ElitistGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
-		self:Setup()
-	end
-	
-	for i=1, GetNumPartyMembers() do
-		ElitistGroup.modules.Scan:QueueAdd("party" .. i)
-	end
-
-	ElitistGroup.modules.Scan:QueueStart()
+	-- Setup the actual UI	if( ElitistGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
+		self:Show()
+	else		ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())	end
 end
 
-function Summary:Setup()
-	self:CreateUI()
-	self.frame:SetHeight(35 + (140 * math.floor(GetNumPartyMembers() / 2)))
-	self.frame:SetWidth(30 + (175 * math.floor(GetNumPartyMembers() / 2)))
+function Summary:Show()
+	ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())	self:CreateUI()
+	self.frame:SetHeight(35 + (140 * math.ceil(GetNumPartyMembers() / 2)))
+	self.frame:SetWidth(30 + (175 * math.ceil(GetNumPartyMembers() / 2)))
 	self.frame:Show()
 	
 	for _, row in pairs(self.summaryRows) do row:Hide() end
@@ -111,7 +100,7 @@ function Summary:UpdateSingle(row)
 		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], name, server, level)
 		row.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 	end
-
+	
 	-- No data yet, show the basic info then tell them we're loading
 	if( not userData ) then
 		for _, key in pairs(buttonList) do
@@ -203,7 +192,7 @@ function Summary:UpdateSingle(row)
 			row.enchantInfo.tooltip = enchantTooltip
 			row.enchantInfo.disableWrap = not enchantData.noData
 		else
-			row.enchantInfo:SetText(L["Loading"])
+			row.enchantInfo:SetText(L["Enchants"])
 			row.enchantInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
 			row.enchantInfo.tooltip = L["No enchants found."]
 			row.enchantInfo.disableWrap = nil
@@ -216,13 +205,13 @@ function Summary:UpdateSingle(row)
 			row.gemInfo.tooltip = gemTooltip
 			row.gemInfo.disableWrap = not gemData.noData
 		else
-			row.gemInfo:SetText(L["Loading"])
+			row.gemInfo:SetText(L["Gems"])
 			row.gemInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
 			row.gemInfo.tooltip = L["No gems found. It is possible data failed to load, however it is more likely the player has no gems."]
 			row.gemInfo.disableWrap = nil
 		end
 
-		ElitistGroup:DeleteTables(equipmentData, enchantData, gemData)
+		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
 	end
 end
 
@@ -276,7 +265,7 @@ function Summary:CreateSingle(id)
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
-		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button:SetPushedTextOffset(0, 0)		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
 		button.icon:SetSize(16, 16)
 		button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
@@ -321,18 +310,18 @@ function Summary:CreateUI()
 	self.summaryRows = {}
 	
 	-- Main container
-	local frame = CreateFrame("Frame", "ElitistGroupSummaryFrame", UIParent)
+	local frame = CreateFrame("Frame", "ElitistGroupPartySummaryFrame", UIParent)
 	frame:SetClampedToScreen(true)
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetFrameStrata("HIGH")
-	frame:SetScript("OnHide", function() ElitistGroup:DeleteTables(equipmentData, enchantData, gemData) end)
+	frame:SetScript("OnHide", function() ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData) end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
-			frame:SetPoint("CENTER", UIParent, "CENTER", ElitistGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
-			ElitistGroup.db.profile.position = nil
+			frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+			ElitistGroup.db.profile.positions.summary = nil
 			return
 		end
 		
@@ -342,7 +331,7 @@ function Summary:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		ElitistGroup.db.profile.position = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		ElitistGroup.db.profile.positions.summary = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -352,7 +341,7 @@ function Summary:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	table.insert(UISpecialFrames, "ElitistGroupSummaryFrame")
+	table.insert(UISpecialFrames, "ElitistGroupPartySummaryFrame")
 	
 	if( ElitistGroup.db.profile.positions.summary ) then
 		local scale = frame:GetEffectiveScale()
