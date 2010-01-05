@@ -63,7 +63,6 @@ localization = localization .. "\n}"
 -- Send it all off to the localizer script
 local http = require("socket.http")
 local ltn = require("ltn12")
-local localization = io.open("localization/enUS.lua"):read("*all")
 
 local addonData = {
 	["format"] = "lua_table",
@@ -97,11 +96,13 @@ http.request({
 })
 
 local VALID_LOCALIZATION = string.format("<a href=\"/addons/%s/localization/phrases/", ADDON_SLUG)
+--local file = io.open("test.txt", "w")
 for _, text in pairs(source) do
-	if( string.match(text, VALID_LOCALIZATION) ) then
+	if( string.match(text, "Redirecting%.%.%.") ) then
 		print(string.format("Localization uploaded for %s, %s keys!", ADDON_SLUG, totalLocalizedKeys))
 		return
 	end
+	--file:write(text .. "\n")
 end
 
 print(string.format("Failed to localize for %s :(", ADDON_SLUG))
