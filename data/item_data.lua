@@ -180,7 +180,6 @@ ElitistGroup.OVERRIDE_ENCHANTS = {
 	[3604] = "dps", -- Hyperspeed Accelerators
 	[3599] = "never", -- Personal Electromagnetic Pulse Generator
 	[3605] = "physical-dps", -- Flexweave Underlay
-	[3601] = "never", -- Frag Belt
 	[3883] = "tank", -- Rune of the Nerubian Carapace
 	[3847] = "tank", -- Rune of the Stoneskin Gargoyle
 	[3368] = "melee-dps", -- Rune of the Fallen Crusader
