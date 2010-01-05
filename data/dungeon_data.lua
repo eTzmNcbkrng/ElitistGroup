@@ -1,10 +1,10 @@
-local SexyGroup = select(2, ...)
-local L = SexyGroup.L
+local ElitistGroup = select(2, ...)
+local L = ElitistGroup.L
 
 -- normal/heroic is for separating the dungeons like TotC/TotGC, hard will be for dungeons like Ulduar or Sartharion with hard modes on heroic
-SexyGroup.DUNGEON_TYPES = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
+ElitistGroup.DUNGEON_TYPES = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
 
-SexyGroup.DUNGEON_DATA = {
+ElitistGroup.DUNGEON_DATA = {
 	L["T7 Dungeons"],					200, 5,		"heroic",
 	L["Sartharion"],					200, 10,	"normal",
 	L["Naxxramas"],						200, 10,	"normal",
@@ -38,10 +38,10 @@ SexyGroup.DUNGEON_DATA = {
 
 local BASE_MOD = 0.89
 
-SexyGroup.DUNGEON_MIN = 1000
-SexyGroup.DUNGEON_MAX = 0
-for i=1, #(SexyGroup.DUNGEON_DATA), 4 do
-	local itemLevel, players, type = SexyGroup.DUNGEON_DATA[i + 1], SexyGroup.DUNGEON_DATA[i + 2], SexyGroup.DUNGEON_DATA[i + 3]
+ElitistGroup.DUNGEON_MIN = 1000
+ElitistGroup.DUNGEON_MAX = 0
+for i=1, #(ElitistGroup.DUNGEON_DATA), 4 do
+	local itemLevel, players, type = ElitistGroup.DUNGEON_DATA[i + 1], ElitistGroup.DUNGEON_DATA[i + 2], ElitistGroup.DUNGEON_DATA[i + 3]
 	local modifier = BASE_MOD
 	
 	-- 10/25 mans get a slight modifier compared to 5 mans, hard/heroic mdoes are also given a slight bump
@@ -53,12 +53,12 @@ for i=1, #(SexyGroup.DUNGEON_DATA), 4 do
 		end
 	end
 	
-	SexyGroup.DUNGEON_DATA[i + 1] = math.floor(itemLevel * modifier)
-	SexyGroup.DUNGEON_MIN = math.min(SexyGroup.DUNGEON_MIN, SexyGroup.DUNGEON_DATA[i + 1])
-	SexyGroup.DUNGEON_MAX = math.max(SexyGroup.DUNGEON_MAX, SexyGroup.DUNGEON_DATA[i + 1])
+	ElitistGroup.DUNGEON_DATA[i + 1] = math.floor(itemLevel * modifier)
+	ElitistGroup.DUNGEON_MIN = math.min(ElitistGroup.DUNGEON_MIN, ElitistGroup.DUNGEON_DATA[i + 1])
+	ElitistGroup.DUNGEON_MAX = math.max(ElitistGroup.DUNGEON_MAX, ElitistGroup.DUNGEON_DATA[i + 1])
 end
 
-SexyGroup.DUNGEON_DIFF = SexyGroup.DUNGEON_MAX - SexyGroup.DUNGEON_MIN
+ElitistGroup.DUNGEON_DIFF = ElitistGroup.DUNGEON_MAX - ElitistGroup.DUNGEON_MIN
 
 
 --[[
@@ -71,7 +71,7 @@ SexyGroup.DUNGEON_DIFF = SexyGroup.DUNGEON_MAX - SexyGroup.DUNGEON_MIN
 	Currently cascading is setup to do 10 man heroic -> 10 man normal, might also cascade 25 man normal -> 10 man normal, 25 man heroic -> 10 man heroic, but someone is also
 	more likely to have been carried through a 25 man than a 10, so not sure if it's "accurate" to cascade that.
 ]]
-SexyGroup.EXPERIENCE_POINTS = {
+ElitistGroup.EXPERIENCE_POINTS = {
 	-- 5 man dungeons
 	{name = L["Dungeons"], parent = true, id = "5-man", players = 5, heroic = true},
 	
@@ -435,16 +435,16 @@ SexyGroup.EXPERIENCE_POINTS = {
 	},
 }
 
-SexyGroup.CHILD_PARENTS = {}
-SexyGroup.VALID_ACHIEVEMENTS = {}
-for _, data in pairs(SexyGroup.EXPERIENCE_POINTS) do
+ElitistGroup.CHILD_PARENTS = {}
+ElitistGroup.VALID_ACHIEVEMENTS = {}
+for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
 	if( data.tier ) then
-		SexyGroup.CHILD_PARENTS[data.id] = data.childOf
+		ElitistGroup.CHILD_PARENTS[data.id] = data.childOf
 	end
 	
 	for achievementID, points in pairs(data) do
 		if( type(achievementID) == "number" ) then
-			SexyGroup.VALID_ACHIEVEMENTS[achievementID] = true
+			ElitistGroup.VALID_ACHIEVEMENTS[achievementID] = true
 		end
 	end
 end

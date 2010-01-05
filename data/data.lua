@@ -1,17 +1,17 @@
-local SexyGroup = select(2, ...)
-local L = SexyGroup.L
+local ElitistGroup = select(2, ...)
+local L = ElitistGroup.L
 
-SexyGroup.ROLE_TANK = 0x04
-SexyGroup.ROLE_HEALER = 0x02
-SexyGroup.ROLE_DAMAGE = 0x01
-SexyGroup.MAX_RATING = 5
+ElitistGroup.ROLE_TANK = 0x04
+ElitistGroup.ROLE_HEALER = 0x02
+ElitistGroup.ROLE_DAMAGE = 0x01
+ElitistGroup.MAX_RATING = 5
 
 -- required = How many of the talents the class needs
 -- the number set for the talent is how many they need
 -- Death Knights for example need capped Blade Barrier, Anticipation or Toughness, any 2 to be a tank
 -- This isn't really perfect, if a Druid tries to hybrid it up then it's hard for us to figure out what spec they are
 -- a good idea might be to force set their role based on the assignment they chose when possible, and use this as a fallback
-SexyGroup.FORCE_SPECROLE = {
+ElitistGroup.FORCE_SPECROLE = {
 	["DEATHKNIGHT"] = {
 		["required"] = 2,
 		["role"] = "tank",
@@ -31,7 +31,7 @@ SexyGroup.FORCE_SPECROLE = {
 }
 
 -- Tree names
-SexyGroup.TREE_DATA = {
+ElitistGroup.TREE_DATA = {
 	["SHAMAN"] = {
 		"caster-dps", L["Elemental"], "Interface\\Icons\\Spell_Nature_Lightning",
 		"melee-dps", L["Enhancement"], "Interface\\Icons\\Spell_Nature_LightningShield",
