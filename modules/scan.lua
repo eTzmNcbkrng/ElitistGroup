@@ -12,11 +12,12 @@ local MAX_QUEUE_RETRIES = 20
 local QUEUE_RETRY_TIME = 2
 local INSPECTION_TIMEOUT = 2
 local GEAR_CHECK_INTERVAL = 0.20
-local pending, pendingGear, inspectQueue, queueRetries = {}, {}, {}, {}
+local pending, pendingGear, inspectQueue = {}, {}, {}
 
 function Scan:OnInitialize()
 	self:RegisterEvent("INSPECT_TALENT_READY")
 	self:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
+	self:RegisterEvent("PLAYER_LEAVING_WORLD", "ResetQueue")
 	
 	self.frame = CreateFrame("Frame")
 	self.frame:SetScript("OnUpdate", function(self, elapsed)
@@ -43,46 +44,6 @@ function Scan:OnInitialize()
 		end
 	end)
 	self.frame:Hide()
-end
-
-function Scan:IsInspectPending()
-	return pending.activeInspect and pending.expirationTime and pending.expirationTime > GetTime()
-end
-
-function Scan:QueueAdd(unit)
-	if( not queueRetries[unit] ) then
-		queueRetries[unit] = 0
-		table.insert(inspectQueue, unit)
-	end
-end
-
-function Scan:ResetQueue()
-	table.wipe(inspectQueue)
-	table.wipe(queueRetries)
-end
-
-function Scan:ProcessQueue()
-	if( #(inspectQueue) == 0 ) then
-		self.frame.queueTimer = nil
-		table.wipe(queueRetries)
-		return
-	end
-	
-	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
-		local unit = table.remove(inspectQueue, 1)
-
-		NotifyInspect(unit)
-		if( pending.unit ~= unit and UnitExists(unit) and queueRetries[unit] < MAX_QUEUE_RETRIES ) then
-			queueRetries[unit] = queueRetries[unit] + 1
-			table.insert(inspectQueue, unit)
-		end
-	end
-end
-
-function Scan:QueueStart()
-	self:ProcessQueue()
-	self.frame.queueTimer = QUEUE_RETRY_TIME
-	self.frame:Show()
 end
 
 hooksecurefunc("NotifyInspect", function(unit)
@@ -246,6 +207,7 @@ function Scan:UpdateUnitData(unit)
 	for itemType in pairs(ElitistGroup.INVENTORY_TO_TYPE) do
 		local inventoryID = GetInventorySlotInfo(itemType)
 		local itemLink = GetInventoryItemLink(unit, inventoryID)
+		
 		userData.equipment[inventoryID] = ElitistGroup:GetItemLink(itemLink)
 				
 		-- Basically, this makes sure that either the item has no sockets that need to be loaded, or that the data isn't already present
@@ -290,4 +252,104 @@ function Scan:InspectUnit(unit)
 	else
 		NotifyInspect(unit)
 	end
+end
+
+-- Handle the queuing aspect of inspection
+function Scan:IsInspectPending()
+	return pending.activeInspect and pending.expirationTime and pending.expirationTime > GetTime()
+end
+
+function Scan:UnitIsQueued(unit)
+	return inspectQueue[unit]
+end
+
+function Scan:UnitQueuePosition(unit)
+	if( not inspectQueue[unit] ) then return nil end
+	
+	for i=1, #(inspectQueue) do
+		if( inspectQueue[i] == unit ) then
+			return i
+		end
+	end
+end
+
+-- Try and speed up the queue so people who are initially in range are done first not perfectly obviously, but better than nothing
+local function sortQueue(a, b)
+	local aInspect = a and CanInspect(a)
+	local bInspect = b and CanInspect(b)
+	
+	if( aInspect == bInspect ) then
+		return a < b
+	elseif( aInspect ) then
+		return true
+	elseif( bInspect ) then
+		return false
+	end
+end
+
+function Scan:QueueGroup(unitType, total)
+	for i=1, total do
+		local unit = unitType .. i
+		if( not inspectQueue[unit] ) then
+			inspectQueue[unit] = 0
+			table.insert(inspectQueue, unit)
+		end
+	end
+	
+	table.sort(inspectQueue, sortQueue)
+	self:QueueStart()
+end
+
+function Scan:QueueUnit(unit)
+	if( not inspectQueue[unit] ) then
+		inspectQueue[unit] = 0
+		table.insert(inspectQueue, unit)
+	end
+end
+
+function Scan:QueueStart()
+	self:RegisterEvent("PLAYER_REGEN_DISABLED")
+	self:RegisterEvent("PLAYER_REGEN_ENABLED")
+
+	if( not InCombatLockdown() ) then
+		self:ProcessQueue()
+		self.frame.queueTimer = QUEUE_RETRY_TIME
+		self.frame:Show()
+	end
+end
+
+-- We don't want to be processing queues while in combat, so once you enter combat stop processing until its dropped
+function Scan:PLAYER_REGEN_DISABLED()
+	self.frame.queueTimer = nil
+end
+
+function Scan:PLAYER_REGEN_ENABLED()
+	self.frame.queueTimer = QUEUE_RETRY_TIME
+	self:ProcessQueue()
+end
+
+function Scan:ProcessQueue()
+	if( #(inspectQueue) == 0 ) then
+		self:ResetQueue()
+		return
+	end
+	
+	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
+		local unit = table.remove(inspectQueue, 1)
+
+		NotifyInspect(unit)
+		if( pending.unit ~= unit and UnitExists(unit) and inspectQueue[unit] < MAX_QUEUE_RETRIES ) then
+			inspectQueue[unit] = inspectQueue[unit] + 1
+			table.insert(inspectQueue, unit)
+		else
+			inspectQueue[unit] = nil
+		end
+	end
+end
+
+function Scan:ResetQueue()
+	self.frame.queueTimer = nil
+	self:UnregisterEvent("PLAYER_REGEN_DISABLED")
+	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+	table.wipe(inspectQueue)
 end
