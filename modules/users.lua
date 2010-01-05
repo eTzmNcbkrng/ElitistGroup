@@ -27,7 +27,7 @@ function Users:LoadData(userData)
 	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
 
 	-- Build score as well as figure out their score
-	ElitistGroup:DeleteTables(equipmentData, enchantData, gemData, gemTooltips, enchantTooltips)
+	ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData, gemTooltips, enchantTooltips)
 
 	if( not userData.pruned ) then
 		equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
@@ -97,9 +97,9 @@ function Users:LoadData(userData)
 		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
 		local quality = equipmentData.totalScore >= 210 and ITEM_QUALITY_EPIC or equipmentData.totalScore >= 195 and ITEM_QUALITY_RARE or equipmentData.totalScore >= 170 and ITEM_QUALITY_UNCOMMON or ITEM_QUALITY_COMMON
 		
-		equipSlot.text:SetFormattedText(L["%s%d|r score"], ITEM_QUALITY_COLORS[quality].hex, equipmentData.totalScore)
+		equipSlot.text:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[quality].hex, equipmentData.totalScore)
 		equipSlot.icon:SetTexture("Interface\\Icons\\" .. scoreIcon)
-		equipSlot.tooltip = L["Score is the average item level of all the players equipped items."]
+		equipSlot.tooltip = L["Average item level of all the players equipped items, with modifiers for blue or lower quality items."]
 		equipSlot:Show()
 	else
 		equipmentData, gemData, enchantData, gemTooltips, enchantTooltips = nil, nil, nil, nil, nil
@@ -332,6 +332,8 @@ function Users:UpdateAchievementInfo()
 					row.toggle:SetHighlightTexture("Interface\\Buttons\\UI-" .. type .. "Button-Hilight", "ADD")
 					row.toggle.id = data.id
 					row.toggle:Show()
+				else
+					row.toggle:Hide()
 				end
 				
 				local players = data.parent and data.players and string.format(L[" (%d-man)"], data.players) or ""
@@ -346,7 +348,7 @@ function Users:UpdateAchievementInfo()
 					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 					
-					if( data.childOf ) then
+					if( data.childOf and not row.toggle:IsShown() ) then
 						row.nameText:SetFormattedText("- [|cff%02x%02x00%d%%|r] %s%s", r, g, percent * 100, heroicIcon, data.name)
 					else
 						row.nameText:SetFormattedText("[|cff%02x%02x00%d%%|r] %s%s%s", r, g, percent * 100, heroicIcon, data.name, players)
@@ -728,6 +730,7 @@ function Users:CreateUI()
 			slot.extraText:SetTextColor(0.90, 0.90, 0.90)
 		else
 			slot.text = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+			slot.text:SetFont(GameFontHighlight:GetFont(), 16)
 			slot.text:SetPoint("LEFT", slot.icon, "RIGHT", 2, 0)
 			slot.text:SetWidth(72)
 			slot.text:SetHeight(14)
@@ -773,6 +776,7 @@ function Users:CreateUI()
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
+		button:SetPushedTextOffset(0, 0)
 		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
 		button.icon:SetSize(16, 16)
@@ -867,7 +871,7 @@ function Users:CreateUI()
 	frame.userTabFrame.notesButton:SetBackdropColor(0, 0, 0, 0)
 	frame.userTabFrame.notesButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
 	frame.userTabFrame.notesButton.tabID = "notes"
-
+	
 	frame.userTabFrame.achievementsButton = CreateFrame("Button", nil, frame.userTabFrame)
 	frame.userTabFrame.achievementsButton:SetNormalFontObject(GameFontNormal)
 	frame.userTabFrame.achievementsButton:SetHighlightFontObject(GameFontHighlight)
