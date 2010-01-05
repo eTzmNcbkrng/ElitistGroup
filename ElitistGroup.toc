@@ -18,6 +18,14 @@ libs\AceTimer-3.0\AceTimer-3.0.xml
 #@end-no-lib-strip@
 
 localization\enUS.lua
+localization\deDE.lua
+localization\esES.lua
+localization\esMX.lua
+localization\frFR.lua
+localization\koKR.lua
+localization\ruRU.lua
+localization\zhCN.lua
+localization\zhTW.lua
 
 ElitistGroup.lua
 data\data.lua

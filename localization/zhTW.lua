@@ -1,0 +1,6 @@
+if( GetLocale() ~= "zhTW" ) then return end
+
+local ElitistGroup = select(2, ...)
+ElitistGroup.L = setmetatable({
+--@localization(locale="zhTW", format="lua_table", same-key-is-true=true, handle-unlocalized="ignore")@
+}, {__index = ElitistGroup.L})
