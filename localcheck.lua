@@ -1,4 +1,4 @@
-local ADDON_SLUG = "elitistgroup"
+local ADDON_SLUG = string.match(io.open(".git/config"):read("*all"), "git%.wowace%.com:wow/(.-)/mainline%.git")
 --local CURSE_API_KEY = ""
 -- And you though I would let you steal my API key!
 dofile("../TestCode/api-key.lua")
@@ -51,9 +51,11 @@ for text in io.lines(TOC_FILE) do
 end
 
 -- Compile it into string form
+local totalLocalizedKeys = 0
 local localization = "{"
 for key in pairs(localizedKeys) do
 	localization = string.format("%s\n[\"%s\"] = \"%s\",", localization, key, key)
+	totalLocalizedKeys = totalLocalizedKeys + 1
 end
 
 localization = localization .. "\n}"
@@ -97,7 +99,7 @@ http.request({
 local VALID_LOCALIZATION = string.format("<a href=\"/addons/%s/localization/phrases/", ADDON_SLUG)
 for _, text in pairs(source) do
 	if( string.match(text, VALID_LOCALIZATION) ) then
-		print(string.format("Localization uploaded for %s!", ADDON_SLUG))
+		print(string.format("Localization uploaded for %s, %s keys!", ADDON_SLUG, totalLocalizedKeys))
 		return
 	end
 end
