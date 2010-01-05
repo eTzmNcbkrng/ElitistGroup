@@ -76,8 +76,9 @@ gemMetaTable = {
 
 		for i=1, tooltip:NumLines() do
 			local text = string.lower(_G["ElitistGroupTooltipTextLeft" .. i]:GetText())
-			for key, stat in pairs(ElitistGroup.STAT_MAP) do
-				if( string.match(text, string.lower(_G[stat])) ) then
+			for i=1, #(ElitistGroup.ORDERED_STAT_MAP) do
+				local key = ElitistGroup.ORDERED_STAT_MAP[i]
+				if( string.match(text, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
 					foundData = true
 					statCache[key] = true
 				end
@@ -154,8 +155,9 @@ enchantMetaTable = {
 		-- Parse out the stats
 		local foundData
 		table.wipe(statCache)
-		for key, stat in pairs(ElitistGroup.STAT_MAP) do
-			if( string.match(enchantText, string.lower(_G[stat])) ) then
+		for i=1, #(ElitistGroup.ORDERED_STAT_MAP) do
+			local key = ElitistGroup.ORDERED_STAT_MAP[i]
+			if( string.match(enchantText, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
 				foundData = true
 				statCache[key] = true
 			end
@@ -263,9 +265,10 @@ itemMetaTable = {
 			
 			-- Yay we found the enchant proc
 			if( statText ) then
-				for key, stat in pairs(ElitistGroup.STAT_MAP) do
-					if( string.match(statText, string.lower(_G[stat])) ) then
-						statCache[stat] = true
+				for i=1, #(ElitistGroup.ORDERED_STAT_MAP) do
+					local key = ElitistGroup.ORDERED_STAT_MAP[i]
+					if( string.match(statText, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
+						statCache[key] = true
 					end
 				end
 			end
