@@ -26,7 +26,8 @@ data\item_data.lua
 
 modules\cache.lua
 modules\users.lua
-modules\user_summary.lua
+modules\party_summary.lua
+modules\raid_summary.lua
 modules\scan.lua
 modules\group_notes.lua
 modules\sync.lua
