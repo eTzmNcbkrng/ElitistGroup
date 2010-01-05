@@ -1,160 +1,105 @@
-local function output(msg)
-	io.stdout:write(msg)
-	io.stdout:write("\n")
-	io.stdout:flush()
+local ADDON_SLUG = "elitistgroup"
+--local CURSE_API_KEY = ""
+-- And you though I would let you steal my API key!
+dofile("../TestCode/api-key.lua")
+
+local TOC_FILE
+
+-- Check windows first
+local noLines = true
+for file in io.popen(string.format("dir /B \"./\"")):lines() do
+	noLines = false
+
+	if( string.match(file, "(.+)%.toc") ) then
+		TOC_FILE = file
+		break
+	end
 end
 
-local file = io.open("localization/enUS.lua")
-local contents = file:read("*line")
-local nextLine = file:read("*line")
-file:close()
+-- Now check OSX
+if( noLines ) then
+	for file in io.popen(string.format("ls -1 \"./\"")):lines() do
+		if( string.match(file, "(.+)%.toc") ) then
+			TOC_FILE = file
+			break
+		end
+	end
+end
 
-local LOCAL_VAR = string.match(contents, "^(.+) = {")
-local IS_NAMESPACED = string.match(contents, "%.%.%.")
-if( not IS_NAMESPACED and not LOCAL_VAR ) then
-	output("Failed to find localization variable in localization.enUS.lua")
+if( not TOC_FILE ) then
+	print("Failed to find toc file.")
 	return
-elseif( IS_NAMESPACED ) then
-	output("Namespaced, using only L to identify")
-	LOCAL_VAR = string.match(nextLine, "^(.+) = {")
-else
-	output("Localization key " .. LOCAL_VAR)
 end
 
-
-function string.trim(text)
-	return string.gsub(text, "^%s*(.-)%s*$", "%1")
-end
-
-local foundLocals = {}
-local totalFound = 0
-local function scanFile(path)
-	output("Scanning " .. path)
-	
-	local contents = io.open(path):read("*all")
-	for line in string.gmatch(contents, "L%[\"(.-)\"%]") do
-		foundLocals[line] = true
-		totalFound = totalFound + 1
+-- Parse through the TOC file so we know what to scan
+local ignore
+local localizedKeys = {}
+for text in io.lines(TOC_FILE) do
+	if( string.match(text, "#@no%-lib%-strip@") ) then
+		ignore = true
+	elseif( string.match(text, "#@end%-no%-lib%-strip@") ) then
+		ignore = nil
 	end
-
-	if( not IS_NAMESPACED ) then
-		for line in string.gmatch(contents, LOCAL_VAR .. "%[\"(.-)\"%]") do
-			foundLocals[line] = true
-			totalFound = totalFound + 1
+	
+	if( not ignore and not string.match(text, "^localization") and string.match(text, "%.lua$") ) then
+		local contents = io.open(text):read("*all")
+		
+		for match in string.gmatch(contents, "L%[\"(.-)%\"]") do
+			localizedKeys[match] = true
 		end
 	end
 end
 
-local function scanFolder(path)
-	for file in io.popen(string.format("dir /B \"%s\"", (path or ""))):lines() do
-		local extension = string.match(file, "%.([%a%d]+)$")
-		if( file ~= "" and not extension and file ~= "libs" ) then
-			if( path ) then
-				scanFolder(path .. "/" .. file)
-			else
-				scanFolder(file)
-			end
-		elseif( extension == "lua" and file ~= "localcheck.lua" and file ~= "globalcheck.lua" and not string.match(file, "^localization") ) then
-			if( path ) then
-				scanFile(path .. "/" .. file)
-			else
-				scanFile(file)
-			end
-		end
+-- Compile it into string form
+local localization = "{"
+for key in pairs(localizedKeys) do
+	localization = string.format("%s\n[\"%s\"] = \"%s\",", localization, key, key)
+end
+
+localization = localization .. "\n}"
+
+-- Send it all off to the localizer script
+local http = require("socket.http")
+local ltn = require("ltn12")
+local localization = io.open("localization/enUS.lua"):read("*all")
+
+local addonData = {
+	["format"] = "lua_table",
+	["language"] = "1",
+	["delete_unimported"] = "y",
+	["text"] = localization,
+}
+
+-- Send it off
+local boundary = "-------" .. os.time()
+local source = {}
+local body = ""
+
+for key, data in pairs(addonData) do
+	body = body .. "--" .. boundary .. "\r\n"
+	body = body .. "Content-Disposition: form-data; name=\"" .. key .. "\"\r\n\r\n"
+	body = body .. data .. "\r\n"
+end
+
+body = body .. "--" .. boundary .. "\r\n"
+
+http.request({
+	method = "POST",
+	url = string.format("http://www.wowace.com/addons/%s/localization/import/?api-key=%s", ADDON_SLUG, CURSE_API_KEY),
+	sink = ltn12.sink.table(source),
+	source = ltn12.source.string(body),
+	headers = {
+		["Content-Type"] = string.format("multipart/form-data; boundary=\"%s\"", boundary),
+		["Content-Length"] = string.len(body),
+	},
+})
+
+local VALID_LOCALIZATION = string.format("<a href=\"/addons/%s/localization/phrases/", ADDON_SLUG)
+for _, text in pairs(source) do
+	if( string.match(text, VALID_LOCALIZATION) ) then
+		print(string.format("Localization uploaded for %s!", ADDON_SLUG))
+		return
 	end
 end
 
-scanFolder()
-
-output("Total keys found " .. totalFound)
-
--- Sort everything
-local keyOrder = {}
-for key in pairs(foundLocals) do
-	table.insert(keyOrder, key)
-end
-
-table.sort(keyOrder, function(a, b) return a < b end)
-
-local file = io.open("localization/enUS.lua", "w")
-
--- Load the current localization to get the tables out
-if( not IS_NAMESPACED ) then
-	dofile("localization.enUS.lua")
-else
-	local tblName = string.match(LOCAL_VAR, "^(.+)%.L")
-	file:write(string.format("local %s = select(2, ...)\n", tblName))
-end
-
-file:write(LOCAL_VAR .. " = {")
-
--- Write all used keys
-for _, key in pairs(keyOrder) do
-	file:write(string.format("\n	[\"%s\"] = \"%s\",", key, key))
-end
-
--- Format the string so it can be written
-local function parse(text)
-	text = string.gsub(text, "\n", "\\n")
-	text = string.gsub(text, "\"", "\\\"")
-	
-	return text
-end
-
--- Tables inside localization are assumed to always be there
-local _G = getfenv(0)
-local keyOrder = {}
-if( _G[LOCAL_VAR] ) then
-	for key, data in pairs(_G[LOCAL_VAR]) do
-		if( type(data) == "table" ) then
-			table.insert(keyOrder, key)
-		end
-	end
-
-	table.sort(keyOrder, function(a, b) return a < b end)
-end
-
-file:write("\n")
-
-local hadTables
-local function writeTable(key, tbl, depth)
-	file:write(string.format(string.rep("	", depth) .. "[\"%s\"] = {\n", key))
-	
-	local data = tbl[key]
-	local subKeyOrder = {}
-	for subKey in pairs(data) do
-		table.insert(subKeyOrder, subKey)
-	end
-	
-	table.sort(subKeyOrder, function(a, b) return a < b end)
-	for _, subKey in pairs(subKeyOrder) do
-		if( type(data[subKey]) == "table" ) then
-			writeTable(subKey, data, depth + 1)
-		elseif( tonumber(subKey) ) then
-			file:write(string.format("%s[%s] = \"%s\",\n", string.rep("	", depth + 1), subKey, parse(data[subKey])))
-		else
-			file:write(string.format("%s[\"%s\"] = \"%s\",\n", string.rep("	", depth + 1), parse(subKey), parse(data[subKey])))
-		end
-	end
-	
-	hadTables = true
-	file:write(string.rep("	", depth) .. "},\n")
-end
-
-for _, key in pairs(keyOrder) do
-	writeTable(key, _G[LOCAL_VAR], 1)
-end
-
-if( hadTables ) then
-	file:write("\n")
-end
-
-file:write("}")
-file:flush()
-file:close()
-
-
-output("Done")
-
-
-
+print(string.format("Failed to localize for %s :(", ADDON_SLUG))
