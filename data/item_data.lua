@@ -1,9 +1,10 @@
-local SexyGroup = select(2, ...)
-local L = SexyGroup.L
+local ElitistGroup = select(2, ...)
+local L = ElitistGroup.L
+local _G = getfenv(0)
 
 -- While it's true that we could apply additional modifiers like 1.05 for legendaries, it's not really necessary because legendaries aren't items
 -- that people have 70% of their equipment as that need a modifier to separate them.
-SexyGroup.QUALITY_MODIFIERS = {
+ElitistGroup.QUALITY_MODIFIERS = {
 	[ITEM_QUALITY_POOR] = 0.50,
 	[ITEM_QUALITY_COMMON] = 0.60,
 	[ITEM_QUALITY_UNCOMMON] = 0.90,
@@ -12,15 +13,15 @@ SexyGroup.QUALITY_MODIFIERS = {
 }
 
 -- Specific override, epic items must have a rare or higher quality gem in them
-SexyGroup.GEM_THRESHOLDS = {
+ElitistGroup.GEM_THRESHOLDS = {
 	[ITEM_QUALITY_EPIC] = ITEM_QUALITY_RARE,
 }
 
 -- Item level of heirlooms based on the player's level. Currently this is ~2.22/per player level, meaning they work out to 187 item level blues at 80
 -- This will have to change come Cataclysm, not quite sure how Blizzard is going to handle heirlooms then
-SexyGroup.HEIRLOOM_ILEVEL = (187 / 80) * SexyGroup.QUALITY_MODIFIERS[ITEM_QUALITY_RARE]
+ElitistGroup.HEIRLOOM_ILEVEL = (187 / 80) * ElitistGroup.QUALITY_MODIFIERS[ITEM_QUALITY_RARE]
 
-SexyGroup.INVENTORY_TO_TYPE = {
+ElitistGroup.INVENTORY_TO_TYPE = {
 	["HeadSlot"] = "head", ["ChestSlot"] = "chest", ["RangedSlot"] = "ranged",
 	["WristSlot"] = "wrists", ["Trinket1Slot"] = "trinkets", ["Trinket0Slot"] = "trinkets",
 	["MainHandSlot"] = "weapons", ["SecondaryHandSlot"] = "weapons", ["Finger0Slot"] = "rings",
@@ -28,22 +29,22 @@ SexyGroup.INVENTORY_TO_TYPE = {
 	["WaistSlot"] = "waist", ["HandsSlot"] = "hands", ["BackSlot"] = "cloak", ["ShoulderSlot"] = "shoulders",
 }
 
-SexyGroup.VALID_INVENTORY_SLOTS = {}
-for slotType in pairs(SexyGroup.INVENTORY_TO_TYPE) do
-	SexyGroup.VALID_INVENTORY_SLOTS[GetInventorySlotInfo(slotType)] = true
+ElitistGroup.VALID_INVENTORY_SLOTS = {}
+for slotType in pairs(ElitistGroup.INVENTORY_TO_TYPE) do
+	ElitistGroup.VALID_INVENTORY_SLOTS[GetInventorySlotInfo(slotType)] = true
 end
 
 -- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
 -- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
 -- Setting a class token means that it's unenchantable for everyone except that class
-SexyGroup.EQUIP_UNECHANTABLE = {
+ElitistGroup.EQUIP_UNECHANTABLE = {
 	["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true,
 	["INVTYPE_RANGEDRIGHT"] = "HUNTER",
 	["INVTYPE_RANGED"] = "HUNTER",
 }
 
 
-SexyGroup.EQUIP_TO_TYPE = {
+ElitistGroup.EQUIP_TO_TYPE = {
 	["INVTYPE_RANGEDRIGHT"] = "ranged", ["INVTYPE_SHIELD"] = "weapons", ["INVTYPE_WEAPONOFFHAND"] = "weapons",
 	["INVTYPE_RANGED"] = "ranged", ["INVTYPE_WEAPON"] = "weapons", ["INVTYPE_2HWEAPON"] = "weapons",
 	["INVTYPE_WRIST"] = "wrists", ["INVTYPE_TRINKET"] = "trinkets", ["INVTYPE_NECK"] = "neck",
@@ -54,10 +55,10 @@ SexyGroup.EQUIP_TO_TYPE = {
 	["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 }
 
-SexyGroup.TALENT_ROLES = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"]}
-SexyGroup.TALENT_TYPES = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"]}
+ElitistGroup.TALENT_ROLES = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"]}
+ElitistGroup.TALENT_TYPES = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"]}
 
-SexyGroup.VALID_SPECTYPES = {
+ElitistGroup.VALID_SPECTYPES = {
 	["healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 	["caster-dps"] = {["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
 	["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
@@ -67,8 +68,8 @@ SexyGroup.VALID_SPECTYPES = {
 }
 
 -- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
-for type in pairs(SexyGroup.VALID_SPECTYPES["melee-dps"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
-for type in pairs(SexyGroup.VALID_SPECTYPES["tank"]) do SexyGroup.VALID_SPECTYPES["feral-tank"][type] = true end
+for type in pairs(ElitistGroup.VALID_SPECTYPES["melee-dps"]) do ElitistGroup.VALID_SPECTYPES["feral-tank"][type] = true end
+for type in pairs(ElitistGroup.VALID_SPECTYPES["tank"]) do ElitistGroup.VALID_SPECTYPES["feral-tank"][type] = true end
 
 local function getSpell(id)
 	local name = GetSpellInfo(id)
@@ -83,7 +84,7 @@ local function getSpell(id)
 end
 
 -- Hybrid relics should be listed in OVERRIDE_ITEMS
-SexyGroup.RELIC_SPELLTYPES = {
+ElitistGroup.RELIC_SPELLTYPES = {
 	[getSpell(24974)] = "caster-dps", -- Insect Swarm
 	[getSpell(8921)] = "caster-dps", -- Moonfire
 	[getSpell(2912)] = "caster-dps", -- Starfire
@@ -137,7 +138,7 @@ SexyGroup.RELIC_SPELLTYPES = {
 }
 
 -- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
-SexyGroup.OVERRIDE_ENCHANTS = {
+ElitistGroup.OVERRIDE_ENCHANTS = {
 	[3870] = "pvp", -- Blood Draining
 	[3869] = "tank", -- Blade Ward
 	[3232] = "all", -- Tuskarr's Vitality
@@ -193,7 +194,7 @@ SexyGroup.OVERRIDE_ENCHANTS = {
 }
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
-SexyGroup.OVERRIDE_ITEMS = {
+ElitistGroup.OVERRIDE_ITEMS = {
 	[49464] = "caster", -- Shiny Shard of the Flame, this would be only useful if you have both trinkets, but still
 	[47668] = "tank/dps", -- Idol of Mutilation
 	[50456] = "tank/dps", -- Idol of the Crying Moon
@@ -239,7 +240,7 @@ SexyGroup.OVERRIDE_ITEMS = {
 }
 
 -- Map for checking stats on gems and enchants
-SexyGroup.STAT_MAP = {
+ElitistGroup.STAT_MAP = {
 	RESILIENCE_RATING = "ITEM_MOD_RESILIENCE_RATING_SHORT", SPELL_PENETRATION = "ITEM_MOD_SPELL_PENETRATION_SHORT", SPELL_HEALING_DONE = "ITEM_MOD_SPELL_HEALING_DONE_SHORT",
 	HIT_SPELL_RATING = "ITEM_MOD_HIT_SPELL_RATING_SHORT", RANGED_ATTACK_POWER = "ITEM_MOD_RANGED_ATTACK_POWER_SHORT", CRIT_RANGED_RATING = "ITEM_MOD_CRIT_RANGED_RATING_SHORT",
 	HIT_RANGED_RATING = "ITEM_MOD_HIT_RANGED_RATING_SHORT", DODGE_RATING = "ITEM_MOD_DODGE_RATING_SHORT", DEFENSE_SKILL_RATING = "ITEM_MOD_DEFENSE_SKILL_RATING_SHORT",
@@ -250,20 +251,37 @@ SexyGroup.STAT_MAP = {
 	SPELL_POWER = "ITEM_MOD_SPELL_POWER_SHORT", SPIRIT = "ITEM_MOD_SPIRIT_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_REGENERATION_SHORT",
 	HASTE_SPELL_RATING = "ITEM_MOD_HASTE_SPELL_RATING_SHORT", CRIT_SPELL_RATING = "ITEM_MOD_CRIT_SPELL_RATING_SHORT", INTELLECT = "ITEM_MOD_INTELLECT_SHORT", RESISTANCE0 = "RESISTANCE0_NAME",
 	STAMINA = "ITEM_MOD_STAMINA_SHORT", RESIST = "RESIST", CRIT_RATING = "ITEM_MOD_CRIT_RATING_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_SHORT", HIT_RATING = "ITEM_MOD_HIT_RATING_SHORT",
-	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH"
+	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH", DAMAGE = "DAMAGE",
+	
+	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], ATTACK = L["attack"],
 }
 
+ElitistGroup.SAFE_STAT_MATCH = {}
+for _, key in pairs(ElitistGroup.STAT_MAP) do
+	local text = _G[key] or key
+	text = string.gsub(text, "%(", "%%(")
+	text = string.gsub(text, "%)", "%%)")
+	text = string.gsub(text, "%.", "%%.")
+	ElitistGroup.SAFE_STAT_MATCH[key] = string.lower(text)
+end
+
+-- Basically, some stats like "armor" will conflict with "armor penetration", as well melee hit and so on
+-- so will set it up so the longest strings get matched first to prevent any chance of conflicts happening
+ElitistGroup.ORDERED_STAT_MAP = {}
+for key in pairs(ElitistGroup.SAFE_STAT_MATCH) do table.insert(ElitistGroup.ORDERED_STAT_MAP, key) end
+table.sort(ElitistGroup.ORDERED_STAT_MAP, function(a, b) return string.len(_G[a] or a) > string.len(_G[b] or b) end)
+
 -- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
-SexyGroup.STAT_DATA = {
+ElitistGroup.STAT_DATA = {
 	{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 	-- This is my favorite category out of them all
 	{type = "never",		gems = "RESIST@"},
 	-- Resilience or spell penetration is always a pvp item
 	{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
 	-- Spell healing is always a healer item, this is the only way to really identify a "pure" healer item
-	{type = "healer",		default = "SPELL_HEALING_DONE@"},
+	{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 	-- Spell hit rating is always a caster dps
-	{type = "caster-dps",	default = "HIT_SPELL_RATING@"},
+	{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@"},
 	-- Items with agility are useful for all physical classes really
 	{type = "physical-all",	default = "AGILITY@"},
 	-- Ranged AP, ranged crit, ranged hit are always ranged
@@ -271,17 +289,19 @@ SexyGroup.STAT_DATA = {
 	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
 	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
-	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
+	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@", trinkets = "STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
 	{type = "melee",		default = "EXPERTISE_RATING@"},
+	-- Agility, armor pen, general AP are physical DPS
+	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@", trinkets = "ATTACK@"},
 	-- Hit melee rating, melee AP, melee crit rating are always melee dps items
 	{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@"},
-	-- Agility, armor pen, general AP are physical DPS
-	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@"},
+	-- Generic damage tag for trinkets
+	{type = "dps",			trinkets = "DAMAGE@"},
 	-- Hybrid, works for DPS and Healers
 	{type = "healer/dps",	default = "CRIT_RATING@HASTE_RATING@"},
 	-- Hybrid, works for DPS and Tanks
 	{type = "tank/dps",		default = "HIT_RATING@"},
 	-- Some classes are going to use a hybrid gem to activate their meta like a Dreadstone, we don't want them being flagged as a tank gem unless it's a pure STA gem
-	{type = "tank",			gems = "STAMINA@"},
+	{type = "tank",			trinkets = "RESISTANCE0@", gems = "STAMINA@"},
 }
