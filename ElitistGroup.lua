@@ -15,7 +15,7 @@ function ElitistGroup:OnInitialize()
 			database = {
 				pruneBasic = 30,
 				pruneFull = 120,
-				saveForeign = false,
+				saveForeign = true,
 				ignoreBelow = 80,
 				autoNotes = true,
 			},

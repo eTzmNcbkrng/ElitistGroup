@@ -10,8 +10,7 @@ function Cache:OnInitialize()
 end
 
 -- Item caching alone will result in 100 entries in ~7 summaries, auto inspecting a party makes this about once every two instances
--- once we do it for raids, it'll be even more so at a certain point we want to wipe our caches and let the garbage collector
--- do it's job
+-- once we do it for raids, it'll be even more so at a certain point we want to wipe our caches and let the garbage collector do it's job
 function Cache:PLAYER_ENTERING_WORLD()
 	if( lastCache > GetTime() ) then return end
 	lastCache = GetTime() + CACHE_TIMEOUT
