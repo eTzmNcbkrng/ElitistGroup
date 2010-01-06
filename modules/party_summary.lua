@@ -51,7 +51,10 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 end
 
 function Summary:Show()
-	ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())	self:CreateUI()
+	ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
+	ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())
+	
+	self:CreateUI()
 	self.frame:SetHeight(35 + (140 * math.ceil(GetNumPartyMembers() / 2)))
 	self.frame:SetWidth(30 + (175 * math.ceil(GetNumPartyMembers() / 2)))
 	self.frame:Show()

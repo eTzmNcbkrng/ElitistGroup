@@ -7,6 +7,7 @@ local userSummaryData, sortedData, queuedUnits = {}, {}, {}
 local MAX_SUMMARY_ROWS = 10
 
 function Summary:Show()
+	ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
 	ElitistGroup.modules.Scan:QueueGroup("raid", GetNumRaidMembers())
 	
 	self:RAID_ROSTER_UPDATE()
