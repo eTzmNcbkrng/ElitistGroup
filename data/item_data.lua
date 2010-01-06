@@ -18,8 +18,9 @@ ElitistGroup.GEM_THRESHOLDS = {
 }
 
 -- Item level of heirlooms based on the player's level. Currently this is ~2.22/per player level, meaning they work out to 187 item level blues at 80
+-- with the quality modifier they are item level ~177
 -- This will have to change come Cataclysm, not quite sure how Blizzard is going to handle heirlooms then
-ElitistGroup.HEIRLOOM_ILEVEL = (187 / 80) * ElitistGroup.QUALITY_MODIFIERS[ITEM_QUALITY_RARE]
+ElitistGroup.HEIRLOOM_ILEVEL = (187 / 80)
 
 ElitistGroup.INVENTORY_TO_TYPE = {
 	["HeadSlot"] = "head", ["ChestSlot"] = "chest", ["RangedSlot"] = "ranged",
