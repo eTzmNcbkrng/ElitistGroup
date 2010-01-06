@@ -255,7 +255,10 @@ local function OnLeave(self)
 end
 
 local function OnClick(self)
-	ElitistGroup.modules.Users:LoadData(ElitistGroup.userData[self.playerID])
+	local userData = ElitistGroup.userData[self.playerID]
+	if( userData ) then
+		ElitistGroup.modules.Users:LoadData(userData)
+	end
 end
 
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
