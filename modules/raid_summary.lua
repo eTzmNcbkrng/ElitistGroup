@@ -149,17 +149,21 @@ function Summary:Update()
 			
 			local classColor = RAID_CLASS_COLORS[summaryData.classToken]
 			local position = ElitistGroup.modules.Scan:UnitQueuePosition(summaryData.unit)
+			local positionTooltip = position and string.format(L[", #%d in inspect queue"], position) or ""
 			position = position and string.format("[#%d] ", position) or ""
 			
 			if( classColor ) then
 				row.name:SetFormattedText("%s|cff%02x%02x%02x%s|r", position, classColor.r * 255, classColor.g * 255, classColor.b * 255, summaryData.name)
-				row.name.tooltip = string.format(L["%s, %s"], name, LOCALIZED_CLASS_NAMES_MALE[summaryData.classToken])
+				row.name.tooltip = string.format(L["%s, %s%s"], name, LOCALIZED_CLASS_NAMES_MALE[summaryData.classToken], positionTooltip)
 			else
 				row.name:SetFormattedText("%s|cffffffff%s|r", position, summaryData.name)
-				row.name.tooltip = string.format(L["%s, unknown class"], name)
+				row.name.tooltip = string.format(L["%s, unknown class%s"], name, positionTooltip)
 			end
 
 			if( userData ) then
+				row.name.playerID = name
+				row.name.tooltip = row.name.tooltip .. "\n" .. L["Click to view detailed information."]
+				
 				if( summaryData.average >= 0 ) then
 					local quality = summaryData.average >= 210 and ITEM_QUALITY_EPIC or summaryData.average >= 195 and ITEM_QUALITY_RARE or summaryData.average >= 170 and ITEM_QUALITY_UNCOMMON or ITEM_QUALITY_COMMON
 					row.average:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[quality].hex, summaryData.average)
@@ -217,6 +221,9 @@ function Summary:Update()
 					row.gems.disableWrap = true
 				end
 			else
+				row.name.playerID = nil
+				row.name.tooltip = row.name.tooltip .. "\n" .. L["User data not available yet."]
+
 				row.average:SetText("---")
 				row.average.tooltip = L["Loading data"]
 				row.rating:SetText("---")
@@ -267,7 +274,7 @@ function Summary:CreateUI()
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
-	frame:SetFrameStrata("HIGH")
+	frame:SetToplevel(true)
 	frame:SetHeight(300)
 	frame:SetWidth(545)
 	frame:Hide()
@@ -373,9 +380,15 @@ function Summary:CreateUI()
 	frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -50)
 	frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -31, 7)
 	frame.scroll:SetScript("OnVerticalScroll", function(self, value) Summary.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 24, Summary.Update); Summary.scrollUpdate = nil end)
-
+	
+	local function viewDetailedInfo(self)
+		local userData = ElitistGroup.userData[self.playerID]
+		if( userData ) then
+			ElitistGroup.modules.Users:LoadData(userData)
+		end
+	end
+	
 	frame.rows = {}
-
 	for i=1, MAX_SUMMARY_ROWS do
 		local row = {}
 		for keyID, key in pairs(headerKeys) do
@@ -403,6 +416,9 @@ function Summary:CreateUI()
 
 			row[key] = button
 		end
+		
+		row.name:SetScript("OnClick", viewDetailedInfo)
+		row.name:SetPushedTextOffset(2, -2)
 		
 		frame.rows[i] = row
 	end

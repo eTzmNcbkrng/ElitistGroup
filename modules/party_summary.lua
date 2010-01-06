@@ -92,18 +92,24 @@ function Summary:UpdateSingle(row)
 	local name, server = UnitName(row.unitID)
 	server = server and server ~= "" and server or GetRealmName()
 
+	local position = ElitistGroup.modules.Scan:UnitQueuePosition(row.unitID)
+	local positionTooltip = position and string.format(L[", #%d in inspect queue"], position) or ""
+	position = position and string.format("[#%d] ", position) or ""
+	
 	-- Build the players info
 	local coords = CLASS_BUTTONS[classToken]
 	if( coords ) then
-		row.playerInfo:SetFormattedText("%s (%s)", name, level)
-		row.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken])
+		row.playerInfo:SetFormattedText("%s%s (%s)", position, name, level)
+		row.playerInfo.tooltip = string.format(L["%s - %s, level %s %s%s"], name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken], positionTooltip)
 		row.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
 		row.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 	else
-		row.playerInfo:SetFormattedText("%s (%s)", name, level)
-		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], name, server, level)
+		row.playerInfo:SetFormattedText("%s (%s)", position, name, level)
+		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class%s"], name, server, level, positionTooltip)
 		row.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 	end
+	
+	row.playerInfo.playerID = userData and playerID or nil
 	
 	-- No data yet, show the basic info then tell them we're loading
 	if( not userData ) then
@@ -245,6 +251,10 @@ local function OnLeave(self)
 	GameTooltip:Hide()
 end
 
+local function OnClick(self)
+	ElitistGroup.modules.Users:LoadData(ElitistGroup.userData[self.playerID])
+end
+
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 function Summary:CreateSingle(id)
 	if( self.summaryRows[id] ) then
@@ -269,7 +279,8 @@ function Summary:CreateSingle(id)
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
-		button:SetPushedTextOffset(0, 0)		button.icon = button:CreateTexture(nil, "ARTWORK")
+		button:SetPushedTextOffset(0, 0)	
+		button.icon = button:CreateTexture(nil, "ARTWORK")
 		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
 		button.icon:SetSize(16, 16)
 		button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
@@ -288,6 +299,9 @@ function Summary:CreateSingle(id)
 		
 		row[key] = button
 	end
+	
+	row.playerInfo:SetPushedTextOffset(2, -2)
+	row.playerInfo:SetScript("OnClick", OnClick)
 	
 	row.gemInfo.disableWrap = true
 	row.enchantInfo.disableWrap = true
@@ -319,7 +333,7 @@ function Summary:CreateUI()
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
-	frame:SetFrameStrata("HIGH")
+	frame:SetToplevel(true)
 	frame:SetScript("OnHide", function() ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData) end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
