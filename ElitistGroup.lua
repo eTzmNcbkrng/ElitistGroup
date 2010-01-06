@@ -142,7 +142,7 @@ end
 function ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 	-- Quality 7 is heirloom, apply our modifier based on the item level
 	if( itemQuality == 7 ) then
-		itemLevel = (tonumber(string.match(itemLink, "(%d+)|h")) or 1) * ElitistGroup.HEIRLOOM_ILEVEL
+		itemLevel = (tonumber(string.match(itemLink, "(%d+)$")) or 1) * ElitistGroup.HEIRLOOM_ILEVEL
 	end
 	
 	return itemLevel * (self.QUALITY_MODIFIERS[itemQuality] or 1)
