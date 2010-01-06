@@ -196,11 +196,14 @@ ElitistGroup.OVERRIDE_ENCHANTS = {
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 ElitistGroup.OVERRIDE_ITEMS = {
 	[47661] = "tank/dps", -- Libram of Valiance
+	[50366] = "healer", -- Althor's Abacus (Heroic)
+	[50359] = "healer", -- Althor's Abacus
 	[44255] = "caster", -- Darkmoon Card: Greatness (+90 INT)
 	[44254] = "caster", -- Darkmoon Card: Greatness (+90 SPI)
 	[44253] = "tank/dps", -- Darkmoon Card: Greantess (+90 AGI)
 	[42987] = "tank/dps", -- Darkmoon Card: Greatness (+90 STR)
 	[49464] = "caster", -- Shiny Shard of the Flame, this would be only useful if you have both trinkets, but still
+	[49463] = "caster", -- Purified Shard of the Flame, ^
 	[47668] = "tank/dps", -- Idol of Mutilation
 	[50456] = "tank/dps", -- Idol of the Crying Moon
 	[38365] = "tank/dps", -- Idol of Perspicacious Attacks
@@ -258,7 +261,8 @@ ElitistGroup.STAT_MAP = {
 	STAMINA = "ITEM_MOD_STAMINA_SHORT", RESIST = "RESIST", CRIT_RATING = "ITEM_MOD_CRIT_RATING_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_SHORT", HIT_RATING = "ITEM_MOD_HIT_RATING_SHORT",
 	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH", DAMAGE = "DAMAGE",
 	
-	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], ATTACK = L["attack"],
+	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], ATTACK = L["attack"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["melee attack"],
+	MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
 }
 
 ElitistGroup.SAFE_STAT_MATCH = {}
@@ -286,7 +290,7 @@ ElitistGroup.STAT_DATA = {
 	-- Spell healing is always a healer item, this is the only way to really identify a "pure" healer item
 	{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 	-- Spell hit rating is always a caster dps
-	{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@"},
+	{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
 	-- Items with agility are useful for all physical classes really
 	{type = "physical-all",	default = "AGILITY@"},
 	-- Ranged AP, ranged crit, ranged hit are always ranged
@@ -298,11 +302,11 @@ ElitistGroup.STAT_DATA = {
 	-- Expertise is a melee stat, but it's used by both dps and tanks
 	{type = "melee",		default = "EXPERTISE_RATING@"},
 	-- Agility, armor pen, general AP are physical DPS
-	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@", trinkets = "ATTACK@"},
+	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@MELEE_AND_RANGE@"},
 	-- Hit melee rating, melee AP, melee crit rating are always melee dps items
-	{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@"},
+	{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@", trinkets = "MELEE_ATTACK@"},
 	-- Generic damage tag for trinkets
-	{type = "dps",			trinkets = "DAMAGE@"},
+	{type = "dps",			trinkets = "DAMAGE@DEAL_DAMAGE@"},
 	-- Hybrid, works for DPS and Healers
 	{type = "healer/dps",	default = "CRIT_RATING@HASTE_RATING@"},
 	-- Hybrid, works for DPS and Tanks
