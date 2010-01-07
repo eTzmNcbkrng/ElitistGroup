@@ -40,3 +40,6 @@ modules\scan.lua
 modules\group_notes.lua
 modules\sync.lua
 modules\config.lua
+#@do-not-package@
+data\tests.lua
+#@end-do-not-package@
