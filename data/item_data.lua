@@ -262,8 +262,11 @@ ElitistGroup.STAT_MAP = {
 	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH", DAMAGE = "DAMAGE",
 	
 	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], ATTACK = L["attack"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["melee attack"],
-	MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
+	MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"], RANGED_CRITICAL_STRIKE = L["ranged critical strike"],
 }
+
+ElitistGroup.REVERSE_STAT_MAP = {}
+for key, value in pairs(ElitistGroup.STAT_MAP) do ElitistGroup.REVERSE_STAT_MAP[value] = key end
 
 ElitistGroup.SAFE_STAT_MATCH = {}
 for _, key in pairs(ElitistGroup.STAT_MAP) do
@@ -294,11 +297,11 @@ ElitistGroup.STAT_DATA = {
 	-- Items with agility are useful for all physical classes really
 	{type = "physical-all",	default = "AGILITY@"},
 	-- Ranged AP, ranged crit, ranged hit are always ranged
-	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@"},
+	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
 	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
 	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
-	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@", trinkets = "STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
+	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@RESISTANCE0@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
 	{type = "melee",		default = "EXPERTISE_RATING@"},
 	-- Agility, armor pen, general AP are physical DPS
@@ -312,5 +315,5 @@ ElitistGroup.STAT_DATA = {
 	-- Hybrid, works for DPS and Tanks
 	{type = "tank/dps",		default = "HIT_RATING@"},
 	-- Some classes are going to use a hybrid gem to activate their meta like a Dreadstone, we don't want them being flagged as a tank gem unless it's a pure STA gem
-	{type = "tank",			trinkets = "RESISTANCE0@", gems = "STAMINA@"},
+	{type = "tank",			gems = "STAMINA@"},
 }
