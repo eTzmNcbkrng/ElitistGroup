@@ -140,7 +140,7 @@ ElitistGroup.RELIC_SPELLTYPES = {
 
 -- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 ElitistGroup.OVERRIDE_ENCHANTS = {
-	[3870] = "pvp", -- Blood Draining
+	[3870] = "tank/pvp", -- Blood Draining
 	[3869] = "tank", -- Blade Ward
 	[3232] = "all", -- Tuskarr's Vitality
 	[3296] = nil, -- Enhant Cloak - Wisdom, not sure if we want to flag this as a never. Really you should always use cloak - haste
