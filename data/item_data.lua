@@ -196,6 +196,7 @@ ElitistGroup.OVERRIDE_ENCHANTS = {
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 ElitistGroup.OVERRIDE_ITEMS = {
+	[40707] = "tank", -- Libram of Obstruction
 	[32368] = "tank", -- Tome of the Lightbringer
 	[47661] = "tank/dps", -- Libram of Valiance
 	[50366] = "healer", -- Althor's Abacus (Heroic)
@@ -264,7 +265,7 @@ ElitistGroup.STAT_MAP = {
 	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH", DAMAGE = "DAMAGE",
 	
 	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["chance on melee attack"],
-	CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"],
+	CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"], RANGED_CRITICAL_STRIKE = L["ranged critical"],
 	MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
 }
 
@@ -299,12 +300,12 @@ ElitistGroup.STAT_DATA = {
 	{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
 	-- Items with agility are useful for all physical classes really
 	{type = "physical-all",	default = "AGILITY@"},
+	-- Special matches for physical dps and trinkets
+	{type = "physical-dps", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 	-- Ranged AP, ranged crit, ranged hit are always ranged
 	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
 	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
 	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
-	-- Special matches for physical dps and trinkets
-	{type = "physical-dps", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
 	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@RESISTANCE0@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
@@ -313,12 +314,14 @@ ElitistGroup.STAT_DATA = {
 	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@"},
 	-- Hit melee rating, melee AP, melee crit rating are always melee dps items
 	{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@", trinkets = "MELEE_ATTACK@"},
+	-- Special matches for tank/dps both being allowed to gem hit
+	{type = "tank/dps", 	enchants = "HIT_RATING@", gems = "HIT_RATING@"},
 	-- Generic damage tag for trinkets
 	{type = "dps",			trinkets = "DAMAGE@DEAL_DAMAGE@"},
+	-- Hybrid, works for DPS and Tanks
+	{type = "dps",			default = "HIT_RATING@"},
 	-- Hybrid, works for DPS and Healers
 	{type = "healer/dps",	default = "CRIT_RATING@HASTE_RATING@"},
-	-- Hybrid, works for DPS and Tanks
-	{type = "tank/dps",		default = "HIT_RATING@"},
 	-- Some classes are going to use a hybrid gem to activate their meta like a Dreadstone, we don't want them being flagged as a tank gem unless it's a pure STA gem
 	{type = "tank",			gems = "STAMINA@"},
 }
