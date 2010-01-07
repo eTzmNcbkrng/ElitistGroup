@@ -140,6 +140,7 @@ ElitistGroup.RELIC_SPELLTYPES = {
 
 -- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 ElitistGroup.OVERRIDE_ENCHANTS = {
+	[3225] = "dps", -- Executioner
 	[3870] = "tank/pvp", -- Blood Draining
 	[3869] = "tank", -- Blade Ward
 	[3232] = "all", -- Tuskarr's Vitality
@@ -195,6 +196,7 @@ ElitistGroup.OVERRIDE_ENCHANTS = {
 
 -- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 ElitistGroup.OVERRIDE_ITEMS = {
+	[32368] = "tank", -- Tome of the Lightbringer
 	[47661] = "tank/dps", -- Libram of Valiance
 	[50366] = "healer", -- Althor's Abacus (Heroic)
 	[50359] = "healer", -- Althor's Abacus
@@ -261,8 +263,9 @@ ElitistGroup.STAT_MAP = {
 	STAMINA = "ITEM_MOD_STAMINA_SHORT", RESIST = "RESIST", CRIT_RATING = "ITEM_MOD_CRIT_RATING_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_SHORT", HIT_RATING = "ITEM_MOD_HIT_RATING_SHORT",
 	HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH", DAMAGE = "DAMAGE",
 	
-	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], ATTACK = L["attack"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["melee attack"],
-	MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"], RANGED_CRITICAL_STRIKE = L["ranged critical strike"],
+	HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["chance on melee attack"],
+	CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"],
+	MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
 }
 
 ElitistGroup.REVERSE_STAT_MAP = {}
@@ -300,12 +303,14 @@ ElitistGroup.STAT_DATA = {
 	{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
 	-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
 	{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
+	-- Special matches for physical dps and trinkets
+	{type = "physical-dps", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 	-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
 	{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@RESISTANCE0@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
 	-- Expertise is a melee stat, but it's used by both dps and tanks
 	{type = "melee",		default = "EXPERTISE_RATING@"},
 	-- Agility, armor pen, general AP are physical DPS
-	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@MELEE_AND_RANGE@"},
+	{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@"},
 	-- Hit melee rating, melee AP, melee crit rating are always melee dps items
 	{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@", trinkets = "MELEE_ATTACK@"},
 	-- Generic damage tag for trinkets
