@@ -471,23 +471,24 @@ function Users:CreateUI()
 
 		elseif( self.equippedItem ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-			GameTooltip:SetHyperlink(self.equippedItem)
+			
+			if( self.itemTalentType ) then
+				GameTooltip:SetText(string.format(L["|cfffed000Item Type:|r %s"], self.itemTalentType), 1, 1, 1)
+			end
+			if( self.enchantTooltip ) then
+				GameTooltip:AddLine(self.enchantTooltip)
+			end
+			if( self.gemTooltip ) then
+				GameTooltip:AddLine(self.gemTooltip)
+			end
+			
 			GameTooltip:Show()
-
+			
+			-- Show the item as a second though
 			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "ElitistGroupUserTooltip", UIParent, "GameTooltipTemplate")
 			extraTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
 			extraTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
-			
-			if( self.itemTalentType ) then
-				extraTooltip:SetText(string.format(L["|cfffed000Item Type:|r %s"], self.itemTalentType), 1, 1, 1)
-			end
-			if( self.enchantTooltip ) then
-				extraTooltip:AddLine(self.enchantTooltip)
-			end
-			if( self.gemTooltip ) then
-				extraTooltip:AddLine(self.gemTooltip)
-			end
-			
+			extraTooltip:SetHyperlink(self.equippedItem)
 			extraTooltip:Show()
 		end
 	end
