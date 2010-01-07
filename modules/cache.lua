@@ -79,7 +79,7 @@ gemMetaTable = {
 				local key = ElitistGroup.ORDERED_STAT_MAP[i]
 				if( string.match(text, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
 					foundData = true
-					statCache[key] = true
+					statCache[ElitistGroup.REVERSE_STAT_MAP[key]] = true
 				end
 			end
 			
@@ -137,7 +137,6 @@ enchantMetaTable = {
 				if( tooltip:NumLines() > i ) then
 					enchantText = string.lower(_G["ElitistGroupTooltipTextLeft" .. i + 1]:GetText())
 				end
-
 				break
 			-- First green text we find that isn't the Use: is the enchant
 			elseif( ( r >= 0.97 and g < 0.15 and b < 0.15 ) or ( r == 0 and g >= 0.97 and b == 0 ) ) then
@@ -150,7 +149,7 @@ enchantMetaTable = {
 			rawset(tbl, link, "unknown")
 			return "unknown"
 		end
-		
+				
 		-- Parse out the stats
 		local foundData
 		table.wipe(statCache)
@@ -158,7 +157,7 @@ enchantMetaTable = {
 			local key = ElitistGroup.ORDERED_STAT_MAP[i]
 			if( string.match(enchantText, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
 				foundData = true
-				statCache[key] = true
+				statCache[ElitistGroup.REVERSE_STAT_MAP[key]] = true
 			end
 		end
 		
@@ -251,10 +250,10 @@ itemMetaTable = {
 			local statText
 			for i=tooltip:NumLines(), 1, -1 do
 				local row = _G["ElitistGroupTooltipTextLeft" .. i]
-				local text = string.lower(row:GetText())
 				local r, g, b = row:GetTextColor()
 				
 				if( r == 0 and g > 0.97 and b == 0 ) then
+					local text = string.lower(row:GetText())
 					if( string.match(text, ITEM_SPELL_TRIGGER_ONEQUIP) or string.match(text, ITEM_SPELL_TRIGGER_ONPROC) or string.match(text, ITEM_SPELL_TRIGGER_ONUSE) ) then
 						statText = text
 						break
@@ -272,7 +271,7 @@ itemMetaTable = {
 				end
 			end
 		end
-
+		
 		-- Now scan and figure out what the spec is
 		for i=1, #(ElitistGroup.STAT_DATA) do
 			local data = ElitistGroup.STAT_DATA[i]
