@@ -76,7 +76,7 @@ ElitistGroup.EXPERIENCE_POINTS = {
 	{name = L["Dungeons"], parent = true, id = "5-man", players = 5, heroic = true},
 	
 	-- T7 Dungeons, 5 man, heroic (Drak'Tharon Keep, Violet Hold, etc)
-	{name = L["T7 Dungeons"], childOf = "5-man", id = "t7-heroic", heroic = true, tier = true, childless = true, players = 5,
+	{name = L["T7 Dungeons"], childOf = "5-man", id = "t7-heroic", heroic = true, childless = true, players = 5,
 		experienced = 30, -- 6 full clears
 		[1504] = 5, -- Ingvar the Plunderer kills (Heroic Utgarde Keep)
 		[1505] = 5, -- Keristrasza kills (Heroic Nexus)
@@ -94,13 +94,13 @@ ElitistGroup.EXPERIENCE_POINTS = {
 	},
 
 	-- T9 Dungeons, 5 man (Trial of the Champion)
-	{name = L["T9 Dungeons"], childOf = "5-man", id = "t8-5m", heroic = true, tier = true, childless = true, players = 5,
+	{name = L["T9 Dungeons"], childOf = "5-man", id = "t8-5m", heroic = true, childless = true, players = 5,
 		experienced = 15,
 		[4027] = 5, -- The Black Knight kills (Heroic Trial of the Champion)
 	},
 
 	-- T10 Dungeons, 5 man, heroic
-	{name = L["T10 Dungeons"], childOf = "5-man", id = "t10-5m", heroic = true, tier = true, childless = true, players = 5,
+	{name = L["T10 Dungeons"], childOf = "5-man", id = "t10-5m", heroic = true, childless = true, players = 5,
 		experienced = 90, -- Works out to about a clear in each dungeon
 		[4714] = 2, -- Bronjahm kills (Heroic Forge of Souls)
 		[4716] = 8, -- Devourer of Souls kills (Heroic Forge of Souls)
@@ -117,11 +117,7 @@ ElitistGroup.EXPERIENCE_POINTS = {
 	
 	-- 10 man dungeons
 	{name = L["Raids"], parent = true, id = "10-man", players = 10},
-
-	{name = L["T7 Raids"], childOf = "10-man", id = "t7-10m", players = 10, tier = true,
-		experienced = 325, -- Experienced for this entire 10-man tier, 5 naxx clears, or a combination of Sarth/Malygos
-	},
-	{name = L["Naxxramas"], childOf = "t7-10m", id = "naxx-10m", players = 10,
+	{name = L["Naxxramas"], childOf = "10-man", id = "naxx-10m", players = 10,
 		experienced = 260, -- 3 full clears / 2 full clears + undying
 		[1361] = 2, -- Anub'Rekhan kills (Naxxramas 10 player)
 		[1362] = 2, -- Grand Widow Faerlina kills (Naxxramas 10 player)
@@ -141,19 +137,17 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		[576] = 65, -- The Fall of Naxxramas (10 player)
 		[2187] = 65, -- The Undying
 	},
-	{name = L["Sartharion"], childOf = "t7-10m", id = "sarth-10m", players = 10,
+	{name = L["Sartharion"], childOf = "10-man", id = "sarth-10m", players = 10,
 		experienced = 30, -- 3 kills or a 3-drake kill
 		[1392] = 10, -- Sartharion kills (Chamber of the Aspects 10 player)
 		[2051] = 30, -- The Twilight Zone (10 player)
 	},
-	{name = L["Malygos"], childOf = "t7-10m", id = "malygos-10m", players = 10,
+	{name = L["Malygos"], childOf = "10-man", id = "malygos-10m", players = 10,
 		experienced = 30, -- 3 kills or a sub-6 minute kill
 		[1391] = 10, -- Malygos kills (10 player)
 		[1874] = 30, -- You Don't Have An Eternity (10 player)
 	},
-	
-	{name = L["T8 Raids"], childOf = "10-man", id = "t8-10m", players = 10, tier = true},
-	{name = L["Ulduar"], childOf = "t8-10m", id = "ulduar-10m-n", players = 10,
+	{name = L["Ulduar"], childOf = "10-man", id = "ulduar-10m-n", players = 10,
 		experienced = 240, -- 3 full clears, 2 with Champion of Ulduar, Algalon is a bonus
 		[2856] = 1, -- Flame Leviathan kills (Ulduar 10 player)
 		[2857] = 1, -- Razorscale kills (Ulduar 10 player)
@@ -172,22 +166,8 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		[2894] = 60, -- The Secrets of Ulduar (10 player)
 		[2903] = 60, -- Champion of Ulduar
 	},
-	{name = L["Ulduar"], childOf = "t8-10m", heroic = true, id = "ulduar-10m-h", cascade = "ulduar-10m-n", players = 10,
-		experienced = 60, -- 4 of the 7 hard modes, or one zero light + two other misc hard modes
-		[2941] = 15, -- I Choose You, Steelbreaker (10 player)
-		[3056] = 5, -- Orbit-uary (10 player)
-		[3058] = 10, -- Heartbreaker (10 player)
-		[3158] = 25, -- One Light in the Darkness (10 player)
-		[3159] = 40, -- Alone in the Darkness (10 player)
-		[3179] = 15, -- Knock, Knock, Knock on Wood (10 player)
-		[3180] = 15, -- Firefighter (10 player)
-		[3181] = 15, -- I Love the Smell of Saronite in the Morning (10 player)
-		[3004] = 25, -- He Feeds On Your Tears (10 player)
-	},
-
-	{name = L["T9 Raids"], childOf = "10-man", id = "t9-10m", players = 10, tier = true},
 	-- Right now, the ToC10 and ToCG10 completion stats are bugged, going to include them so data is recorded, but it's worth 0 right now
-	{name = L["Trial of the Crusader"], childOf = "t9-10m", id = "toc-10m", players = 10,
+	{name = L["Trial of the Crusader"], childOf = "10-man", id = "toc-10m", players = 10,
 		experienced = 40, -- Slightly wonky, first 4 bosses killed 3 times, with one being a full clear
 		[4028] = 1, -- Victories over the Beasts of Northrend (Trial of the Crusader 10 player)
 		[4032] = 2, -- Lord Jaraxxus kills (Trial of the Crusader 10 player)
@@ -196,26 +176,13 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		[4044] = 0, -- Times completed the Trial of the Crusader (10 player)
 		[3917] = 10, -- Call of the Crusade (10 player)
 	},
-	{name = L["Trial of the Grand Crusader"], childOf = "t9-10m", id = "togc-10m", cascade = "toc-10m", heroic = true, players = 10,
-		experienced = 50, -- first 4 bosses killed 4 times with one full clear, 3 with >=45 attempts, 1 with 50 attempts
-		[4030] = 1, -- Victories over the Beasts of Northrend (Trial of the Grand Crusader 10 player)
-		[4033] = 2, -- Lord Jaraxxus kills (Trial of the Grand Crusader 10 player)
-		[4037] = 3, -- Victories over the Faction Champions (Trial of the Grand Crusader 10 player)
-		[4041] = 4, -- Val'kyr Twins kills (Trial of the Grand Crusader 10 player)
-		[4045] = 0, -- Times completed the Trial of the Grand Crusader (10 player)
-		[3918] = 10, -- Call of the Grand Crusade (10 player)
-		[3809] = 10, -- A Tribute to Mad Skill (10 player)
-		[3810] = 30, -- A Tribute to Insanity (10 player)
-		[4080] = 30, -- A Tribute to Dedicated Insanity
-	},
-	{name = L["Onyxia's Lair"], childOf = "t9-10m", id = "onyxia-10m", players = 10,
+	{name = L["Onyxia's Lair"], childOf = "10-man", id = "onyxia-10m", players = 10,
 		experienced = 10,
 		[4396] = 10, -- Onyxia's Lair (10 player)
 		[4402] = 20, -- More Dots! (10 player)
 	},
 	
-	{name = L["T10 Raids"], childOf = "10-man", id = "t10-10m", players = 10, tier = true},
-	{name = L["Icecrown Citadel"], childOf = "t10-10m", id = "icc-10m-n", players = 10,
+	{name = L["Icecrown Citadel"], childOf = "10-man", id = "icc-10m-n", players = 10,
 		experienced = 180, -- 3 full clears
 		[4639] = 1, -- Lord Marrowgar kills (Icecrown 10 player)
 		[4643] = 1, -- Lady Deathwhisper kills (Icecrown 10 player)
@@ -235,27 +202,7 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		--[4531] = 5, -- Storming the Citadel (10 player)
 		[4532] = 45, -- Fall of the Lich King (10 player)
 	},
-	{name = L["Icecrown Citadel"], childOf = "t10-10m", id = "icc-10m-h", cascade = "icc-10m-n", heroic = true, players = 10,
-		experienced = 90, -- 1 full clear
-		[4640] = 1, -- Lord Marrowgar kills (Heroic Icecrown 10 player)
-		[4654] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 10 player)
-		[4659] = 1, -- Gunship Battle victories (Heroic Icecrown 10 player)
-		[4662] = 2, -- Deathbringer kills (Heroic Icecrown 10 player)
-		[4665] = 2, -- Festergut kills (Heroic Icecrown 10 player)
-		[4668] = 2, -- Rotface kills (Heroic Icecrown 10 player)
-		[4677] = 6, -- Professor Putricide kills (Heroic Icecrown 10 player)
-		[4671] = 3, -- Blood Prince Council kills (Heroic Icecrown 10 player)
-		[4680] = 7, -- Blood Queen Lana'thel kills (Heroic Icecrown 10 player)
-		[4674] = 3, -- Valithria Dreamwalker rescues (Heroic Icecrown 10 player)
-		[4684] = 7, -- Sindragosa kills (Heroic Icecrown 10 player)
-		[4686] = 10, -- Victories over the Lich King (Heroic Icecrown 10 player)
-		--[4628] = 0, -- Heroic: Storming the Citadel (10 player)
-		--[4629] = 0, -- Heroic: The Plagueworks (10 player)
-		--[4630] = 0, -- Heroic: The Crimson Hall (10 player)
-		--[4631] = 0, -- Heroic: The Frostwing Halls (10 player)
-		[4636] = 45, -- Heroic: Fall of the Lich King (10 player)
-	},
-	{name = L["Vault of Archavon"], childOf = "10-man", id = "voa-10m", players = 10, tier = true,
+	{name = L["Vault of Archavon"], childOf = "10-man", id = "voa-10m", players = 10, subParent = true,
 		experienced = 120, -- 4 full clears, or three with Toravon
 		[4016] = 20, -- Earth, Wind & Fire (10 player)
 	},
@@ -275,14 +222,10 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		experienced = 60,
 		[4657] = 20, -- Toravon the Ice Watcher kills (Wintergrasp 10 player)
 	},
-	
+		
 	-- 25 man raids
 	{name = L["Raids"], parent = true, id = "25-man", players = 25},
-	
-	{name = L["T7 Raids"], childOf = "25-man", id = "t7-25m", players = 25, tier = true,
-		experienced = 350,
-	},
-	{name = L["Naxxramas"], childOf = "t7-25m", id = "naxx-25m", players = 25,
+	{name = L["Naxxramas"], childOf = "25-man", id = "naxx-25m", players = 25,
 		experienced = 280, -- 3 full clears/2 full clears + immortal
 		[1368] = 2, -- Anub'Rekhan kills (Naxxramas 25 player)
 		[1380] = 2, -- Grand Widow Faerlina kills (Naxxramas 25 player)
@@ -302,19 +245,17 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		[577] = 70, -- The Fall of Naxxramas (25 player)
 		[2186] = 70, -- The Immortal
 	},
-	{name = L["Sartharion"], childOf = "t7-25m", id = "sarth-25m", players = 25,
+	{name = L["Sartharion"], childOf = "25-man", id = "sarth-25m", players = 25,
 		experienced = 30, -- 3 kills or 3-drake
 		[1393] = 10, -- Sartharion kills (Chamber of the Aspects 25 player)
 		[2051] = 30, -- The Twilight Zone (10 player)
 	},
-	{name = L["Malygos"], childOf = "t7-25m", id = "malygos-25m", players = 25,
+	{name = L["Malygos"], childOf = "25-man", id = "malygos-25m", players = 25,
 		experienced = 30,
 		[1394] = 10, -- Malygos kills (25 player)
 		[1875] = 30, -- You Don't Have An Eternity (25 player)
 	},
-
-	{name = L["T8 Raids"], childOf = "25-man", id = "t8-25m", players = 25, tier = true}, 
-	{name = L["Ulduar"], childOf = "t8-25m", id = "ulduar-25m-n", players = 25,
+	{name = L["Ulduar"], childOf = "25-man", id = "ulduar-25m-n", players = 25,
 		experienced = 240, -- 3 full clears, 2 with Conqueror of Ulduar, Algalon is a bonus
 		[2872] = 1, -- Flame Leviathan kills (Ulduar 25 player)
 		[2873] = 1, -- Razorscale kills (Ulduar 25 player)
@@ -333,21 +274,7 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		[2895] = 60, -- The Secrets of Ulduar (25 player)
 		[2904] = 60, -- Conqueror of Ulduar
 	},
-	{name = L["Ulduar"], childOf = "t8-25m", id = "ulduar-25m-h", cascade = "ulduar-25m-n", heroic = true, players = 25,
-		experienced = 60, -- 4 of the 7 hard modes, or one zero light + two other misc hard modes
-		[2944] = 15, -- I Choose You, Steelbreaker (25 player)
-		[3057] = 5, -- Orbit-uary (25 player)
-		[3059] = 10, -- Heartbreaker (25 player)
-		[3163] = 25, -- One Light in the Darkness (25 player)
-		[3164] = 40, -- Alone in the Darkness (25 player)
-		[3187] = 15, -- Knock, Knock, Knock on Wood (25 player)
-		[3188] = 15, -- I Love the Smell of Saronite in the Morning (25 player)
-		[3189] = 15, -- Firefighter (25 player)
-		[3005] = 25, -- He Feeds On Your Tears (25 player)
-	},
-
-	{name = L["T9 Raids"], childOf = "25-man", id = "t9-25m", players = 25, tier = true},
-	{name = L["Trial of the Crusader"], childOf = "t9-25m", id = "toc-25m", players = 25,
+	{name = L["Trial of the Crusader"], childOf = "25-man", id = "toc-25m", players = 25,
 		experienced = 40, -- 3 full clears
 		[4031] = 0, -- Victories over the Beasts of Northrend (Trial of the Crusader 25 player)
 		[4034] = 1, -- Lord Jaraxxus kills (Trial of the Crusader 25 player)
@@ -356,24 +283,12 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		[4046] = 6, -- Times completed the Trial of the Crusader (25 player)
 		[3916] = 10, -- Call of the Crusade (25 player)
 	},
-	{name = L["Trial of the Grand Crusader"], childOf = "t9-25m", id = "togc-25m", cascade = "toc-25m", heroic = true, players = 25,
-		experienced = 50, -- 4 full clears, or 3 full clears + mad skill, 1 full clear + insanity
-		[4029] = 1, -- Victories over the Beasts of Northrend (Trial of the Grand Crusader 25 player)
-		[4035] = 1, -- Lord Jaraxxus kills (Trial of the Grand Crusader 25 player)
-		[4039] = 2, -- Victories over the Faction Champions (Trial of the Grand Crusader 25 player)
-		[4043] = 3, -- Val'kyr Twins kills (Trial of the Grand Crusader 25 player)
-		[4047] = 5, -- Times completed the Trial of the Grand Crusader (25 player)
-		[3812] = 10, -- Call of the Grand Crusade (25 player)
-		[3818] = 10, -- A Tribute to Mad Skill (25 player)
-		[3819] = 30, -- A Tribute to Insanity (25 player)
-	},
-	{name = L["Onyxia's Lair"], childOf = "t9-25m", id = "onyxia-25m", players = 25,
+	{name = L["Onyxia's Lair"], childOf = "25-man", id = "onyxia-25m", players = 25,
 		experienced = 10,
 		[4397] = 10, -- Onyxia's Lair (25 player)
 		[4405] = 20, -- More Dots! (25 player)
 	},
-	{name = L["T10 Raids"], childOf = "25-man", id = "t10-25m", players = 25, tier = true},
-	{name = L["Icecrown Citadel"], childOf = "t10-25m", id = "icc-25m-n", players = 25,
+	{name = L["Icecrown Citadel"], childOf = "25-man", id = "icc-25m-n", players = 25,
 		experienced = 180, -- 3 full clears
 		[4641] = 1, -- Lord Marrowgar kills (Icecrown 25 player)
 		[4655] = 1, -- Lady Deathwhisper kills (Icecrown 25 player)
@@ -393,27 +308,7 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		--[4607] = 0, -- The Frostwing Halls (25 player)
 		[4608] = 45, -- Fall of the Lich King (25 player)
 	},
-	{name = L["Icecrown Citadel"], childOf = "t10-25m", id = "icc-25m-h", cascade = "icc-25m-n", heroic = true, players = 25,
-		experienced = 90, -- 1 full clear
-		[4642] = 1, -- Lord Marrowgar kills (Heroic Icecrown 25 player)
-		[4656] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 25 player)
-		[4661] = 1, -- Gunship Battle victories (Heroic Icecrown 25 player)
-		[4664] = 2, -- Deathbringer kills (Heroic Icecrown 25 player)
-		[4667] = 2, -- Festergut kills (Heroic Icecrown 25 player)
-		[4670] = 2, -- Rotface kills (Heroic Icecrown 25 player)
-		[4679] = 6, -- Professor Putricide kills (Heroic Icecrown 25 player)
-		[4673] = 3, -- Blood Prince Council kills (Heroic Icecrown 25 player)
-		[4682] = 7, -- Blood Queen Lana'thel kills (Heroic Icecrown 25 player)
-		[4676] = 3, -- Valithria Dreamwalker rescues (Heroic Icecrown 25 player)
-		[4685] = 10, -- Sindragosa kills (Heroic Icecrown 25 player)
-		[4688] = 10, -- Victories over the Lich King (Heroic Icecrown 25 player)
-		--[4632] = 0, -- Heroic: Storming the Citadel (25 player)
-		--[4633] = 0, -- Heroic: The Plagueworks (25 player)
-		--[4634] = 0, -- Heroic: The Crimson Hall (25 player)
-		--[4635] = 0, -- Heroic: The Frostwing Halls (25 player)
-		[4637] = 45, -- Heroic: Fall of the Lich King (25 player)
-	},
-	{name = L["Vault of Archavon"], childOf = "25-man", id = "voa-25m", players = 25, tier = true,
+	{name = L["Vault of Archavon"], childOf = "25-man", id = "voa-25m", players = 25, subParent = true,
 		experienced = 120, -- 4 full clears, or three with Toravon
 		[4017] = 20, -- Earth, Wind & Fire (25 player)
 	},
@@ -433,12 +328,104 @@ ElitistGroup.EXPERIENCE_POINTS = {
 		experienced = 60,
 		[4658] = 20, -- Toravon the Ice Watcher kills (Wintergrasp 25 player)
 	},
+
+		-- 10 man heroic/hard mode raids
+	{name = L["Raids"], parent = true, id = "10-man-hard", players = 10, heroic = true},
+	{name = L["Ulduar"], childOf = "10-man-hard", heroic = true, id = "ulduar-10m-h", cascade = "ulduar-10m-n", players = 10,
+		experienced = 60, -- 4 of the 7 hard modes, or one zero light + two other misc hard modes
+		[2941] = 15, -- I Choose You, Steelbreaker (10 player)
+		[3056] = 5, -- Orbit-uary (10 player)
+		[3058] = 10, -- Heartbreaker (10 player)
+		[3158] = 25, -- One Light in the Darkness (10 player)
+		[3159] = 40, -- Alone in the Darkness (10 player)
+		[3179] = 15, -- Knock, Knock, Knock on Wood (10 player)
+		[3180] = 15, -- Firefighter (10 player)
+		[3181] = 15, -- I Love the Smell of Saronite in the Morning (10 player)
+		[3004] = 25, -- He Feeds On Your Tears (10 player)
+	},
+	{name = L["Trial of the Grand Crusader"], childOf = "10-man-hard", id = "togc-10m", cascade = "toc-10m", heroic = true, players = 10,
+		experienced = 50, -- first 4 bosses killed 4 times with one full clear, 3 with >=45 attempts, 1 with 50 attempts
+		[4030] = 1, -- Victories over the Beasts of Northrend (Trial of the Grand Crusader 10 player)
+		[4033] = 2, -- Lord Jaraxxus kills (Trial of the Grand Crusader 10 player)
+		[4037] = 3, -- Victories over the Faction Champions (Trial of the Grand Crusader 10 player)
+		[4041] = 4, -- Val'kyr Twins kills (Trial of the Grand Crusader 10 player)
+		[4045] = 0, -- Times completed the Trial of the Grand Crusader (10 player)
+		[3918] = 10, -- Call of the Grand Crusade (10 player)
+		[3809] = 10, -- A Tribute to Mad Skill (10 player)
+		[3810] = 30, -- A Tribute to Insanity (10 player)
+		[4080] = 30, -- A Tribute to Dedicated Insanity
+	},
+	{name = L["Icecrown Citadel"], childOf = "10-man-hard", id = "icc-10m-h", cascade = "icc-10m-n", heroic = true, players = 10,
+		experienced = 90, -- 1 full clear
+		[4640] = 1, -- Lord Marrowgar kills (Heroic Icecrown 10 player)
+		[4654] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 10 player)
+		[4659] = 1, -- Gunship Battle victories (Heroic Icecrown 10 player)
+		[4662] = 2, -- Deathbringer kills (Heroic Icecrown 10 player)
+		[4665] = 2, -- Festergut kills (Heroic Icecrown 10 player)
+		[4668] = 2, -- Rotface kills (Heroic Icecrown 10 player)
+		[4677] = 6, -- Professor Putricide kills (Heroic Icecrown 10 player)
+		[4671] = 3, -- Blood Prince Council kills (Heroic Icecrown 10 player)
+		[4680] = 7, -- Blood Queen Lana'thel kills (Heroic Icecrown 10 player)
+		[4674] = 3, -- Valithria Dreamwalker rescues (Heroic Icecrown 10 player)
+		[4684] = 7, -- Sindragosa kills (Heroic Icecrown 10 player)
+		[4686] = 10, -- Victories over the Lich King (Heroic Icecrown 10 player)
+		--[4628] = 0, -- Heroic: Storming the Citadel (10 player)
+		--[4629] = 0, -- Heroic: The Plagueworks (10 player)
+		--[4630] = 0, -- Heroic: The Crimson Hall (10 player)
+		--[4631] = 0, -- Heroic: The Frostwing Halls (10 player)
+		[4636] = 45, -- Heroic: Fall of the Lich King (10 player)
+	},
+	
+	{name = L["Raids"], parent = true, id = "25-man-hard", players = 25, heroic = true},
+	{name = L["Ulduar"], childOf = "25-man-hard", id = "ulduar-25m-h", cascade = "ulduar-25m-n", heroic = true, players = 25,
+		experienced = 60, -- 4 of the 7 hard modes, or one zero light + two other misc hard modes
+		[2944] = 15, -- I Choose You, Steelbreaker (25 player)
+		[3057] = 5, -- Orbit-uary (25 player)
+		[3059] = 10, -- Heartbreaker (25 player)
+		[3163] = 25, -- One Light in the Darkness (25 player)
+		[3164] = 40, -- Alone in the Darkness (25 player)
+		[3187] = 15, -- Knock, Knock, Knock on Wood (25 player)
+		[3188] = 15, -- I Love the Smell of Saronite in the Morning (25 player)
+		[3189] = 15, -- Firefighter (25 player)
+		[3005] = 25, -- He Feeds On Your Tears (25 player)
+	},
+	{name = L["Trial of the Grand Crusader"], childOf = "25-man-hard", id = "togc-25m", cascade = "toc-25m", heroic = true, players = 25,
+		experienced = 50, -- 4 full clears, or 3 full clears + mad skill, 1 full clear + insanity
+		[4029] = 1, -- Victories over the Beasts of Northrend (Trial of the Grand Crusader 25 player)
+		[4035] = 1, -- Lord Jaraxxus kills (Trial of the Grand Crusader 25 player)
+		[4039] = 2, -- Victories over the Faction Champions (Trial of the Grand Crusader 25 player)
+		[4043] = 3, -- Val'kyr Twins kills (Trial of the Grand Crusader 25 player)
+		[4047] = 5, -- Times completed the Trial of the Grand Crusader (25 player)
+		[3812] = 10, -- Call of the Grand Crusade (25 player)
+		[3818] = 10, -- A Tribute to Mad Skill (25 player)
+		[3819] = 30, -- A Tribute to Insanity (25 player)
+	},
+	{name = L["Icecrown Citadel"], childOf = "25-man-hard", id = "icc-25m-h", cascade = "icc-25m-n", heroic = true, players = 25,
+		experienced = 90, -- 1 full clear
+		[4642] = 1, -- Lord Marrowgar kills (Heroic Icecrown 25 player)
+		[4656] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 25 player)
+		[4661] = 1, -- Gunship Battle victories (Heroic Icecrown 25 player)
+		[4664] = 2, -- Deathbringer kills (Heroic Icecrown 25 player)
+		[4667] = 2, -- Festergut kills (Heroic Icecrown 25 player)
+		[4670] = 2, -- Rotface kills (Heroic Icecrown 25 player)
+		[4679] = 6, -- Professor Putricide kills (Heroic Icecrown 25 player)
+		[4673] = 3, -- Blood Prince Council kills (Heroic Icecrown 25 player)
+		[4682] = 7, -- Blood Queen Lana'thel kills (Heroic Icecrown 25 player)
+		[4676] = 3, -- Valithria Dreamwalker rescues (Heroic Icecrown 25 player)
+		[4685] = 10, -- Sindragosa kills (Heroic Icecrown 25 player)
+		[4688] = 10, -- Victories over the Lich King (Heroic Icecrown 25 player)
+		--[4632] = 0, -- Heroic: Storming the Citadel (25 player)
+		--[4633] = 0, -- Heroic: The Plagueworks (25 player)
+		--[4634] = 0, -- Heroic: The Crimson Hall (25 player)
+		--[4635] = 0, -- Heroic: The Frostwing Halls (25 player)
+		[4637] = 45, -- Heroic: Fall of the Lich King (25 player)
+	},
 }
 
 ElitistGroup.CHILD_PARENTS = {}
 ElitistGroup.VALID_ACHIEVEMENTS = {}
 for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
-	if( data.tier ) then
+	if( data.subParent ) then
 		ElitistGroup.CHILD_PARENTS[data.id] = data.childOf
 	end
 	
