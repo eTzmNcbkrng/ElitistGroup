@@ -11,7 +11,7 @@ local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		local self = Users
-		if( self.activeUserID and user == self.activeUserID and self.frame and self.frame:IsVisible() ) then
+		if( self.activeUserID and self.activeUserID == user and self.frame:IsVisible() ) then
 			self:LoadData(ElitistGroup.userData[user])
 		end
 	end)
@@ -214,6 +214,16 @@ function Users:LoadData(userData)
 end
 
 local userList = {}
+local function sortNames(a, b)
+	if( UnitExists(userList[a]) == UnitExists(userList[b]) ) then
+		return a < b
+	elseif( UnitExists(userList[a]) ) then
+		return true
+	elseif( UnitExists(userList[b]) ) then
+		return false
+	end
+end
+
 function Users:UpdateDatabasePage()
 	self = Users
 	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
@@ -224,6 +234,7 @@ function Users:UpdateDatabasePage()
 		table.wipe(userList)
 		for name in pairs(ElitistGroup.db.faction.users) do
 			if( search == "" or string.match(string.lower(name), search) ) then
+				userList[name] = string.match(name, "(.-)%-")
 				table.insert(userList, name)
 			end
 		end
@@ -243,7 +254,7 @@ function Users:UpdateDatabasePage()
 			row:SetWidth(rowWidth)
 			row:Show()
 			
-			if( userList[id] ~= ElitistGroup.playerName and UnitExists(string.match(userList[id], "(.-)%-")) ) then
+			if( userList[id] ~= ElitistGroup.playerName and UnitExists(userList[row.userID]) ) then
 				row:SetFormattedText("|cffffffff[%s]|r %s", GROUP, userList[id])
 			else
 				row:SetText(userList[id])
