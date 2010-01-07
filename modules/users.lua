@@ -310,8 +310,11 @@ function Users:UpdateAchievementInfo()
 	local self = Users
 	local totalEntries = 0
 	for id, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( data.tier or ElitistGroup.db.profile.expExpanded[ElitistGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( not ElitistGroup.CHILD_PARENTS[data.childOf] or ElitistGroup.db.profile.expExpanded[ElitistGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
 			totalEntries = totalEntries + 1
+			data.isVisible = true
+		else
+			data.isVisible = nil
 		end
 	end
 	
@@ -324,17 +327,11 @@ function Users:UpdateAchievementInfo()
 	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
 	for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( data.tier or ElitistGroup.db.profile.expExpanded[ElitistGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+		if( data.isVisible ) then
 			id = id + 1
 			if( id >= offset ) then
 				local row = self.frame.achievementFrame.rows[rowID]
-				local rowOffset = 16
-				if( data.tier and not data.childless ) then
-					rowOffset = 30
-				elseif( data.childOf ) then
-					rowOffset = 20
-				end
-				
+
 				-- Setup toggle button
 				if( not data.childless and ( ElitistGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
 					local type = not ElitistGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
@@ -344,8 +341,11 @@ function Users:UpdateAchievementInfo()
 					row.toggle.id = data.id
 					row.toggle:Show()
 				else
+					row.toggle.id = nil
 					row.toggle:Hide()
 				end
+
+				local rowOffset = data.subParent and 20 or ElitistGroup.CHILD_PARENTS[data.childOf] and 10 or data.childOf and 4 or 16
 				
 				local players = data.parent and data.players and string.format(L[" (%d-man)"], data.players) or ""
 				-- Children categories without experience requirements should be shown in the experienceText so we don't get an off looking gap
