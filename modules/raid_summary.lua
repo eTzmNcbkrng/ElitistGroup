@@ -33,10 +33,10 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 			end
 		end
 		
-		summaryData.equipmentBad = equipmentData.totalBad
-		summaryData.enchantsBad = enchantData.totalBad
+		summaryData.equipment = equipmentData.totalBad
+		summaryData.enchants = enchantData.totalBad
 		summaryData.enchantTooltip = enchantTooltip
-		summaryData.gemsBad = gemData.totalBad
+		summaryData.gems = gemData.totalBad
 		summaryData.gemTooltip = gemTooltip
 		summaryData.average = math.floor(equipmentData.totalScore)
 		summaryData.rating = 0
@@ -109,7 +109,7 @@ function Summary:CacheUnit(unit)
 	-- No data, cache gogogogo!
 	elseif( not userSummaryData[playerID] ) then
 		local name, server = UnitName(unit)
-		userSummaryData[playerID] = {name = name, totalRatings = 0, rating = -1, average = -1, equipmentBad = -1, enchantsBad = -1, gemsBad = -1, classToken = select(2, UnitClass(unit)), fullName = server and server ~= "" and string.format("%s-%s", name, server) or name}
+		userSummaryData[playerID] = {name = name, totalRatings = 0, rating = -1, average = -1, equipment = -1, enchants = -1, gems = -1, classToken = select(2, UnitClass(unit)), fullName = server and server ~= "" and string.format("%s-%s", name, server) or name}
 		table.insert(sortedData, playerID)
 		
 		if( ElitistGroup.userData[playerID] ) then
@@ -175,7 +175,7 @@ function Summary:Update()
 				end
 					
 				if( summaryData.totalRatings > 0 ) then
-					row.rating:SetFormattedtext("%.1f", summaryData.rating) 
+					row.rating:SetFormattedText("%.1f", summaryData.rating) 
 					row.rating.tooltip = string.format(L["Average rating %.2f of %d, rated %d times."], summaryData.rating, ElitistGroup.MAX_RATING, summaryData.totalRatings)
 				else
 					row.rating:SetText("---")
@@ -186,38 +186,38 @@ function Summary:Update()
 				row.enchants.disableWrap = nil
 				row.gems.disableWrap = nil
 				
-				if( summaryData.equipmentBad == -1 ) then
+				if( summaryData.equipment == -1 ) then
 					row.equipment:SetText(L["Loading"])
 					row.equipment.tooltip = L["Loading data"]
-				elseif( summaryData.equipmentBad == 0 ) then
+				elseif( summaryData.equipment == 0 ) then
 					row.equipment:SetText(L["Pass"])
 					row.equipment.tooltip = L["Nothing is wrong with this players equipment!"]
 				else
-					row.equipment:SetFormattedText(L["%d bad"], summaryData.equipmentBad)
+					row.equipment:SetFormattedText(L["%d bad"], summaryData.equipment)
 					row.equipment.tooltip = summaryData.equipmentTooltip
 					row.equipment.disableWrap = true
 				end
 
-				if( summaryData.enchantsBad == -1 ) then
+				if( summaryData.enchants == -1 ) then
 					row.enchants:SetText(L["Loading"])
 					row.enchants.tooltip = L["Loading data"]
-				elseif( summaryData.enchantsBad == 0 ) then
+				elseif( summaryData.enchants == 0 ) then
 					row.enchants:SetText(L["Pass"])
 					row.enchants.tooltip = L["Nothing is wrong with this players enchants!"]
 				else
-					row.enchants:SetFormattedText(L["%d bad"], summaryData.enchantsBad)
+					row.enchants:SetFormattedText(L["%d bad"], summaryData.enchants)
 					row.enchants.tooltip = summaryData.enchantTooltip
 					row.enchants.disableWrap = true
 				end
 
-				if( summaryData.gemsBad == -1 ) then
+				if( summaryData.gems == -1 ) then
 					row.gems:SetText(L["Loading"])
 					row.gems.tooltip = L["Loading data"]
-				elseif( summaryData.gemsBad == 0 ) then
+				elseif( summaryData.gems == 0 ) then
 					row.gems:SetText(L["Pass"])
 					row.gems.tooltip = L["Nothing is wrong with this players gems!"]
 				else
-					row.gems:SetFormattedText(L["%d bad"], summaryData.gemsBad)
+					row.gems:SetFormattedText(L["%d bad"], summaryData.gems)
 					row.gems.tooltip = summaryData.gemTooltip
 					row.gems.disableWrap = true
 				end
