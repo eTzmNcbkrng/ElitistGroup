@@ -302,7 +302,7 @@ local function loadData()
 		-- Items with agility are useful for all physical classes really
 		{type = "physical-all",	default = "AGILITY@"},
 		-- Special matches for physical dps and trinkets
-		{type = "physical-dps", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
+		{type = "physical-dps", default = "ARMOR_PENETRATION_RATING@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 		-- Ranged AP, ranged crit, ranged hit are always ranged
 		{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
 		-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
@@ -312,7 +312,7 @@ local function loadData()
 		-- Expertise is a melee stat, but it's used by both dps and tanks
 		{type = "melee",		default = "EXPERTISE_RATING@"},
 		-- Agility, armor pen, general AP are physical DPS
-		{type = "physical-dps",	default = "ARMOR_PENETRATION_RATING@ATTACK_POWER@"},
+		{type = "physical-dps",	default = "ATTACK_POWER@"},
 		-- Hit melee rating, melee AP, melee crit rating are always melee dps items
 		{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@", trinkets = "MELEE_ATTACK@"},
 		-- Special matches for tank/dps both being allowed to gem hit
