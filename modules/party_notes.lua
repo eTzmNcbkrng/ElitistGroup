@@ -1,5 +1,5 @@
 local ElitistGroup = select(2, ...)
-local History = ElitistGroup:NewModule("History", "AceEvent-3.0")
+local History = ElitistGroup:NewModule("PartyHistory", "AceEvent-3.0")
 local L = ElitistGroup.L
 
 local AceGUI = LibStub("AceGUI-3.0")
