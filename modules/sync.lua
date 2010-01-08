@@ -1,11 +1,11 @@
 -- Some of the sanity checks in this are a bit unnecessary and me being super paranoid
 -- but I know how much people will love to try and break this, so I am going to give them as little way to break it as possible
 local ElitistGroup = select(2, ...)
-local Sync = ElitistGroup:NewModule("Sync", "AceEvent-3.0", "AceEvent-3.0", "AceTimer-3.0", "AceComm-3.0")
+local Sync = ElitistGroup:NewModule("Sync", "AceEvent-3.0", "AceComm-3.0")
 local L = ElitistGroup.L
 local playerName = UnitName("player")
-local combatQueue, requestThrottle, cachedPlayerData, blockOfflineMessage = {}, {}
-local COMM_PREFIX = "SMPGRP"
+local combatQueue, requestThrottle, requestedInfo, cachedPlayerData, blockOfflineMessage = {}, {}, {}
+local COMM_PREFIX = "ELITG"
 local MAX_QUEUE = 20
 local REQUEST_TIMEOUT = 10
 -- This should be raised most likely, but for now only allow a notes or gear request every 5 seconds from someoneone
@@ -16,6 +16,7 @@ function Sync:Setup()
 		self:RegisterComm(COMM_PREFIX)
 		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetCacheData")
 		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetCacheData")
+		self:RegisterEvent("PLAYER_LEAVING_WORLD", "ResetThrottle")
 	else
 		self:UnregisterComm(COMM_PREFIX)
 		self:UnregisterAllEvents()
@@ -29,8 +30,9 @@ function Sync:ResetCacheData()
 	cachedPlayerData = nil
 end
 
-function Sync:ResetThrottle(sender)
-	requestThrottle[sender] = nil
+function Sync:ResetThrottle()
+	requestThrottle = {}
+	requestedInfo = {}
 end
 
 local function getFullName(name)
@@ -53,6 +55,7 @@ function Sync:VerifyTable(tbl, checkTbl)
 end
 
 -- Not quite sure how this should get implemented, will add it later since it's of less importance
+--[[
 local function filterOffline(self, event, msg)
 	return blockOfflineMessage == msg
 end
@@ -65,11 +68,20 @@ end
 function Sync:DisableOfflineBlock()
 	ChatFrame_RemoveMessageEventFilter("CHAT_MSG_SYSTEM", filterOffline)
 end
+]]
 
 -- This will have to be changed, I'm not quite sure a good way of doing it yet
-function Sync:RequestSuccessful(event, type, name)
-	ElitistGroup:Print(string.format(L["Successfully got data on %s, type /elitistgroup %s to view!"], name, name))
-	self:UnregisterMessage("SG_DATA_UPDATED")
+function Sync:SG_DATA_UPDATED(event, type, name)
+	if( requestedInfo[name] ) then
+		requestedInfo[name] = nil
+		ElitistGroup:Print(string.format(L["Successfully got data on %s, type /elitistgroup %s to view!"], name, name))
+	end
+	
+	local hasData
+	for key in pairs(requestedInfo) do hasData = true break end
+	if( not hasData ) then
+		self:UnregisterMessage("SG_DATA_UPDATED")
+	end
 end
 
 local function verifyInput(name, forceServer)
@@ -99,27 +111,30 @@ function Sync:SendCmdGear(name)
 	end
 end
 
+-- Request somebodies gear
 function Sync:RequestGear(name)
 	local name = verifyInput(name)
 	if( name ) then
+		requestedInfo[name] = true
 		self:CommMessage("REQGEAR", "WHISPER", name)
-		self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
-		self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
+		self:RegisterMessage("SG_DATA_UPDATED")
 	end
 end
 
+-- Request the notes on a specific person
 function Sync:RequestNotes(name)
 	local name = verifyInput(name, true)
 	if( name and not IsInGuild() ) then
 		ElitistGroup:Print(L["You need to be in a guild to request notes on players."])
 		return
 	elseif( name ) then
+		requestedInfo[name] = true
 		self:CommMessage(string.format("REQNOTES@%s", name), "GUILD")
-		self:RegisterMessage("SG_DATA_UPDATED", "RequestSuccessful")
-		self:ScheduleTimer("UnregisterMessage", REQUEST_TIMEOUT, "SG_DATA_UPDATED")
+		self:RegisterMessage("SG_DATA_UPDATED")
 	end
 end
 
+-- Send our gear to somebody else
 function Sync:SendGearData(sender, override)
 	if( not override and not ElitistGroup.db.profile.comm.gearRequests ) then return end
 	
@@ -132,12 +147,11 @@ function Sync:SendGearData(sender, override)
 	self:CommMessage(cachedPlayerData, "WHISPER", sender)
 end
 
+-- Received a notes request, send off whatever we have
 function Sync:ParseNotesRequest(sender, ...)
 	-- To pull note data, we do have to unserialize stuff, so we probably shouldn't let people request more than 5 notes at a time
 	-- since it means we can delay it on the clients side too to prevent any lag
 	if( select("#", ...) == 0 or select("#", ...) > 5 ) then return end
-	requestThrottle[sender] = true
-	self:ScheduleTimer("ResetThrottle", REQUEST_THROTTLE, sender)
 
 	local tempList = {}
 	local queuedData = ""
@@ -159,10 +173,9 @@ function Sync:ParseNotesRequest(sender, ...)
 	end
 end
 
+-- Parse the gear somebody sent
 function Sync:ParseSentGear(sender, data)
 	if( not data ) then return end
-	requestThrottle[sender] = true
-	self:ScheduleTimer("ResetThrottle", REQUEST_THROTTLE, sender)
 	
 	local sentData, msg = loadstring("return " .. data)
 	if( not sentData ) then
@@ -218,6 +231,7 @@ function Sync:ParseSentGear(sender, data)
 	self:SendMessage("SG_DATA_UPDATED", "gear", senderName)
 end
 
+-- Parse the notes somebody sent us
 function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	senderTime = tonumber(senderTime)
 	if( not senderTime or not data ) then return end
@@ -258,6 +272,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	end
 end
 
+-- Handle the actual comm
 function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	if( prefix ~= COMM_PREFIX or sender == playerName or not ElitistGroup.db.profile.comm.areas[distribution] ) then return end
 	if( InCombatLockdown() ) then
@@ -275,24 +290,25 @@ function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	-- REQNOTES:playerA@playerBplayerC@etc - Request notes on the given players
 	elseif( cmd == "REQNOTES" and args ) then
 		self:ParseNotesRequest(sender, string.split("@", args))
-	elseif( cmd == "GEAR" and args and not requestThrottle[sender] ) then
+	-- GEAR:<serialized table of the persons gear>
+	elseif( cmd == "GEAR" and args and ( not requestThrottle[sender] or requestThrottle[sender] < GetTime() ) ) then
+		requestThrottle[sender] = GetTime() + REQUEST_THROTTLE
 		self:ParseSentGear(sender, string.split("@", args))
-	elseif( cmd == "NOTES" and args and not requestThrottle[sender] ) then
+	-- NOTES:<serialized table of the notes on the people requested through REQNOTES
+	elseif( cmd == "NOTES" and args and ( not requestThrottle[sender] or requestThrottle[sender] < GetTime() ) ) then
+		requestThrottle[sender] = GetTime() + REQUEST_THROTTLE
 		self:ParseSentNotes(sender, currentTime or time(), string.split("@", args))
 	end
 end
 
--- Rather than instantly processing the queue, will slowly process it over 6 seconds so the client doesn't lock up at all
+-- If the fact that the comm is not delayed causes issues, then will have to fix it
 function Sync:PLAYER_REGEN_ENABLED()
 	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
 	
 	for i=#(combatQueue), 1, -1 do
-		self:ScheduleTimer("DelayedComm", i * 0.3, table.remove(combatQueue, i))
+		local data = table.remove(combatQueue, i)
+		self:OnCommReceived(COMM_PREFIX, data[1], data[2], data[3], data[4])
 	end
-end
-
-function Sync:DelayedComm(data)
-	self:OnCommReceived(COMM_PREFIX, data[1], data[2], data[3], data[4])
 end
 
 function Sync:CommMessage(message, channel, target)
