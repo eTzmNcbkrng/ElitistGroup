@@ -54,7 +54,7 @@ function History:UpdateUnitData(unit)
 	local roleText = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or ""
 	
 	groupData[partyID].role = role
-	groupData[partyID].roletext = roleText
+	groupData[partyID].talentText = roleText
 end
 
 function History:UNIT_NAME_UPDATE(event, unit)

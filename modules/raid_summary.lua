@@ -28,7 +28,7 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 			for _, itemLink in pairs(userData.equipment) do
 				local fullItemLink = select(2, GetItemInfo(itemLink))
 				if( fullItemLink and equipmentData[itemLink] ) then
-					summaryData.equipmentTooltip = summaryData.equipmentTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.TALENT_TYPES[equipmentData[itemLink]] or equipmentData[itemLink])
+					summaryData.equipmentTooltip = summaryData.equipmentTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
 		end
@@ -385,7 +385,7 @@ function Summary:CreateUI()
 	local function viewDetailedInfo(self)
 		local userData = ElitistGroup.userData[self.playerID]
 		if( userData ) then
-			ElitistGroup.modules.Users:LoadData(userData)
+			ElitistGroup.modules.Users:Show(userData)
 		end
 	end
 	

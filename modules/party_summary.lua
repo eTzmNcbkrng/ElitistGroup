@@ -158,11 +158,11 @@ function Summary:UpdateSingle(row)
 		if( not userData.unspentPoints ) then
 			row.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
 			row.talentInfo.icon:SetTexture(specIcon)
-			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
+			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
 		else
 			row.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
 			row.talentInfo.icon:SetTexture(specIcon)
-			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
+			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
 		end
 		
 		-- Add trusted info of course
@@ -189,7 +189,7 @@ function Summary:UpdateSingle(row)
 			for _, itemLink in pairs(userData.equipment) do
 				local fullItemLink = select(2, GetItemInfo(itemLink))
 				if( fullItemLink and equipmentData[itemLink] ) then
-					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.TALENT_TYPES[equipmentData[itemLink]] or equipmentData[itemLink])
+					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
 
@@ -257,7 +257,7 @@ end
 local function OnClick(self)
 	local userData = ElitistGroup.userData[self.playerID]
 	if( userData ) then
-		ElitistGroup.modules.Users:LoadData(userData)
+		ElitistGroup.modules.Users:Show(userData)
 	end
 end
 

@@ -123,7 +123,7 @@ end
 function Scan:INSPECT_ACHIEVEMENT_READY()
 	if( pending.playerID and pending.achievements and ElitistGroup.userData[pending.playerID] ) then
 		local userData = ElitistGroup.userData[pending.playerID]
-		for achievementID in pairs(ElitistGroup.VALID_ACHIEVEMENTS) do
+		for achievementID in pairs(ElitistGroup.Dungeons.achievements) do
 			local id, _, _, _, _, _, _, _, flags = GetAchievementInfo(achievementID)
 			if( flags == ACHIEVEMENT_FLAGS_STATISTIC ) then
 				userData.achievements[achievementID] = tonumber(GetComparisonStatistic(id)) or nil
@@ -156,7 +156,7 @@ end
 
 function Scan:GetTalentData(classToken, inspect)
 	local specRole
-	local forceData = ElitistGroup.FORCE_SPECROLE[classToken]
+	local forceData = ElitistGroup.Talents.specOverride[classToken]
 	local activeTalentGroup = GetActiveTalentGroup(inspect)
 	if( forceData ) then
 		local talentMatches = 0
@@ -204,7 +204,7 @@ function Scan:UpdateUnitData(unit)
 	userData.scanned = time()
 
 	table.wipe(userData.equipment)
-	for itemType in pairs(ElitistGroup.INVENTORY_TO_TYPE) do
+	for itemType in pairs(ElitistGroup.Items.inventoryToID) do
 		local inventoryID = GetInventorySlotInfo(itemType)
 		local itemLink = GetInventoryItemLink(unit, inventoryID)
 		
@@ -236,7 +236,7 @@ function Scan:UpdatePlayerData()
 	userData.specRole = specRole
 
 	table.wipe(userData.achievements)
-	for achievementID in pairs(ElitistGroup.VALID_ACHIEVEMENTS) do
+	for achievementID in pairs(ElitistGroup.Dungeons.achievements) do
 		local id, _, _, completed, _, _, _, _, flags = GetAchievementInfo(achievementID)
 		if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == ACHIEVEMENT_FLAGS_STATISTIC ) then
 			userData.achievements[id] = tonumber(GetStatistic(id)) or nil

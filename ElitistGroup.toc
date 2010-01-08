@@ -29,7 +29,7 @@ localization\zhCN.lua
 localization\zhTW.lua
 
 ElitistGroup.lua
-data\data.lua
+data\talent_data.lua
 data\dungeon_data.lua
 data\item_data.lua
 

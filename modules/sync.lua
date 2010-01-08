@@ -190,14 +190,14 @@ function Sync:ParseSentGear(sender, data)
 	
 	-- Verify gear
 	for key, value in pairs(sentData.equipment) do
-		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > ElitistGroup.MAX_LINK_LENGTH or not ElitistGroup.VALID_INVENTORY_SLOTS ) then
+		if( type(key) ~= "number" or type(value) ~= "string" or not string.match(value, "item:(%d+)") or string.len(value) > ElitistGroup.MAX_LINK_LENGTH or not ElitistGroup.Items.validInventorySlots ) then
 			sentData.equipment[key] = nil
 		end
 	end
 	
 	-- Verify achievements
 	for key, value in pairs(sentData.achievements) do
-		if( type(key) ~= "number" or type(value) ~= "number" or not ElitistGroup.VALID_ACHIEVEMENTS[key] ) then
+		if( type(key) ~= "number" or type(value) ~= "number" or not ElitistGroup.Dungeons.achievements[key] ) then
 			sentData.achievements[key] = nil
 		end
 	end

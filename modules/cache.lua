@@ -59,9 +59,9 @@ emptyGemMetaTable = {
 gemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = link and tonumber(string.match(link, "item:(%d+)"))
-		if( itemID and ElitistGroup.OVERRIDE_ITEMS[itemID] ) then
-			rawset(tbl, link, ElitistGroup.OVERRIDE_ITEMS[itemID])
-			return ElitistGroup.OVERRIDE_ITEMS[itemID]
+		if( itemID and ElitistGroup.Items.itemOverrides[itemID] ) then
+			rawset(tbl, link, ElitistGroup.Items.itemOverrides[itemID])
+			return ElitistGroup.Items.itemOverrides[itemID]
 		elseif( not itemID or not GetItemInfo(itemID) ) then
 			rawset(tbl, link, "unknown")
 			return "unknown"
@@ -75,11 +75,11 @@ gemMetaTable = {
 
 		for i=1, tooltip:NumLines() do
 			local text = string.lower(_G["ElitistGroupTooltipTextLeft" .. i]:GetText())
-			for i=1, #(ElitistGroup.ORDERED_STAT_MAP) do
-				local key = ElitistGroup.ORDERED_STAT_MAP[i]
-				if( string.match(text, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
+			for i=1, #(ElitistGroup.Items.orderedStatMap) do
+				local key = ElitistGroup.Items.orderedStatMap[i]
+				if( string.match(text, ElitistGroup.Items.safeStatMatch[key]) ) then
 					foundData = true
-					statCache[ElitistGroup.REVERSE_STAT_MAP[key]] = true
+					statCache[ElitistGroup.Items.reverseStatMap[key]] = true
 				end
 			end
 			
@@ -91,8 +91,8 @@ gemMetaTable = {
 			return "unknown"
 		end
 
-		for i=1, #(ElitistGroup.STAT_DATA) do
-			local data = ElitistGroup.STAT_DATA[i]
+		for i=1, #(ElitistGroup.Items.statTalents) do
+			local data = ElitistGroup.Items.statTalents[i]
 			local statString = (data.default or "") .. (data.gems or "")
 			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
@@ -114,7 +114,7 @@ gemMetaTable = {
 enchantMetaTable = {
 	__index = function(tbl, link)
 		local enchantID = tonumber(link)
-		local type = not enchantID and "unknown" or enchantID == 0 and "none" or ElitistGroup.OVERRIDE_ENCHANTS[enchantID]
+		local type = not enchantID and "unknown" or enchantID == 0 and "none" or ElitistGroup.Items.enchantOverrides[enchantID]
 		if( type ) then
 			rawset(tbl, link, type)
 			return type
@@ -153,11 +153,11 @@ enchantMetaTable = {
 		-- Parse out the stats
 		local foundData
 		table.wipe(statCache)
-		for i=1, #(ElitistGroup.ORDERED_STAT_MAP) do
-			local key = ElitistGroup.ORDERED_STAT_MAP[i]
-			if( string.match(enchantText, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
+		for i=1, #(ElitistGroup.Items.orderedStatMap) do
+			local key = ElitistGroup.Items.orderedStatMap[i]
+			if( string.match(enchantText, ElitistGroup.Items.safeStatMatch[key]) ) then
 				foundData = true
-				statCache[ElitistGroup.REVERSE_STAT_MAP[key]] = true
+				statCache[ElitistGroup.Items.reverseStatMap[key]] = true
 			end
 		end
 		
@@ -167,8 +167,8 @@ enchantMetaTable = {
 		end
 		
 		-- Now figure out wehat spec type
-		for i=1, #(ElitistGroup.STAT_DATA) do
-			local data = ElitistGroup.STAT_DATA[i]
+		for i=1, #(ElitistGroup.Items.statTalents) do
+			local data = ElitistGroup.Items.statTalents[i]
 			local statString = (data.default or "") .. (data.enchants or "")
 			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
@@ -207,7 +207,7 @@ local function getRelicSpecType(link)
 	-- Some relics can be forced into a type by spell, eg Rejuvenation means it's obviously for healers
 	-- some relics... actually realy only ferals, are classified as hybrid by doing two things which
 	-- is where the stat scanning comes into play
-	for spell, type in pairs(ElitistGroup.RELIC_SPELLTYPES) do
+	for spell, type in pairs(ElitistGroup.Items.relicSpells) do
 		if( string.match(equipText, spell) ) then
 			return type
 		end
@@ -219,13 +219,13 @@ end
 itemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = tonumber(string.match(link, "item:(%d+)"))
-		if( itemID and ElitistGroup.OVERRIDE_ITEMS[itemID] ) then
-			rawset(tbl, link, ElitistGroup.OVERRIDE_ITEMS[itemID])
-			return ElitistGroup.OVERRIDE_ITEMS[itemID]
+		if( itemID and ElitistGroup.Items.itemOverrides[itemID] ) then
+			rawset(tbl, link, ElitistGroup.Items.itemOverrides[itemID])
+			return ElitistGroup.Items.itemOverrides[itemID]
 		end
 		
 		local inventoryType = select(9, GetItemInfo(link))
-		local equipType = inventoryType and ElitistGroup.EQUIP_TO_TYPE[inventoryType]
+		local equipType = inventoryType and ElitistGroup.Items.equipToType[inventoryType]
 		if( not equipType ) then 
 			rawset(tbl, link, "unknown")
 			return "unknown"
@@ -263,9 +263,9 @@ itemMetaTable = {
 			
 			-- Yay we found the enchant proc
 			if( statText ) then
-				for i=1, #(ElitistGroup.ORDERED_STAT_MAP) do
-					local key = ElitistGroup.ORDERED_STAT_MAP[i]
-					if( string.match(statText, ElitistGroup.SAFE_STAT_MATCH[key]) ) then
+				for i=1, #(ElitistGroup.Items.orderedStatMap) do
+					local key = ElitistGroup.Items.orderedStatMap[i]
+					if( string.match(statText, ElitistGroup.Items.safeStatMatch[key]) ) then
 						statCache[key] = true
 					end
 				end
@@ -273,12 +273,12 @@ itemMetaTable = {
 		end
 		
 		-- Now scan and figure out what the spec is
-		for i=1, #(ElitistGroup.STAT_DATA) do
-			local data = ElitistGroup.STAT_DATA[i]
+		for i=1, #(ElitistGroup.Items.statTalents) do
+			local data = ElitistGroup.Items.statTalents[i]
 			local statString = (data.default or "") .. (data[equipType] or "")
 			if( statString ~= "" ) then
 				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[ElitistGroup.STAT_MAP[statKey]] ) then
+					if( statCache[ElitistGroup.Items.statMap[statKey]] ) then
 						rawset(tbl, link, data.type)
 						return data.type
 					end
