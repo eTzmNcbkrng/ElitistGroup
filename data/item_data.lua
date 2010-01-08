@@ -140,6 +140,7 @@ local function loadData()
 
 	-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 	ElitistGroup.Items.enchantOverrides = {
+		[3852] = "tank/pvp", -- Greater Inscription of the Gladiator
 		[3225] = "dps", -- Executioner
 		[3870] = "tank/pvp", -- Blood Draining
 		[3869] = "tank", -- Blade Ward
@@ -268,6 +269,7 @@ local function loadData()
 		HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["chance on melee attack"],
 		CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"], RANGED_CRITICAL_STRIKE = L["ranged critical"],
 		MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
+		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"],
 	}
 
 	ElitistGroup.Items.reverseStatMap = {}
