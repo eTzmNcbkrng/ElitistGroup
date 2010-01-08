@@ -1,33 +1,52 @@
 local ElitistGroup = select(2, ...)
 local Users = ElitistGroup:NewModule("Users", "AceEvent-3.0")
 local L = ElitistGroup.L
-
+local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
+local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips, achievementTooltips, tempList
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18
-local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips
+local DungeonData = ElitistGroup.Dungeons
 
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		local self = Users
 		if( self.activeUserID and self.activeUserID == user and self.frame:IsVisible() ) then
-			self:LoadData(ElitistGroup.userData[user])
+			self:Show(ElitistGroup.userData[user])
 		end
 	end)
 end
 
-function Users:LoadData(userData)
-	if( not userData ) then return end
+local function sortAchievements(a, b)
+	local aName, _, _, _, _, _, _, aFlags = select(2, GetAchievementInfo(a))
+	local bName, _, _, _, _, _, _, bFlags = select(2, GetAchievementInfo(b))
+	local aEarned = Users.activeData.achievements[a] or 0
+	local bEarned = Users.activeData.achievements[b] or 0
+	local aStatistic = bit.band(aFlags, ACHIEVEMENT_FLAGS_STATISTIC) > 0
+	local bStatistic = bit.band(bFlags, ACHIEVEMENT_FLAGS_STATISTIC) > 0
 	
+	if( not aStatistic and not bStatistic ) then
+		return aEarned == bEarned and aName < bName or aEarned > bEarned
+	elseif( not aStatistic ) then
+		return true
+	elseif( not bStatistic ) then
+		return false
+	end
+	
+	return aEarned > bEarned
+end
+
+function Users:Show(userData)
+	if( not userData ) then return end
 	self:CreateUI()
+
 	local frame = self.frame
 
 	self.activeData = userData
 	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
 
 	-- Build score as well as figure out their score
-	ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData, gemTooltips, enchantTooltips)
+	ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
 
 	if( not userData.pruned ) then
 		equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
@@ -47,7 +66,7 @@ function Users:LoadData(userData)
 					slot.equippedItem = itemLink
 					slot.gemTooltip = gemTooltips[itemLink]
 					slot.enchantTooltip = enchantTooltips[itemLink]
-					slot.itemTalentType = ElitistGroup.TALENT_TYPES[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
+					slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
 					slot.typeText:SetText(slot.itemTalentType)
 					slot:Enable()
@@ -91,6 +110,8 @@ function Users:LoadData(userData)
 				slot:Show()
 			end
 		end
+		
+		ElitistGroup:ReleaseTables(enchantTooltips, gemTooltips)
 				
 		-- Now combine these too, in the same way you combine to make a better and more powerful robot
 		local equipSlot = frame.gearFrame.equipSlots[18]
@@ -102,7 +123,7 @@ function Users:LoadData(userData)
 		equipSlot.tooltip = L["Average item level of all the players equipped items, with modifiers for blue or lower quality items."]
 		equipSlot:Show()
 	else
-		equipmentData, gemData, enchantData, gemTooltips, enchantTooltips = nil, nil, nil, nil, nil
+		equipmentData, gemData, enchantData = nil, nil, nil
 		
 		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
 		frame.pruneInfo:Show()
@@ -126,11 +147,11 @@ function Users:LoadData(userData)
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
 			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		else
 			frame.userFrame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.TALENT_ROLES[specType])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		end
 	else
@@ -165,33 +186,63 @@ function Users:LoadData(userData)
 	end
 	
 	-- Build the necessary experience data based on the players achievements, this is fun!
-	self.experienceData = {}
-	for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
-		self.experienceData[data.id] = self.experienceData[data.id] or 0
+	if( not userData.pruned ) then
+		tempList = ElitistGroup:GetTable()
+		achievementTooltips = {}
+		self.experienceData = {}
+		for _, data in pairs(DungeonData.experience) do
+			self.experienceData[data.id] = self.experienceData[data.id] or 0
 				
-		for id, points in pairs(data) do
-			if( type(id) == "number" and userData.achievements[id] ) then
-				self.experienceData[data.id] = self.experienceData[data.id] + (points * userData.achievements[id])
+			for id, points in pairs(data) do
+				if( type(id) == "number" and userData.achievements[id] ) then
+					self.experienceData[data.id] = self.experienceData[data.id] + (points * userData.achievements[id])
+				end
+			end
+			
+			-- Add the childs score to the parents
+			if( not data.parent ) then
+				self.experienceData[data.childOf] = (self.experienceData[data.childOf] or 0) + self.experienceData[data.id]
+			end
+			
+			-- Cascade the scores from this one to whatever it's supposed to
+			if( data.cascade ) then
+				self.experienceData[data.cascade] = (self.experienceData[data.cascade] or 0) + self.experienceData[data.id]
+			end
+			
+			-- Build the tooltip, caching it because it really does not need to be recalcualted that often
+			table.wipe(tempList)
+			for achievementID, points in pairs(data) do
+				if( type(achievementID) == "number" and type(points) == "number" ) then
+					table.insert(tempList, achievementID)
+				end
+			end
+			
+			table.sort(tempList, sortAchievements)
+			
+			achievementTooltips[data.id] = ""
+			for i=1, #(tempList) do
+				local achievementID = tempList[i]
+				local name, _, _, _, _, _, _, flags = select(2, GetAchievementInfo(achievementID))
+				name = string.trim(string.gsub(name, "%((.-)%)$", ""))
+				
+				local earned = userData.achievements[achievementID]
+				if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == ACHIEVEMENT_FLAGS_STATISTIC ) then
+					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d]|r %s", earned or 0, name)
+				else
+					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s]|r %s", earned == 1 and YES or NO, name)
+				end
 			end
 		end
 		
-		-- Add the childs score to the parents
-		if( not data.parent ) then
-			self.experienceData[data.childOf] = (self.experienceData[data.childOf] or 0) + self.experienceData[data.id]
-		end
-		
-		-- Cascade the scores from this one to whatever it's supposed to
-		if( data.cascade ) then
-			self.experienceData[data.cascade] = (self.experienceData[data.cascade] or 0) + self.experienceData[data.id]
-		end
+		ElitistGroup:ReleaseTables(tempList)
 	end
-	
+		
 	-- Setup dungeon info
 	-- Find where the players score lets them into at least
 	local lockedScore
-	if( equipmentData ) then
-		for i=#(ElitistGroup.DUNGEON_DATA), 1, -4 do
-			local score = ElitistGroup.DUNGEON_DATA[i - 2]
+	if( not userData.pruned ) then
+		for i=#(DungeonData.suggested), 1, -4 do
+			local score = DungeonData.suggested[i - 2]
 			if( lockedScore and lockedScore ~= score ) then
 				self.forceOffset = math.ceil((i + 1) / 4)
 				break
@@ -309,8 +360,9 @@ end
 function Users:UpdateAchievementInfo()
 	local self = Users
 	local totalEntries = 0
-	for id, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
-		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( not ElitistGroup.CHILD_PARENTS[data.childOf] or ElitistGroup.db.profile.expExpanded[ElitistGroup.CHILD_PARENTS[data.childOf]] ) ) ) then
+	for id, data in pairs(DungeonData.experience) do
+		self.experienceData[data.id] = self.experienceData[data.id] or 0
+		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( not DungeonData.experienceParents[data.childOf] or ElitistGroup.db.profile.expExpanded[DungeonData.experienceParents[data.childOf]] ) ) ) then
 			totalEntries = totalEntries + 1
 			data.isVisible = true
 		else
@@ -326,14 +378,14 @@ function Users:UpdateAchievementInfo()
 	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
 	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
-	for _, data in pairs(ElitistGroup.EXPERIENCE_POINTS) do
+	for _, data in pairs(DungeonData.experience) do
 		if( data.isVisible ) then
 			id = id + 1
 			if( id >= offset ) then
 				local row = self.frame.achievementFrame.rows[rowID]
 
 				-- Setup toggle button
-				if( not data.childless and ( ElitistGroup.CHILD_PARENTS[data.id] or data.parent ) ) then
+				if( not data.childless and ( DungeonData.experienceParents[data.id] or data.parent ) ) then
 					local type = not ElitistGroup.db.profile.expExpanded[data.id] and "Plus" or "Minus"
 					row.toggle:SetNormalTexture("Interface\\Buttons\\UI-" .. type .. "Button-UP")
 					row.toggle:SetPushedTexture("Interface\\Buttons\\UI-" .. type .. "Button-DOWN")
@@ -345,7 +397,7 @@ function Users:UpdateAchievementInfo()
 					row.toggle:Hide()
 				end
 
-				local rowOffset = data.subParent and 20 or ElitistGroup.CHILD_PARENTS[data.childOf] and 10 or data.childOf and 4 or 16
+				local rowOffset = data.subParent and 20 or DungeonData.experienceParents[data.childOf] and 10 or data.childOf and 4 or 16
 				
 				local players = data.parent and data.players and string.format(L[" (%d-man)"], data.players) or ""
 				-- Children categories without experience requirements should be shown in the experienceText so we don't get an off looking gap
@@ -365,7 +417,8 @@ function Users:UpdateAchievementInfo()
 						row.nameText:SetFormattedText("[|cff%02x%02x00%d%%|r] %s%s%s", r, g, percent * 100, heroicIcon, data.name, players)
 					end
 					
-					row.tooltip = string.format(L["%s: %d/%d in %d-man %s (%s)"], experienceText, self.experienceData[data.id], data.experienced, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
+					row.tooltip = string.format(L["%s - %d-man %s (%s)"], experienceText, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
+					row.expandedInfo = achievementTooltips[data.id]
 				end
 				
 				row:SetWidth(rowWidth - rowOffset)
@@ -415,9 +468,9 @@ function Users:UpdateNoteInfo()
 	end
 end
 
-local TOTAL_DUNGEONS = #(ElitistGroup.DUNGEON_DATA) / 4
 function Users:UpdateDungeonInfo()
 	local self = Users
+	local TOTAL_DUNGEONS = #(DungeonData.suggested) / 4
 
 	FauxScrollFrame_Update(self.frame.dungeonFrame.scroll, TOTAL_DUNGEONS, MAX_DUNGEON_ROWS - 1, 28)
 	if( self.forceOffset ) then
@@ -431,20 +484,20 @@ function Users:UpdateDungeonInfo()
 
 	local id, rowID = 1, 1
 	local offset = FauxScrollFrame_GetOffset(self.frame.dungeonFrame.scroll)
-	for dataID=1, #(ElitistGroup.DUNGEON_DATA), 4 do
+	for dataID=1, #(DungeonData.suggested), 4 do
 		if( id >= offset ) then
 			local row = self.frame.dungeonFrame.rows[rowID]
 			
-			local name, score, players, type = ElitistGroup.DUNGEON_DATA[dataID], ElitistGroup.DUNGEON_DATA[dataID + 1], ElitistGroup.DUNGEON_DATA[dataID + 2], ElitistGroup.DUNGEON_DATA[dataID + 3]
-			local percent = 1.0 - ((score - ElitistGroup.DUNGEON_MIN) / ElitistGroup.DUNGEON_DIFF)
+			local name, score, players, type = DungeonData.suggested[dataID], DungeonData.suggested[dataID + 1], DungeonData.suggested[dataID + 2], DungeonData.suggested[dataID + 3]
+			local percent = 1.0 - ((score - DungeonData.minLevel) / DungeonData.levelDiff)
 			-- This shows colors relative to how close the player is to the score, not sure if we want to use this.
-			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / ElitistGroup.DUNGEON_DIFF), 1), 0)
+			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / DungeonData.levelDiff), 1), 0)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local heroicIcon = (type == "heroic" or type == "hard") and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
 			
 			row.dungeonName:SetFormattedText("%s|cff%02x%02x00%s|r", heroicIcon, r, g, name)
-			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %d-man (%s)"], r, g, score, players, ElitistGroup.DUNGEON_TYPES[type])
+			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %d-man (%s)"], r, g, score, players, DungeonData.types[type])
 			row:Show()
 
 			rowID = rowID + 1
@@ -462,6 +515,15 @@ function Users:CreateUI()
 		return
 	end
 
+	local function OnAchievementEnter(self)
+		if( self.tooltip ) then
+			GameTooltip:SetOwner(self.toggle:IsVisible() and self.toggle or self, "ANCHOR_LEFT")
+			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, true)
+			GameTooltip:AddLine(self.expandedInfo)
+			GameTooltip:Show()
+		end
+	end
+	
 	local extraTooltip
 	local function OnEnter(self)
 		if( self.tooltip ) then
@@ -666,7 +728,7 @@ function Users:CreateUI()
 	end)
 
 	local function viewUserData(self)
-		Users:LoadData(ElitistGroup.userData[self.userID])
+		Users:Show(ElitistGroup.userData[self.userID])
 	end
 
 	frame.databaseFrame.rows = {}
@@ -760,7 +822,7 @@ function Users:CreateUI()
 
 		if( inventoryMap[i] ) then
 			slot.inventorySlot = inventoryMap[i]
-			slot.inventoryType = ElitistGroup.INVENTORY_TO_TYPE[inventoryMap[i]]
+			slot.inventoryType = ElitistGroup.Items.inventoryToID[inventoryMap[i]]
 			slot.inventoryID, slot.emptyTexture, slot.checkRelic = GetInventorySlotInfo(inventoryMap[i])
 		end
 		
@@ -920,7 +982,7 @@ function Users:CreateUI()
 	frame.achievementFrame.rows = {}
 	for i=1, MAX_ACHIEVEMENT_ROWS do
 		local button = CreateFrame("Button", nil, frame.achievementFrame)
-		button:SetScript("OnEnter", OnEnter)
+		button:SetScript("OnEnter", OnAchievementEnter)
 		button:SetScript("OnLeave", OnLeave)
 		button:SetScript("OnClick", toggleCategory)
 		button:SetHeight(14)
