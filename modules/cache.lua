@@ -113,7 +113,7 @@ gemMetaTable = {
 -- Because of how engineering enchants are done, we cannot scan for them. They have to be manually overridden cause Blizzard are jerks.
 enchantMetaTable = {
 	__index = function(tbl, link)
-		local enchantID = tonumber(string.match(link, "item:%d+:(%d+)"))
+		local enchantID = tonumber(link)
 		local type = not enchantID and "unknown" or enchantID == 0 and "none" or ElitistGroup.OVERRIDE_ENCHANTS[enchantID]
 		if( type ) then
 			rawset(tbl, link, type)

@@ -163,24 +163,6 @@ function ElitistGroup:GetPlayerSpec(playerData)
 	return playerData.specRole or self.TREE_DATA[playerData.classToken][treeOffset], self.TREE_DATA[playerData.classToken][treeOffset + 1], self.TREE_DATA[playerData.classToken][treeOffset + 2] 
 end
 
-function ElitistGroup:IsValidItem(itemLink, playerData)
-	local spec = self:GetPlayerSpec(playerData)
-	local itemType = self.ITEM_TALENTTYPE[itemLink]
-	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
-end
-
-function ElitistGroup:IsValidGem(itemLink, playerData)
-	local spec = self:GetPlayerSpec(playerData)
-	local itemType = self.GEM_TALENTTYPE[itemLink]
-	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
-end
-
-function ElitistGroup:IsValidEnchant(itemLink, playerData)
-	local spec = self:GetPlayerSpec(playerData)
-	local itemType = self.ENCHANT_TALENTTYPE[itemLink]
-	return spec ~= "unknown" and itemType ~= "unknown" and self.VALID_SPECTYPES[spec] and self.VALID_SPECTYPES[spec][itemType]
-end
-
 local tableCache = setmetatable({}, {__mode = "k"})
 local function getTable()
 	return table.remove(tableCache, 1) or {}
@@ -330,7 +312,7 @@ function ElitistGroup:GetGearSummary(userData)
 	for inventoryID, itemLink in pairs(userData.equipment) do
 		local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
 		if( fullItemLink ) then
-			local baseItemLink, enchantItemLink = string.match(itemLink, "item:%d+"), string.match(itemLink, "item:%d+:%d+")
+			local baseItemLink, enchantItemLink = string.match(itemLink, "item:%d+"), string.match(itemLink, "item:%d+:(%d+)")
 						
 			-- Figure out the items primary info
 			equipment.totalScore = equipment.totalScore + self:CalculateScore(itemLink, itemQuality, itemLevel)
