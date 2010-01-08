@@ -1,5 +1,5 @@
 local ElitistGroup = select(2, ...)
-ElitistGroup = LibStub("AceAddon-3.0"):NewAddon(ElitistGroup, "ElitistGroup", "AceEvent-3.0", "AceTimer-3.0")
+ElitistGroup = LibStub("AceAddon-3.0"):NewAddon(ElitistGroup, "ElitistGroup", "AceEvent-3.0")
 local L = ElitistGroup.L
 
 function ElitistGroup:OnInitialize()
@@ -452,6 +452,48 @@ function ElitistGroup:GetGearSummary(userData)
 	equipment.totalScore = equipment.totalEquipped > 0 and equipment.totalScore / equipment.totalEquipped or 0
 	return equipment, enchants, gems
 end
+
+-- Broker plugin
+LibStub("LibDataBroker-1.1"):NewDataObject("Elitist Group", {
+	type = "launcher",
+	icon = "Interface\\Icons\\inv_weapon_glave_01",
+	OnClick = function(self, mouseButton)
+		-- Inspecting
+		if( mouseButton == "LeftButton" ) then
+			SlashCmdList["ELITISTGROUP"]("")
+		-- Rating
+		elseif( IsAltKeyDown() and mouseButton == "RightButton" ) then
+			if( GetNumPartyMembers() > 0 ) then
+				SlashCmdList["ELITISTGROUPRATE"]("")
+			end
+		-- Summaries
+		elseif( mouseButton == "RightButton" and ( GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0 ) ) then
+			local instanceType = select(2, IsInInstance())
+			if( instanceType == "raid" ) then
+				ElitistGroup.modules.RaidSummary:Show()
+			else
+				ElitistGroup.modules.PartySummary:Show()
+			end
+		end
+	end,
+	OnTooltipShow = function(tooltip)
+		if( not tooltip ) then return end
+		
+		tooltip:SetText("Elitist Group")
+		tooltip:AddLine(L["Left Click - Open player/target information"], 1, 1, 1, nil, nil)
+		
+		local instanceType = select(2, IsInInstance())
+		if( instanceType == "raid" ) then
+			tooltip:AddLine(L["Right Click - Open summary for your raid"], 1, 1, 1, nil, nil)
+		elseif( instanceType == "party" ) then
+			tooltip:AddLine(L["Right Click - Open summary for your party"], 1, 1, 1, nil, nil)
+		end
+		
+		if( ElitistGroup.modules.History.haveActiveGroup ) then
+			tooltip:AddLine(L["ALT + Right Click - Open rating window for party"], 1, 1, 1, nil, nil)
+		end
+	end,
+})
 
 -- Encodes text in a way that it won't interfere with the table being loaded
 local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}"),
