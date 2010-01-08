@@ -238,7 +238,7 @@ function Scan:UpdatePlayerData()
 	table.wipe(userData.achievements)
 	for achievementID in pairs(ElitistGroup.VALID_ACHIEVEMENTS) do
 		local id, _, _, completed, _, _, _, _, flags = GetAchievementInfo(achievementID)
-		if( flags == ACHIEVEMENT_FLAGS_STATISTIC ) then
+		if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == ACHIEVEMENT_FLAGS_STATISTIC ) then
 			userData.achievements[id] = tonumber(GetStatistic(id)) or nil
 		else
 			userData.achievements[id] = completed and 1 or nil
