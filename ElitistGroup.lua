@@ -475,7 +475,9 @@ LibStub("LibDataBroker-1.1"):NewDataObject("Elitist Group", {
 			tooltip:AddLine(L["Right Click - Open summary for your party"], 1, 1, 1, nil, nil)
 		end
 		
-		if( ElitistGroup.modules.History.haveActiveGroup ) then
+		if( ElitistGroup.modules.RaidHistory.haveActiveGroup ) then
+			tooltip:AddLine(L["ALT + Right Click - Open rating window for raid"], 1, 1, 1, nil, nil)
+		elseif( ElitistGroup.modules.PartyHistory.haveActiveGroup ) then
 			tooltip:AddLine(L["ALT + Right Click - Open rating window for party"], 1, 1, 1, nil, nil)
 		end
 	end,
