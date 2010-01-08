@@ -13,12 +13,6 @@ externals:
     libs/AceEvent-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceEvent-3.0
         tag: latest
-    libs/AceTimer-3.0:
-        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceTimer-3.0
-        tag: latest
-    libs/AceLocale-3.0:
-        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceLocale-3.0
-        tag: latest
     libs/AceAddon-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceAddon-3.0
         tag: latest
@@ -30,6 +24,9 @@ externals:
         tag: latest
     libs/AceComm-3.0:
         url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceComm-3.0
+        tag: latest
+    libs/AceDBOptions-3.0:
+        url: svn://svn.wowace.com/wow/ace3/mainline/trunk/AceDBOptions-3.0
         tag: latest
 ignore:
 	- globalcheck.lua
