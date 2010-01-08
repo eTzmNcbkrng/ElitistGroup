@@ -34,6 +34,7 @@ end
 
 TEST_DATA = {
 	["gear"] = {
+		["item:37723"] = "physical-dps",
 		["item:47673"] = "melee-dps",
 		["item:47412"] = "physical-all",
 		["item:37651"] = "caster",
@@ -115,7 +116,7 @@ TEST_DATA = {
 		["item:50827"] = "physical-all",
 		["item:50355"] = "physical-dps",
 		["item:40733"] = "melee",
-		["item:50788"] = "melee",
+		["item:50788"] = "physical-dps",
 		["item:40881"] = "pvp",
 		["item:49809"] = "caster",
 		["item:40890"] = "pvp",
