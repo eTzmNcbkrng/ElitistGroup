@@ -36,6 +36,15 @@ local function sortAchievements(a, b)
 	return aEarned > bEarned
 end
 
+function Users:Toggle(userData)
+	local userID = string.format("%s-%s", userData.name, userData.server)
+	if( self.activeUserID == userID and self.frame:IsVisible() ) then
+		self.frame:Hide()
+	else
+		self:Show(userData)
+	end
+end
+
 function Users:Show(userData)
 	if( not userData ) then return end
 	self:CreateUI()
