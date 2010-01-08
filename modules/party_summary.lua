@@ -255,7 +255,7 @@ local function OnLeave(self)
 end
 
 local function OnClick(self)
-	local userData = ElitistGroup.userData[self.playerID]
+	local userData = self.playerID and ElitistGroup.userData[self.playerID]
 	if( userData ) then
 		ElitistGroup.modules.Users:Show(userData)
 	end

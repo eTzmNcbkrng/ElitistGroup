@@ -383,7 +383,7 @@ function Summary:CreateUI()
 	frame.scroll:SetScript("OnVerticalScroll", function(self, value) Summary.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 24, Summary.Update); Summary.scrollUpdate = nil end)
 	
 	local function viewDetailedInfo(self)
-		local userData = ElitistGroup.userData[self.playerID]
+		local userData = self.playerID and ElitistGroup.userData[self.playerID]
 		if( userData ) then
 			ElitistGroup.modules.Users:Show(userData)
 		end
