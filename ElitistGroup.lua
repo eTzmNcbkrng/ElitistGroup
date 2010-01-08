@@ -61,7 +61,12 @@ function ElitistGroup:OnInitialize()
 			return tbl[name]
 		end
 	})
-		
+
+	self.ROLE_TANK = 0x04
+	self.ROLE_HEALER = 0x02
+	self.ROLE_DAMAGE = 0x01
+	self.MAX_RATING = 5
+	
 	-- Data is old enough that we want to remove extra data to save space
 	if( self.db.profile.database.pruneBasic > 0 or self.db.database.pruneFull > 0 ) then
 		local pruneBasic = time() - (self.db.profile.database.pruneBasic * 86400)
@@ -142,10 +147,10 @@ end
 function ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 	-- Quality 7 is heirloom, apply our modifier based on the item level
 	if( itemQuality == 7 ) then
-		itemLevel = (tonumber(string.match(itemLink, "(%d+)$")) or 1) * ElitistGroup.HEIRLOOM_ILEVEL
+		itemLevel = (tonumber(string.match(itemLink, "(%d+)$")) or 1) * ElitistGroup.Items.heirloomLevel
 	end
 	
-	return itemLevel * (self.QUALITY_MODIFIERS[itemQuality] or 1)
+	return itemLevel * (self.Items.qualityModifiers[itemQuality] or 1)
 end
 
 function ElitistGroup:GetPlayerSpec(playerData)
@@ -160,11 +165,11 @@ function ElitistGroup:GetPlayerSpec(playerData)
 		return "unknown", L["Unknown"], "Interface\\Icons\\INV_Misc_QuestionMark"
 	end
 	
-	return playerData.specRole or self.TREE_DATA[playerData.classToken][treeOffset], self.TREE_DATA[playerData.classToken][treeOffset + 1], self.TREE_DATA[playerData.classToken][treeOffset + 2] 
+	return playerData.specRole or self.Talents.treeData[playerData.classToken][treeOffset], self.Talents.treeData[playerData.classToken][treeOffset + 1], self.Talents.treeData[playerData.classToken][treeOffset + 2] 
 end
 
 local tableCache = setmetatable({}, {__mode = "k"})
-local function getTable()
+function ElitistGroup:GetTable()
 	return table.remove(tableCache, 1) or {}
 end
 
@@ -179,7 +184,7 @@ function ElitistGroup:ReleaseTables(...)
 end
 
 function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
-	local enchantTooltips, gemTooltips = getTable(), getTable()
+	local enchantTooltips, gemTooltips = self:GetTable(), self:GetTable()
 	
 	-- Compile all the gems into tooltips per item
 	local lastItemLink, totalBad
@@ -200,7 +205,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		if( arg == "missing" ) then
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. L["Unused sockets"]
 		elseif( type(arg) == "string" ) then
-			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, ElitistGroup.TALENT_TYPES[arg] or arg)
+			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, ElitistGroup.Items.itemRoleText[arg] or arg)
 		else
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r quality gem"], select(2, GetItemInfo(gemLink)) or gemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"])
 		end
@@ -217,7 +222,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		if( enchantTalent == "missing" ) then
 			enchantTooltips[itemLink] = L["Enchant: |cffffffffNone found|r"]
 		else
-			enchantTooltips[itemLink] = string.format(L["Enchant: |cffffffff%s enchant|r"], ElitistGroup.TALENT_TYPES[enchantTalent] or enchantTalent)
+			enchantTooltips[itemLink] = string.format(L["Enchant: |cffffffff%s enchant|r"], ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent)
 		end
 	end
 		
@@ -232,7 +237,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 end
 
 function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
-	local tempList = getTable()
+	local tempList = self:GetTable()
 	local gemTooltip, enchantTooltip
 	local totalLines = 0
 	
@@ -249,7 +254,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			elseif( arg == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Missing gems"], fullItemLink))
 			elseif( type(arg) == "string" ) then
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, ElitistGroup.TALENT_TYPES[arg] or arg))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, ElitistGroup.Items.itemRoleText[arg] or arg))
 			else
 				table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 			end
@@ -273,7 +278,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			if( enchantTalent == "missing" ) then
 				table.insert(tempList, string.format(L["%s - Unenchanted"], fullItemLink))
 			else
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], fullItemLink, ElitistGroup.TALENT_TYPES[enchantTalent] or enchantTalent))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], fullItemLink, ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent))
 			end
 		end
 		
@@ -291,8 +296,8 @@ end
 local MAINHAND_SLOT, OFFHAND_SLOT, WAIST_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot"), GetInventorySlotInfo("WaistSlot")
 function ElitistGroup:GetGearSummary(userData)
 	local spec = self:GetPlayerSpec(userData)
-	local validSpecTypes = self.VALID_SPECTYPES[spec]
-	local equipment, gems, enchants = getTable(), getTable(), getTable()
+	local validSpecTypes = self.Items.talentToSpec[spec]
+	local equipment, gems, enchants = self:GetTable(), self:GetTable(), self:GetTable()
 	
 	equipment.totalScore = 0
 	equipment.totalEquipped = 0
@@ -326,7 +331,7 @@ function ElitistGroup:GetGearSummary(userData)
 			end
 			
 			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
-			local unenchantable = ElitistGroup.EQUIP_UNECHANTABLE[itemEquipType]
+			local unenchantable = ElitistGroup.Items.unenchantableTypes[itemEquipType]
 			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
 				enchants.total = enchants.total + 1
 
@@ -374,7 +379,7 @@ function ElitistGroup:GetGearSummary(userData)
 						gems.pass = nil
 					else
 						local gemQuality = select(3, GetItemInfo(gemLink))
-						if( ElitistGroup.GEM_THRESHOLDS[itemQuality] and gemQuality < ElitistGroup.GEM_THRESHOLDS[itemQuality] ) then
+						if( self.Items.gemQualities[itemQuality] and gemQuality < self.Items.gemQualities[itemQuality] ) then
 							gems[fullItemLink] = itemLink
 							gems.totalBad = gems.totalBad + 1
 							gems.pass = nil
@@ -449,11 +454,10 @@ LibStub("LibDataBroker-1.1"):NewDataObject("Elitist Group", {
 				SlashCmdList["ELITISTGROUPRATE"]("")
 			end
 		-- Summaries
-		elseif( mouseButton == "RightButton" and ( GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0 ) ) then
-			local instanceType = select(2, IsInInstance())
-			if( instanceType == "raid" ) then
+		elseif( mouseButton == "RightButton" ) then
+			if( GetNumRaidMembers() > 0 ) then
 				ElitistGroup.modules.RaidSummary:Show()
-			else
+			elseif( GetNumPartyMembers() > 0 ) then
 				ElitistGroup.modules.PartySummary:Show()
 			end
 		end

@@ -174,15 +174,12 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		if( GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 ) then
 			ElitistGroup:Print(L["You must be in a group to use this."])
 			return
-		elseif( instanceType ~= "party" and instanceType ~= "raid" ) then
-			ElitistGroup:Print(L["You must be inside a party or raid instance to use this feature."])
-			return
 		end
 	
-		if( instanceType == "party" ) then
-			ElitistGroup.modules.PartySummary:Show()
-		else
+		if( GetNumRaidMembers() > 0 ) then
 			ElitistGroup.modules.RaidSummary:Show()
+		else
+			ElitistGroup.modules.PartySummary:Show()
 		end
 		return
 	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" or cmd == "send" ) then
@@ -216,7 +213,7 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 
 		local userData = playerID and ElitistGroup.userData[playerID]
 		if( userData ) then
-			ElitistGroup.modules.Users:LoadData(userData)
+			ElitistGroup.modules.Users:Show(userData)
 		end
 		return
 	end
@@ -235,7 +232,7 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		return
 	end
 	
-	ElitistGroup.modules.Users:LoadData(data)
+	ElitistGroup.modules.Users:Show(data)
 end
 
 local register = CreateFrame("Frame", nil, InterfaceOptionsFrame)
