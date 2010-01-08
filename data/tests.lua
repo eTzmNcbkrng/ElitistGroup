@@ -5,7 +5,7 @@ function ElitistGroup:Test()
 	for type, list in pairs(TEST_DATA) do
 		local tbl = ElitistGroup[type == "gear" and "ITEM_TALENTTYPE" or type == "gems" and "GEM_TALENTTYPE" or type == "enchants" and "ENCHANT_TALENTTYPE"]
 		for itemID, expected in pairs(list) do
-			local itemType = tbl[itemID]
+			local itemType = type == "enchants" and tbl[string.match(itemID, "item:%d+:(%d+)")] or tbl[itemID]
 			if( itemType == "unknown" or itemType ~= expected ) then
 				results[type].failed = true
 				table.insert(results[type], {item = itemID, type = itemType, expected = expected})
