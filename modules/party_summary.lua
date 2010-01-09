@@ -52,7 +52,9 @@ end
 
 function Summary:Show()
 	ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
-	ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())
+	if( select(2, IsInInstance()) == "party" ) then
+		ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())
+	end
 	
 	self:CreateUI()
 	self.frame:SetHeight(35 + (140 * math.ceil(GetNumPartyMembers() / 2)))
@@ -95,20 +97,16 @@ function Summary:UpdateSingle(row)
 	local name, server = UnitName(row.unitID)
 	server = server and server ~= "" and server or GetRealmName()
 
-	local position = ElitistGroup.modules.Scan:UnitQueuePosition(row.unitID)
-	local positionTooltip = position and string.format(L[", #%d in inspect queue"], position) or ""
-	position = position and string.format("[#%d] ", position) or ""
-	
 	-- Build the players info
 	local coords = CLASS_BUTTONS[classToken]
 	if( coords ) then
-		row.playerInfo:SetFormattedText("%s%s (%s)", position, name, level)
-		row.playerInfo.tooltip = string.format(L["%s - %s, level %s %s%s"], name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken], positionTooltip)
+		row.playerInfo:SetFormattedText("%s (%s)", name, level)
+		row.playerInfo.tooltip = string.format(L["%s - %s, level %s %s"], name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken])
 		row.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
 		row.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 	else
-		row.playerInfo:SetFormattedText("%s (%s)", position, name, level)
-		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class%s"], name, server, level, positionTooltip)
+		row.playerInfo:SetFormattedText("%s (%s)", name, level)
+		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class"], name, server, level)
 		row.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 	end
 	
@@ -257,7 +255,7 @@ end
 local function OnClick(self)
 	local userData = self.playerID and ElitistGroup.userData[self.playerID]
 	if( userData ) then
-		ElitistGroup.modules.Users:Show(userData)
+		ElitistGroup.modules.Users:Toggle(userData)
 	end
 end
 
