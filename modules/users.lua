@@ -262,6 +262,16 @@ function Users:Show(userData)
 		end
 	end
 	
+	-- Set the note label
+	frame.userFrame.manageNote:SetText(self.activeData.notes[ElitistGroup.playerName] and L["Edit Note"] or L["Add Note"])
+	if( ElitistGroup.playerName ~= self.activeUserID ) then
+		frame.userFrame.manageNote.tooltip = L["You can edit or add a note on this player here."]
+		frame.userFrame.manageNote:Enable()
+	else
+		frame.userFrame.manageNote.tooltip = L["You cannot set a note on yourself!"]
+		frame.userFrame.manageNote:Disable()
+	end
+	
 	self.activeDataNotes = 0
 	for _ in pairs(userData.notes) do 
 		self.activeDataNotes = self.activeDataNotes + 1
@@ -445,7 +455,7 @@ end
 function Users:UpdateNoteInfo()
 	local self = Users
 	FauxScrollFrame_Update(self.frame.noteFrame.scroll, self.activeDataNotes, MAX_NOTE_ROWS - 1, 48)
-	
+		
 	for _, row in pairs(self.frame.noteFrame.rows) do row:Hide() end
 	local rowWidth = self.frame.noteFrame:GetWidth() - (self.frame.noteFrame.scroll:IsVisible() and 24 or 10)
 	
@@ -462,6 +472,7 @@ function Users:UpdateNoteInfo()
 			if( bit.band(note.role, ElitistGroup.ROLE_HEALER) > 0 ) then roles = HEALER end
 			if( bit.band(note.role, ElitistGroup.ROLE_TANK) > 0 ) then roles = roles .. ", " .. TANK end
 			if( bit.band(note.role, ElitistGroup.ROLE_DAMAGE) > 0 ) then roles = roles .. ", " .. DAMAGE end
+			roles = roles == "" and UNKNOWN or roles
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, ElitistGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
 			row.commentText:SetText(note.comment or L["No comment"])
@@ -515,6 +526,167 @@ function Users:UpdateDungeonInfo()
 		
 		id = id + 1
 	end
+end
+
+local function managePlayerNote()
+	local self = Users
+	local frame = self.frame
+	
+	local defaultRole = 0
+	if( not frame.manageNote ) then
+		local function getNote()
+			if( not Users.activeData.notes[ElitistGroup.playerName] ) then
+				Users.activeDataNotes = Users.activeDataNotes + 1
+				Users.activeData.notes[ElitistGroup.playerName] = {rating = 3, role = defaultRole, time = time()}
+			end
+			
+			ElitistGroup.writeQueue[Users.activeUserID] = true
+			return Users.activeData.notes[ElitistGroup.playerName]
+		end
+		
+		local function UpdateComment(self)
+			local text = self:GetText()
+			if( text ~= self.lastText ) then
+				self.lastText = text
+				
+				local playerNote = getNote()
+				playerNote.comment = ElitistGroup:SafeEncode(string.trim(text) ~= "" and text or nil)
+				Users:UpdateTabPage()
+			end
+		end
+		
+		local function UpdateRole(self)
+			local playerNote = getNote()
+			local isTank, isHealer, isDamage = bit.band(playerNote.role, ElitistGroup.ROLE_TANK) > 0, bit.band(playerNote.role, ElitistGroup.ROLE_HEALER) > 0, bit.band(playerNote.role, ElitistGroup.ROLE_DAMAGE) > 0
+			if( self.roleID == ElitistGroup.ROLE_TANK ) then
+				isTank = not isTank
+			elseif( self.roleID == ElitistGroup.ROLE_HEALER ) then
+				isHealer = not isHealer
+			elseif( self.roleID == ElitistGroup.ROLE_DAMAGE ) then
+				isDamage = not isDamage
+			end
+			
+			playerNote.role = bit.bor(isTank and ElitistGroup.ROLE_TANK or 0, isHealer and ElitistGroup.ROLE_HEALER or 0, isDamage and ElitistGroup.ROLE_DAMAGE or 0)
+			SetDesaturation(self:GetNormalTexture(), bit.band(playerNote.role, self.roleID) == 0)
+			Users:UpdateTabPage()
+		end
+		
+		local function UpdateRating(self)
+			local playerNote = getNote()
+			playerNote.rating = self:GetValue()
+			Users:UpdateTabPage()
+		end
+		
+		frame.manageNote = CreateFrame("Frame", nil, frame)
+		frame.manageNote:SetFrameLevel(40)
+		frame.manageNote:SetBackdrop(backdrop)
+		frame.manageNote:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+		frame.manageNote:SetBackdropColor(0, 0, 0)
+		frame.manageNote:SetHeight(251)
+		frame.manageNote:SetWidth(175)
+		frame.manageNote:SetPoint("TOPLEFT", frame.userFrame.manageNote or TestLog, "BOTTOMLEFT", -3, -1)
+		frame.manageNote:Hide()
+		
+		frame.manageNote.role = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		frame.manageNote.role:SetPoint("TOPLEFT", frame.manageNote, "TOPLEFT", 4, -14)
+		frame.manageNote.role:SetText("Role")
+
+		frame.manageNote.roleTank = CreateFrame("Button", nil, frame.manageNote)
+		frame.manageNote.roleTank:SetSize(18, 18)
+		frame.manageNote.roleTank:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
+		frame.manageNote.roleTank:GetNormalTexture():SetTexCoord(0, 19/64, 22/64, 41/64)
+		frame.manageNote.roleTank:SetPoint("LEFT", frame.manageNote.role, "RIGHT", 24, 0)
+		frame.manageNote.roleTank:SetScript("OnClick", UpdateRole)
+		frame.manageNote.roleTank.roleID = ElitistGroup.ROLE_TANK
+
+		frame.manageNote.roleHealer = CreateFrame("Button", nil, frame.manageNote)
+		frame.manageNote.roleHealer:SetSize(18, 18)
+		frame.manageNote.roleHealer:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
+		frame.manageNote.roleHealer:GetNormalTexture():SetTexCoord(20/64, 39/64, 1/64, 20/64)
+		frame.manageNote.roleHealer:SetPoint("LEFT", frame.manageNote.roleTank, "RIGHT", 6, 0)
+		frame.manageNote.roleHealer:SetScript("OnClick", UpdateRole)
+		frame.manageNote.roleHealer.roleID = ElitistGroup.ROLE_HEALER
+
+		frame.manageNote.roleDamage = CreateFrame("Button", nil, frame.manageNote)
+		frame.manageNote.roleDamage:SetSize(18, 18)
+		frame.manageNote.roleDamage:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
+		frame.manageNote.roleDamage:GetNormalTexture():SetTexCoord(20/64, 39/64, 22/64, 41/64)
+		frame.manageNote.roleDamage:SetPoint("LEFT", frame.manageNote.roleHealer, "RIGHT", 6, 0)
+		frame.manageNote.roleDamage:SetScript("OnClick", UpdateRole)
+		frame.manageNote.roleDamage.roleID = ElitistGroup.ROLE_DAMAGE
+
+		frame.manageNote.rating = CreateFrame("Slider", nil, frame.manageNote)
+		frame.manageNote.rating:SetBackdrop({bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+			edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+			tile = true, tileSize = 8, edgeSize = 8,
+			insets = { left = 3, right = 3, top = 6, bottom = 6 }
+		})
+
+		frame.manageNote.rating:SetPoint("TOPLEFT", frame.manageNote.role, "BOTTOMLEFT", 1, -26)
+		frame.manageNote.rating:SetHeight(15)
+		frame.manageNote.rating:SetWidth(165)
+		frame.manageNote.rating:SetOrientation("HORIZONTAL")
+		frame.manageNote.rating:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+		frame.manageNote.rating:SetMinMaxValues(1, 5)
+		frame.manageNote.rating:SetValue(3)
+		frame.manageNote.rating:SetValueStep(1)
+		frame.manageNote.rating:SetScript("OnValueChanged", UpdateRating)
+
+		local rating = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		rating:SetPoint("BOTTOMLEFT", frame.manageNote.rating, "TOPLEFT", 0, 3)
+		rating:SetPoint("BOTTOMRIGHT", frame.manageNote.rating, "TOPRIGHT", 0, 3)
+		rating:SetText(L["Rating"])
+
+		local min = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		min:SetText(L["Terrible"])
+		min:SetPoint("TOPLEFT", frame.manageNote.rating, "BOTTOMLEFT", 0, -2)
+
+		local max = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		max:SetText(L["Great"])
+		max:SetPoint("TOPRIGHT", frame.manageNote.rating, "BOTTOMRIGHT", 0, -2)
+
+		frame.manageNote.comment = CreateFrame("EditBox", "ElitistGroupUsersComment", frame.manageNote, "InputBoxTemplate")
+		frame.manageNote.comment:SetHeight(18)
+		frame.manageNote.comment:SetWidth(166)
+		frame.manageNote.comment:SetAutoFocus(false)
+		frame.manageNote.comment:SetPoint("TOPLEFT", frame.manageNote.rating, "BOTTOMLEFT", 2, -46)
+		frame.manageNote.comment:SetScript("OnTextChanged", UpdateComment)
+		frame.manageNote.comment:SetMaxLetters(256)
+
+		local text = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		text:SetText(L["Comment"])
+		text:SetPoint("BOTTOMLEFT", frame.manageNote.comment, "TOPLEFT", -4, 4)
+	end
+
+	if( frame.manageNote:IsVisible() ) then
+		frame.manageNote:Hide()
+		frame.userFrame.manageNote:UnlockHighlight()
+	else
+		frame.manageNote:Show()
+		frame.userFrame.manageNote:LockHighlight()
+	end
+	
+	-- Now setup what we got
+	local note = self.activeData.notes[ElitistGroup.playerName]
+	if( note ) then
+		frame.manageNote.comment.lastText = note.comment or ""
+		frame.manageNote.comment:SetText(note.comment or "")
+		frame.manageNote.rating:SetValue(note.rating)
+	else
+		frame.manageNote.comment.lastText = ""
+		frame.manageNote.comment:SetText("")
+		frame.manageNote.rating:SetValue(3)
+		
+		if( not self.activeData.pruned ) then
+			local specType = ElitistGroup:GetPlayerSpec(self.activeData)
+			defaultRole = specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
+		end
+	end
+
+	local role = note and note.role or defaultRole
+	SetDesaturation(frame.manageNote.roleTank:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_TANK) == 0)
+	SetDesaturation(frame.manageNote.roleHealer:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_HEALER) == 0)
+	SetDesaturation(frame.manageNote.roleDamage:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_DAMAGE) == 0)
 end
 
 -- Really need to restructure all of this soon
@@ -583,6 +755,7 @@ function Users:CreateUI()
 	frame:SetToplevel(true)
 	frame:SetMovable(true)
 	frame:SetFrameLevel(5)
+	frame:SetScript("OnHide", function(self) if( self.manageNote ) then self.manageNote:Hide() end end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
@@ -844,7 +1017,7 @@ function Users:CreateUI()
 	frame.userFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 	frame.userFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.userFrame:SetWidth(175)
-	frame.userFrame:SetHeight(80)
+	frame.userFrame:SetHeight(97)
 	frame.userFrame:SetPoint("TOPLEFT", frame.gearFrame, "TOPRIGHT", 10, -8)
 
 	frame.userFrame.headerText = frame.userFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
@@ -880,13 +1053,24 @@ function Users:CreateUI()
 		frame.userFrame[key] = button
 	end
 	
+	local button = CreateFrame("Button", nil, frame.userFrame, "UIPanelButtonGrayTemplate")
+	button:SetHeight(15)
+	button:SetWidth(100)
+	button:SetPoint("TOPLEFT", frame.userFrame.trustedInfo, "BOTTOMLEFT", 0, -3)
+	button:SetText(L["Edit Note"])
+	button:SetScript("OnClick", managePlayerNote)
+	button:SetScript("OnEnter", OnEnter)
+	button:SetScript("OnLeave", OnLeave)
+	button:SetMotionScriptsWhileDisabled(true)
+	frame.userFrame.manageNote = button
+	
 	-- Dungeon suggested container
 	frame.dungeonFrame = CreateFrame("Frame", nil, frame)   
 	frame.dungeonFrame:SetBackdrop(backdrop)
 	frame.dungeonFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 	frame.dungeonFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.dungeonFrame:SetWidth(175)
-	frame.dungeonFrame:SetHeight(243)
+	frame.dungeonFrame:SetHeight(226)
 	frame.dungeonFrame:SetPoint("TOPLEFT", frame.userFrame, "BOTTOMLEFT", 0, -24)
 
 	frame.dungeonFrame.headerText = frame.dungeonFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
@@ -917,7 +1101,7 @@ function Users:CreateUI()
 		button.dungeonInfo:SetPoint("TOPRIGHT", button.dungeonName, "BOTTOMRIGHT", 0, 2)
 
 		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.dungeonFrame.rows[i - 1], "BOTTOMLEFT", 0, -7)
+			button:SetPoint("TOPLEFT", frame.dungeonFrame.rows[i - 1], "BOTTOMLEFT", 0, -5)
 		else
 			button:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 3, -2)
 		end
@@ -1035,7 +1219,7 @@ function Users:CreateUI()
 		button.infoText:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
 
 		button.commentText = button:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		button.commentText:SetHeight(30)
+		button.commentText:SetHeight(32)
 		button.commentText:SetJustifyH("LEFT")
 		button.commentText:SetJustifyV("TOP")
 		button.commentText:SetPoint("TOPLEFT", button.infoText, "BOTTOMLEFT", 0, 0)
