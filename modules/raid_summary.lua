@@ -8,7 +8,9 @@ local MAX_SUMMARY_ROWS = 10
 
 function Summary:Show()
 	ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
-	ElitistGroup.modules.Scan:QueueGroup("raid", GetNumRaidMembers())
+	if( select(2, IsInInstance()) == "raid" ) then
+		ElitistGroup.modules.Scan:QueueGroup("raid", GetNumRaidMembers())
+	end
 	
 	self:RAID_ROSTER_UPDATE()
 	self:CreateUI()
@@ -16,6 +18,30 @@ function Summary:Show()
 end
 
 -- Handle data caching
+function Summary:CacheUnit(unit)
+	local playerID = ElitistGroup:GetPlayerID(unit)
+	-- Unknown name, wait until we get an update then will recache
+	if( not playerID ) then
+		queuedUnits[unit] = true
+		self:RegisterEvent("UNIT_NAME_UPDATE")
+	-- No data, cache gogogogo!
+	elseif( not userSummaryData[playerID] ) then
+		local name, server = UnitName(unit)
+		userSummaryData[playerID] = {name = name, totalRatings = 0, rating = -1, average = -1, equipment = -1, enchants = -1, gems = -1, classToken = select(2, UnitClass(unit)), fullName = server and server ~= "" and string.format("%s-%s", name, server) or name}
+		table.insert(sortedData, playerID)
+		
+		if( ElitistGroup.userData[playerID] ) then
+			self:SG_DATA_UPDATED(nil, nil, playerID)
+		elseif( not ElitistGroup.modules.Scan:UnitIsQueued(unit) ) then
+			ElitistGroup.modules.Scan:QueueUnit(unit)
+			ElitistGroup.modules.Scan:ProcessQueue()
+		end
+	end
+	
+	userSummaryData[playerID].unit = unit
+end
+
+-- This is only registered while the UI is open
 function Summary:SG_DATA_UPDATED(event, type, name)
 	local summaryData = userSummaryData[name]
 	local userData = ElitistGroup.userData[name]
@@ -70,6 +96,7 @@ function Summary:UNIT_NAME_UPDATE(event, unit)
 	end
 end
 
+-- This is only registered while the UI is open
 function Summary:RAID_ROSTER_UPDATE()
 	if( GetNumRaidMembers() == 0 ) then
 		userSummaryData = nil
@@ -100,29 +127,6 @@ function Summary:RAID_ROSTER_UPDATE()
 	end
 end
 
-function Summary:CacheUnit(unit)
-	local playerID = ElitistGroup:GetPlayerID(unit)
-	-- Unknown name, wait until we get an update then will recache
-	if( not playerID ) then
-		queuedUnits[unit] = true
-		self:RegisterEvent("UNIT_NAME_UPDATE")
-	-- No data, cache gogogogo!
-	elseif( not userSummaryData[playerID] ) then
-		local name, server = UnitName(unit)
-		userSummaryData[playerID] = {name = name, totalRatings = 0, rating = -1, average = -1, equipment = -1, enchants = -1, gems = -1, classToken = select(2, UnitClass(unit)), fullName = server and server ~= "" and string.format("%s-%s", name, server) or name}
-		table.insert(sortedData, playerID)
-		
-		if( ElitistGroup.userData[playerID] ) then
-			self:SG_DATA_UPDATED(nil, nil, playerID)
-		elseif( not ElitistGroup.modules.Scan:UnitIsQueued(unit) ) then
-			ElitistGroup.modules.Scan:QueueUnit(unit)
-			ElitistGroup.modules.Scan:ProcessQueue()
-		end
-	end
-	
-	userSummaryData[playerID].unit = unit
-end
-
 -- Build the visual portions
 local function sortUserData(a, b)
 	if( Summary.sortOrder ) then
@@ -139,6 +143,15 @@ function Summary:Update()
 		table.sort(sortedData, sortUserData)
 	end
 	
+	local queueSize = ElitistGroup.modules.Scan:QueueSize()
+	if( select(2, IsInInstance()) ~= "raid" ) then
+		self.frame.inspectQueue:SetText(L["Inspecting only in raid instances"])
+	elseif( queueSize == 0 ) then
+		self.frame.inspectQueue:SetText(L["Inspect queue empty"])
+	else
+		self.frame.inspectQueue:SetFormattedText(L["Queue: %d players left"], queueSize)
+	end
+	
 	FauxScrollFrame_Update(self.frame.scroll, #(sortedData), MAX_SUMMARY_ROWS, 24)
 	local offset = FauxScrollFrame_GetOffset(self.frame.scroll)
 		
@@ -149,15 +162,12 @@ function Summary:Update()
 			local userData = ElitistGroup.userData[name]
 			
 			local classColor = RAID_CLASS_COLORS[summaryData.classToken]
-			local position = ElitistGroup.modules.Scan:UnitQueuePosition(summaryData.unit)
-			local positionTooltip = position and string.format(L[", #%d in inspect queue"], position) or ""
-			position = position and string.format("[#%d] ", position) or ""
 			
 			if( classColor ) then
-				row.name:SetFormattedText("%s|cff%02x%02x%02x%s|r", position, classColor.r * 255, classColor.g * 255, classColor.b * 255, summaryData.name)
-				row.name.tooltip = string.format(L["%s, %s%s"], name, LOCALIZED_CLASS_NAMES_MALE[summaryData.classToken], positionTooltip)
+				row.name:SetFormattedText("|cff%02x%02x%02x%s|r", classColor.r * 255, classColor.g * 255, classColor.b * 255, summaryData.name)
+				row.name.tooltip = string.format(L["%s, %s%s"], name, LOCALIZED_CLASS_NAMES_MALE[summaryData.classToken])
 			else
-				row.name:SetFormattedText("%s|cffffffff%s|r", position, summaryData.name)
+				row.name:SetFormattedText("|cffffffff%s|r", summaryData.name)
 				row.name.tooltip = string.format(L["%s, unknown class%s"], name, positionTooltip)
 			end
 
@@ -330,9 +340,12 @@ function Summary:CreateUI()
 	frame.title:SetPoint("TOP", 0, 0)
 	frame.title:SetText("Elitist Group")
 
+	frame.inspectQueue = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	frame.inspectQueue:SetPoint("TOPLEFT", frame, "TOPLEFT", 11, -14)
+
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-	button:SetPoint("TOPRIGHT", -2, -2)
+	button:SetPoint("TOPRIGHT", -3, -3)
 	button:SetHeight(28)
 	button:SetWidth(28)
 	button:SetScript("OnClick", function() frame:Hide() end)
@@ -363,8 +376,8 @@ function Summary:CreateUI()
 	   frame.headers[key] = headerButton
 	end
 
-	frame.headers.name:SetPoint("TOPLEFT", frame, "TOPLEFT", 8, -18)
-	frame.headers.name:SetWidth(140)
+	frame.headers.name:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
+	frame.headers.name:SetWidth(135)
 	frame.headers.average:SetPoint("TOPLEFT", frame.headers.name, "TOPRIGHT", 5, 0)
 	frame.headers.average:SetWidth(60)
 	frame.headers.rating:SetPoint("TOPLEFT", frame.headers.average, "TOPRIGHT", 15, 0)
@@ -378,14 +391,14 @@ function Summary:CreateUI()
 
 	frame.scroll = CreateFrame("ScrollFrame", "ElitistGroupRaidSummaryScroll", frame, "FauxScrollFrameTemplate")
 	frame.scroll.bar = ElitistGroupUserFrameScroll
-	frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -50)
-	frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -31, 7)
+	frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -32)
+	frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -33, 10)
 	frame.scroll:SetScript("OnVerticalScroll", function(self, value) Summary.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 24, Summary.Update); Summary.scrollUpdate = nil end)
 	
 	local function viewDetailedInfo(self)
 		local userData = self.playerID and ElitistGroup.userData[self.playerID]
 		if( userData ) then
-			ElitistGroup.modules.Users:Show(userData)
+			ElitistGroup.modules.Users:Toggle(userData)
 		end
 	end
 	
@@ -411,8 +424,8 @@ function Summary:CreateUI()
 				button:SetPoint("TOPLEFT", frame.rows[i - 1][key], "BOTTOMLEFT", 0, -2)
 				button:SetPoint("TOPRIGHT", frame.rows[i - 1][key], "BOTTOMRIGHT", 0, -2)
 			else
-				button:SetPoint("TOPLEFT", frame.headers[key], "BOTTOMLEFT", 3, -10)
-				button:SetPoint("TOPRIGHT", frame.headers[key], "BOTTOMRIGHT", 0, -10)
+				button:SetPoint("TOPLEFT", frame.headers[key], "BOTTOMLEFT", 3, -2)
+				button:SetPoint("TOPRIGHT", frame.headers[key], "BOTTOMRIGHT", 0, -2)
 			end
 
 			row[key] = button
@@ -423,6 +436,15 @@ function Summary:CreateUI()
 		
 		frame.rows[i] = row
 	end
+	
+	-- This isn't really perfect, it's mostly to try and give some sort of "constraint" to the panel so it doesn't look so hackish
+	frame.backdropFrame = CreateFrame("Frame", nil, frame)
+	frame.backdropFrame:SetBackdrop({bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1})
+	frame.backdropFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	frame.backdropFrame:SetBackdropColor(0, 0, 0, 0)
+	frame.backdropFrame:SetPoint("TOPLEFT", frame.headers.name, "TOPLEFT", 0, 0)
+	frame.backdropFrame:SetPoint("TOPRIGHT", frame.headers.gems, "TOPRIGHT", 26, 0)
+	frame.backdropFrame:SetHeight(261)
 
 	self.frame = frame
 	self.frame:Show()
