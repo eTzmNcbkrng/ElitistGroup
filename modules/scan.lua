@@ -8,10 +8,10 @@ ElitistGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["ra
 ElitistGroup.MAX_LINK_LENGTH = 80
 ElitistGroup.MAX_NOTE_LENGTH = 256
 
-local MAX_QUEUE_RETRIES = 20
+local MAX_QUEUE_RETRIES = 50
 local QUEUE_RETRY_TIME = 2
 local INSPECTION_TIMEOUT = 2
-local GEAR_CHECK_INTERVAL = 0.20
+local GEAR_CHECK_INTERVAL = 0.10
 local pending, pendingGear, inspectQueue = {}, {}, {}
 
 function Scan:OnInitialize()
@@ -47,12 +47,14 @@ function Scan:OnInitialize()
 end
 
 hooksecurefunc("NotifyInspect", function(unit)
+	-- Inspect timed out, wipe the data we had
 	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
 		table.wipe(pending)
 		table.wipe(pendingGear)
 	end
 	
-	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN and not pending.playerID and not pending.activeInspect ) then
+	-- Seems that we can inspect them
+	if( not pending.activeInspect and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 		pending.playerID = ElitistGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
@@ -90,7 +92,7 @@ hooksecurefunc("ClearAchievementComparisonUnit", function(unit)
 end)
 
 function Scan:CheckInspectGear()
-	if( not pending.playerID or pending.totalChecks >= 25 or UnitGUID(pending.unit) ~= pending.guid ) then
+	if( not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
 		return
 	end
@@ -112,10 +114,11 @@ function Scan:CheckInspectGear()
 		self.frame.gearTimer = nil
 		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
 
-		-- If achievements and talent data is already available, we have all the info we need and it can be unblocked
+		-- If achievements and talent data is already available, we have all the info we need and inspects can unblock
 		if( not pending.achievements and not pending.talents ) then
-			self:ProcessQueue()
 			pending.activeInspect = nil
+			pending.expirationTime = nil
+			self:ProcessQueue()
 		end
 	end
 end
@@ -238,7 +241,7 @@ function Scan:UpdatePlayerData()
 	table.wipe(userData.achievements)
 	for achievementID in pairs(ElitistGroup.Dungeons.achievements) do
 		local id, _, _, completed, _, _, _, _, flags = GetAchievementInfo(achievementID)
-		if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == ACHIEVEMENT_FLAGS_STATISTIC ) then
+		if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
 			userData.achievements[id] = tonumber(GetStatistic(id)) or nil
 		else
 			userData.achievements[id] = completed and 1 or nil
@@ -263,14 +266,8 @@ function Scan:UnitIsQueued(unit)
 	return inspectQueue[unit]
 end
 
-function Scan:UnitQueuePosition(unit)
-	if( not inspectQueue[unit] ) then return nil end
-	
-	for i=1, #(inspectQueue) do
-		if( inspectQueue[i] == unit ) then
-			return i
-		end
-	end
+function Scan:QueueSize()
+	return #(inspectQueue)
 end
 
 -- Try and speed up the queue so people who are initially in range are done first not perfectly obviously, but better than nothing
@@ -290,7 +287,7 @@ end
 function Scan:QueueGroup(unitType, total)
 	for i=1, total do
 		local unit = unitType .. i
-		if( not inspectQueue[unit] ) then
+		if( not inspectQueue[unit] and not UnitIsUnit(unit, "player") ) then
 			inspectQueue[unit] = 0
 			table.insert(inspectQueue, unit)
 		end
@@ -332,17 +329,25 @@ function Scan:ProcessQueue()
 	if( #(inspectQueue) == 0 ) then
 		self:ResetQueue()
 		return
+	elseif( pending.activeInspect and ( pending.expirationTime and pending.expirationTime > GetTime() ) ) then
+		return
 	end
 	
-	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
-		local unit = table.remove(inspectQueue, 1)
+	-- Find the first unit we can inspect
+	for i=#(inspectQueue), 1, -1 do
+		local unit = inspectQueue[i]
+		if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+			NotifyInspect(unit)
 
-		NotifyInspect(unit)
-		if( pending.unit ~= unit and UnitExists(unit) and inspectQueue[unit] < MAX_QUEUE_RETRIES ) then
-			inspectQueue[unit] = inspectQueue[unit] + 1
-			table.insert(inspectQueue, unit)
-		else
+			table.remove(inspectQueue, i)
 			inspectQueue[unit] = nil
+			break
+		-- Kill them, figuratively
+		elseif( inspectQueue[unit] > MAX_QUEUE_RETRIES ) then
+			table.remove(inspectQueue, i)
+			inspectQueue[unit] = nil
+		else
+			inspectQueue[unit] = inspectQueue[unit] + 1
 		end
 	end
 end
