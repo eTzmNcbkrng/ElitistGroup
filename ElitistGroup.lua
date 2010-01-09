@@ -130,7 +130,6 @@ function ElitistGroup:GetItemLink(link)
 	return link and string.match(link, "|H(.-)|h")
 end
 
--- These are just parser functions to let me trim down the item links to take better advantage of metatable caching
 function ElitistGroup:GetItemWithEnchant(link)
 	return link and string.match(link, "item:%d+:%d+")
 end
