@@ -165,10 +165,10 @@ function Summary:Update()
 			
 			if( classColor ) then
 				row.name:SetFormattedText("|cff%02x%02x%02x%s|r", classColor.r * 255, classColor.g * 255, classColor.b * 255, summaryData.name)
-				row.name.tooltip = string.format(L["%s, %s%s"], name, LOCALIZED_CLASS_NAMES_MALE[summaryData.classToken])
+				row.name.tooltip = string.format(L["%s, %s"], name, LOCALIZED_CLASS_NAMES_MALE[summaryData.classToken])
 			else
 				row.name:SetFormattedText("|cffffffff%s|r", summaryData.name)
-				row.name.tooltip = string.format(L["%s, unknown class%s"], name, positionTooltip)
+				row.name.tooltip = string.format(L["%s, unknown class"], name)
 			end
 
 			if( userData ) then
