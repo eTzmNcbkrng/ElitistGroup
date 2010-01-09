@@ -11,6 +11,7 @@ function ElitistGroup:OnInitialize()
 				autoPopup = true,
 				autoSummary = false,
 				databaseExpanded = true,
+				selectedTab = "notes",
 			},
 			database = {
 				pruneBasic = 30,
