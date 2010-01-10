@@ -57,11 +57,12 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"]}
 
 	ElitistGroup.Items.talentToSpec = {
-		["healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
-		["caster-dps"] = {["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
+		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
+		["healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
+		["caster-dps"] = {["caster-spirit"] = true, ["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
 		["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
 		["range-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
 		["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
@@ -272,9 +273,6 @@ local function loadData()
 		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"],
 	}
 
-	ElitistGroup.Items.reverseStatMap = {}
-	for key, value in pairs(ElitistGroup.Items.statMap) do ElitistGroup.Items.reverseStatMap[value] = key end
-
 	ElitistGroup.Items.safeStatMatch = {}
 	for _, key in pairs(ElitistGroup.Items.statMap) do
 		local text = _G[key] or key
@@ -293,39 +291,24 @@ local function loadData()
 	-- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
 	ElitistGroup.Items.statTalents = {
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
-		-- This is my favorite category out of them all
 		{type = "never",		gems = "RESIST@"},
-		-- Resilience or spell penetration is always a pvp item
 		{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
-		-- Spell healing is always a healer item, this is the only way to really identify a "pure" healer item
 		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
-		-- Spell hit rating is always a caster dps
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
-		-- Items with agility are useful for all physical classes really
 		{type = "physical-all",	default = "AGILITY@"},
-		-- Special matches for physical dps and trinkets
 		{type = "physical-dps", default = "ARMOR_PENETRATION_RATING@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
-		-- Ranged AP, ranged crit, ranged hit are always ranged
 		{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
-		-- Casters are +mana, mp5, spell power, spell haste, spell crit, spirit or intellect
-		{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@SPIRIT@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
-		-- Dodge, defense, block rating or value are tank items, as well as rings, trinkets or weapons with armor on them
+		{type = "caster-spirit",gems = "SPIRIT@", enchants = "SPIRIT@"},
+		{type = "caster-spirit",default = "SPIRIT@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
+		{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@MANA@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@"},
 		{type = "tank",			default = "PARRY_RATING@DODGE_RATING@DEFENSE_SKILL_RATING@BLOCK_RATING@BLOCK_VALUE@", enchants = "STAMINA@HEALTH@RESISTANCE0@", trinkets = "RESISTANCE0@STAMINA@", weapons = "RESISTANCE0@", rings = "RESISTANCE0"},
-		-- Expertise is a melee stat, but it's used by both dps and tanks
 		{type = "melee",		default = "EXPERTISE_RATING@"},
-		-- Agility, armor pen, general AP are physical DPS
 		{type = "physical-dps",	default = "ATTACK_POWER@"},
-		-- Hit melee rating, melee AP, melee crit rating are always melee dps items
 		{type = "melee-dps",	default = "HIT_MELEE_RATING@MELEE_ATTACK_POWER@STRENGTH@CRIT_MELEE_RATING@", trinkets = "MELEE_ATTACK@"},
-		-- Special matches for tank/dps both being allowed to gem hit
 		{type = "tank/dps", 	enchants = "HIT_RATING@", gems = "HIT_RATING@"},
-		-- Generic damage tag for trinkets
 		{type = "dps",			trinkets = "DAMAGE@DEAL_DAMAGE@"},
-		-- Hybrid, works for DPS and Tanks
 		{type = "dps",			default = "HIT_RATING@"},
-		-- Hybrid, works for DPS and Healers
 		{type = "healer/dps",	default = "CRIT_RATING@HASTE_RATING@"},
-		-- Some classes are going to use a hybrid gem to activate their meta like a Dreadstone, we don't want them being flagged as a tank gem unless it's a pure STA gem
 		{type = "tank",			gems = "STAMINA@"},
 	}
 end
