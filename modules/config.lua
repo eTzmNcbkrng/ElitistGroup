@@ -149,6 +149,24 @@ local function loadOptions()
 	}
 end
 
+SLASH_ELITISTGROUPRATE1 = "/rate"
+SlashCmdList["ELITISTGROUPRATE"] = function(msg)
+	local RaidHistory, PartyHistory = ElitistGroup.modules.RaidHistory, ElitistGroup.modules.PartyHistory
+	local History = RaidHistory.haveActiveGroup and RaidHistory or PartyHistory.haveActiveGroup and PartyHistory
+	if( GetNumRaidMembers() > 0 ) then
+		History = RaidHistory
+	elseif( GetNumPartyMembers() > 0 ) then
+		History = PartyHistory
+	end
+	
+	if( not History or not History.haveActiveGroup ) then
+		ElitistGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
+		return
+	end
+	
+	History:Show()
+end	
+
 SLASH_ELITISTGROUP1 = "/elitistgroup"
 SLASH_ELITISTGROUP2 = "/elitistgroups"
 SLASH_ELITISTGROUP3 = "/eg"
@@ -168,6 +186,9 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		return
 	elseif( cmd == "notes" and arg ) then
 		ElitistGroup.modules.Sync:RequestNotes(arg)
+		return
+	elseif( cmd == "rate" ) then
+		SlashCmdList["ELITISTGROUPRATE"]("")
 		return
 	elseif( cmd == "summary" ) then
 		local instanceType = select(2, IsInInstance())
