@@ -184,6 +184,21 @@ function Scan:GetTalentData(classToken, inspect)
 	return first or 0, second or 0, third or 0, unspentPoints, specRole
 end
 
+function Scan:ManualCreateCore(playerID, level, classToken)
+	local name, server = string.split("-", playerID, 2)
+	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	userData.name = name
+	userData.server = server
+	userData.level = level
+	userData.classToken = classToken
+	
+	ElitistGroup.userData[playerID] = userData
+	ElitistGroup.writeQueue[playerID] = true
+	
+	-- This is just so loops to find players can be simplified to only look through one table
+	ElitistGroup.db.faction.users[playerID] = ElitistGroup.db.faction.users[playerID] or ""
+end
+
 function Scan:CreateCoreTable(unit)
 	local name, server = UnitName(unit)
 	local playerID = ElitistGroup:GetPlayerID(unit)
