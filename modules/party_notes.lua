@@ -19,16 +19,6 @@ function History:OnInitialize()
 	end)
 
 	table.insert(UISpecialFrames, "ElitistGroupHistoryHider")
-	
-	SLASH_ELITISTGROUPRATE1 = "/rate"
-	SlashCmdList["ELITISTGROUPRATE"] = function(msg, editbox)
-		if( GetNumPartyMembers() == 0 and not self.haveActiveGroup ) then
-			ElitistGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
-			return
-		end
-		
-		History:LogGroup()
-	end	
 end
 
 function History:UpdateUnitData(unit)
@@ -93,7 +83,7 @@ end
 function History:LFG_COMPLETION_REWARD()
 	if( ElitistGroup.db.profile.general.autoPopup ) then
 		wasAutoPopped = true
-		self:LogGroup()
+		self:Show()
 	else
 		local name, typeID = GetLFGCompletionReward()
 		instanceName = typeID == TYPEID_HEROIC_DIFFICULTY and string.format("%s (%s)", name, PLAYER_DIFFICULTY2) or name
@@ -211,7 +201,7 @@ function test(num)
 end
 ]]
 
-function History:LogGroup()
+function History:Show()
 	self:PARTY_MEMBERS_CHANGED()
 	self:InitFrame()
 end
