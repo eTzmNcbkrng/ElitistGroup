@@ -4,6 +4,7 @@ local Cache = ElitistGroup:NewModule("Cache", "AceEvent-3.0")
 local CACHE_TIMEOUT = 30 * 60
 local statCache, itemMetaTable, gemMetaTable, emptyGemMetaTable, enchantMetaTable = {}
 local lastCache = GetTime() + CACHE_TIMEOUT
+local ItemData = ElitistGroup.Items
 
 function Cache:OnInitialize()
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -56,12 +57,33 @@ emptyGemMetaTable = {
 	end,
 }
 
+-- Find the item type based on stats used
+local function matchStats(overrideType)
+	for i=1, #(ItemData.statTalents) do
+		local data = ItemData.statTalents[i]
+		if( not data.require or ( statCache[data.require] or ( data.require2 and statCache[data.require2] ) ) ) then
+			local statString = data.default or data[overrideType]
+			if( data[overrideType] and data.default ) then statString = statString .. data[overrideType] end
+			
+			if( statString ) then
+				for statKey in string.gmatch(statString, "(.-)@") do
+					if( statCache[ItemData.statMap[statKey]] ) then
+						return data.type
+					end
+				end
+			end
+		end
+	end
+	
+	return "unknown"
+end
+
 gemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = link and tonumber(string.match(link, "item:(%d+)"))
-		if( itemID and ElitistGroup.Items.itemOverrides[itemID] ) then
-			rawset(tbl, link, ElitistGroup.Items.itemOverrides[itemID])
-			return ElitistGroup.Items.itemOverrides[itemID]
+		if( itemID and ItemData.itemOverrides[itemID] ) then
+			rawset(tbl, link, ItemData.itemOverrides[itemID])
+			return ItemData.itemOverrides[itemID]
 		elseif( not itemID or not GetItemInfo(itemID) ) then
 			rawset(tbl, link, "unknown")
 			return "unknown"
@@ -75,11 +97,11 @@ gemMetaTable = {
 
 		for i=1, tooltip:NumLines() do
 			local text = string.lower(_G["ElitistGroupTooltipTextLeft" .. i]:GetText())
-			for i=1, #(ElitistGroup.Items.orderedStatMap) do
-				local key = ElitistGroup.Items.orderedStatMap[i]
-				if( string.match(text, ElitistGroup.Items.safeStatMatch[key]) ) then
+			for i=1, #(ItemData.orderedStatMap) do
+				local key = ItemData.orderedStatMap[i]
+				if( string.match(text, ItemData.safeStatMatch[key]) ) then
 					foundData = true
-					statCache[ElitistGroup.Items.reverseStatMap[key]] = true
+					statCache[key] = true
 				end
 			end
 			
@@ -91,21 +113,8 @@ gemMetaTable = {
 			return "unknown"
 		end
 
-		for i=1, #(ElitistGroup.Items.statTalents) do
-			local data = ElitistGroup.Items.statTalents[i]
-			local statString = (data.default or "") .. (data.gems or "")
-			if( statString ~= "" ) then
-				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[statKey] ) then
-						rawset(tbl, link, data.type)
-						return data.type
-					end
-				end
-			end
-		end
-			
-		rawset(tbl, link, "unknown")
-		return "unknown"
+		rawset(tbl, link, matchStats("gems"))
+		return rawget(tbl, link)
 	end,
 }
 
@@ -114,7 +123,7 @@ gemMetaTable = {
 enchantMetaTable = {
 	__index = function(tbl, link)
 		local enchantID = tonumber(link)
-		local type = not enchantID and "unknown" or enchantID == 0 and "none" or ElitistGroup.Items.enchantOverrides[enchantID]
+		local type = not enchantID and "unknown" or enchantID == 0 and "none" or ItemData.enchantOverrides[enchantID]
 		if( type ) then
 			rawset(tbl, link, type)
 			return type
@@ -153,11 +162,11 @@ enchantMetaTable = {
 		-- Parse out the stats
 		local foundData
 		table.wipe(statCache)
-		for i=1, #(ElitistGroup.Items.orderedStatMap) do
-			local key = ElitistGroup.Items.orderedStatMap[i]
-			if( string.match(enchantText, ElitistGroup.Items.safeStatMatch[key]) ) then
+		for i=1, #(ItemData.orderedStatMap) do
+			local key = ItemData.orderedStatMap[i]
+			if( string.match(enchantText, ItemData.safeStatMatch[key]) ) then
 				foundData = true
-				statCache[ElitistGroup.Items.reverseStatMap[key]] = true
+				statCache[key] = true
 			end
 		end
 		
@@ -166,22 +175,8 @@ enchantMetaTable = {
 			return "unknown"
 		end
 		
-		-- Now figure out wehat spec type
-		for i=1, #(ElitistGroup.Items.statTalents) do
-			local data = ElitistGroup.Items.statTalents[i]
-			local statString = (data.default or "") .. (data.enchants or "")
-			if( statString ~= "" ) then
-				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[statKey] ) then
-						rawset(tbl, link, data.type)
-						return data.type
-					end
-				end
-			end
-		end
-			
-		rawset(tbl, link, "unknown")
-		return "unknown"
+		rawset(tbl, link, matchStats("enchants"))
+		return rawget(tbl, link)
 	end,
 }
 
@@ -207,7 +202,7 @@ local function getRelicSpecType(link)
 	-- Some relics can be forced into a type by spell, eg Rejuvenation means it's obviously for healers
 	-- some relics... actually realy only ferals, are classified as hybrid by doing two things which
 	-- is where the stat scanning comes into play
-	for spell, type in pairs(ElitistGroup.Items.relicSpells) do
+	for spell, type in pairs(ItemData.relicSpells) do
 		if( string.match(equipText, spell) ) then
 			return type
 		end
@@ -219,13 +214,13 @@ end
 itemMetaTable = {
 	__index = function(tbl, link)
 		local itemID = tonumber(string.match(link, "item:(%d+)"))
-		if( itemID and ElitistGroup.Items.itemOverrides[itemID] ) then
-			rawset(tbl, link, ElitistGroup.Items.itemOverrides[itemID])
-			return ElitistGroup.Items.itemOverrides[itemID]
+		if( itemID and ItemData.itemOverrides[itemID] ) then
+			rawset(tbl, link, ItemData.itemOverrides[itemID])
+			return ItemData.itemOverrides[itemID]
 		end
 		
 		local inventoryType = select(9, GetItemInfo(link))
-		local equipType = inventoryType and ElitistGroup.Items.equipToType[inventoryType]
+		local equipType = inventoryType and ItemData.equipToType[inventoryType]
 		if( not equipType ) then 
 			rawset(tbl, link, "unknown")
 			return "unknown"
@@ -263,31 +258,17 @@ itemMetaTable = {
 			
 			-- Yay we found the enchant proc
 			if( statText ) then
-				for i=1, #(ElitistGroup.Items.orderedStatMap) do
-					local key = ElitistGroup.Items.orderedStatMap[i]
-					if( string.match(statText, ElitistGroup.Items.safeStatMatch[key]) ) then
+				for i=1, #(ItemData.orderedStatMap) do
+					local key = ItemData.orderedStatMap[i]
+					if( string.match(statText, ItemData.safeStatMatch[key]) ) then
 						statCache[key] = true
 					end
 				end
 			end
 		end
 		
-		-- Now scan and figure out what the spec is
-		for i=1, #(ElitistGroup.Items.statTalents) do
-			local data = ElitistGroup.Items.statTalents[i]
-			local statString = (data.default or "") .. (data[equipType] or "")
-			if( statString ~= "" ) then
-				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[ElitistGroup.Items.statMap[statKey]] ) then
-						rawset(tbl, link, data.type)
-						return data.type
-					end
-				end
-			end
-		end
-			
-		rawset(tbl, link, "unknown")
-		return "unknown"
+		rawset(tbl, link, matchStats(equipType))
+		return rawget(tbl, link)
 	end,
 }
 
