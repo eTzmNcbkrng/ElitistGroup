@@ -260,6 +260,8 @@ function Users:Show(userData)
 				self.forceOffset = math.ceil((i + 1) / 4)
 			end
 		end
+	else
+		self.forceOffset = 0
 	end
 	
 	-- Set the note label
