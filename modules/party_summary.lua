@@ -97,16 +97,19 @@ function Summary:UpdateSingle(row)
 	local name, server = UnitName(row.unitID)
 	server = server and server ~= "" and server or GetRealmName()
 
+	local isTank, isHealer, isDamage = UnitGroupRolesAssigned(row.unitID)
+	local role = (isTank and TANK) or (isHealer and HEALER) or (isDamage and DAMAGE) or UNKNOWN
+
 	-- Build the players info
 	local coords = CLASS_BUTTONS[classToken]
 	if( coords ) then
-		row.playerInfo:SetFormattedText("%s (%s)", name, level)
-		row.playerInfo.tooltip = string.format(L["%s - %s, level %s %s"], name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken])
+		row.playerInfo:SetFormattedText("%s (%s)", name, role)
+		row.playerInfo.tooltip = string.format(L["%s: %s - %s, level %s %s"], role, name, server, level, LOCALIZED_CLASS_NAMES_MALE[classToken])
 		row.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
 		row.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 	else
-		row.playerInfo:SetFormattedText("%s (%s)", name, level)
-		row.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class"], name, server, level)
+		row.playerInfo:SetFormattedText("%s (%s)", name, role)
+		row.playerInfo.tooltip = string.format(L["%s: %s - %s, level %s, unknown class"], role, name, server, level)
 		row.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 	end
 	
