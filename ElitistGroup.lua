@@ -193,7 +193,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		
 		if( lastItemLink ~= itemLink ) then
 			if( lastItemLink ) then
-				gemTooltips[lastItemLink] = string.format(L["Gems: |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
+				gemTooltips[lastItemLink] = string.format(L["Gems: |cffff2020[!]|r |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
 			end
 			
 			gemTooltips[itemLink] = ""
@@ -213,16 +213,16 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	
 	-- And grab the last one
 	if( lastItemLink ) then
-		gemTooltips[lastItemLink] = string.format(L["Gems: |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
+		gemTooltips[lastItemLink] = string.format(L["Gems: |cffff2020[!]|r |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
 	end
 	
 	-- Now compile all the enchants
 	for i=1, #(enchantData), 2 do
 		local itemLink, enchantTalent = enchantData[enchantData[i]], enchantData[i + 1]
 		if( enchantTalent == "missing" ) then
-			enchantTooltips[itemLink] = L["Enchant: |cffffffffNone found|r"]
+			enchantTooltips[itemLink] = L["Enchant: |cffff2020[!]|r |cffffffffNone found|r"]
 		else
-			enchantTooltips[itemLink] = string.format(L["Enchant: |cffffffff%s enchant|r"], ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent)
+			enchantTooltips[itemLink] = string.format(L["Enchant: |cffff2020[!]|r |cffffffff%s enchant|r"], ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent)
 		end
 	end
 		
