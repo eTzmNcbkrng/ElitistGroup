@@ -57,10 +57,11 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-caster"] = L["Priest (Discipline)"]}
 
 	ElitistGroup.Items.talentToSpec = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
+		["disc-healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["caster-dps"] = {["caster-spirit"] = true, ["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
 		["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
@@ -68,7 +69,7 @@ local function loadData()
 		["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 		["feral-tank"] = {["pvp"] = true},
 	}
-
+	
 	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
 	for type in pairs(ElitistGroup.Items.talentToSpec["melee-dps"]) do ElitistGroup.Items.talentToSpec["feral-tank"][type] = true end
 	for type in pairs(ElitistGroup.Items.talentToSpec["tank"]) do ElitistGroup.Items.talentToSpec["feral-tank"][type] = true end
@@ -238,7 +239,7 @@ local function loadData()
 		[44087] = "never", -- Persistent Earthshatter Diamond
 		[41381] = "never", -- Persistent Earthsiege Diamond
 		[32640] = "never", -- Potent Unstable Diamond
-		[41376] = "never", -- Revitalizing Skyflare Diamond
+		[41376] = "disc-healer", -- Revitalizing Skyflare Diamond
 		[25894] = "never", -- Swift Skyfire Diamond
 		[41339] = "never", -- Swift Skyflare Diamond
 		[28557] = "never", -- Swift Starfire Diamond
