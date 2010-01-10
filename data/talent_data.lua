@@ -4,7 +4,7 @@ local L = ElitistGroup.L
 local function loadData()
 	local Talents = ElitistGroup.Talents
 
-	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"]}
+	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"]}
 
 	-- required = How many of the talents the class needs
 	-- the number set for the talent is how many they need
@@ -35,7 +35,7 @@ local function loadData()
 		["SHAMAN"] = {
 			"caster-dps", L["Elemental"], "Interface\\Icons\\Spell_Nature_Lightning",
 			"melee-dps", L["Enhancement"], "Interface\\Icons\\Spell_Nature_LightningShield",
-			"healer", L["Restoration"], "Interface\\Icons\\Spell_Nature_MagicImmunity",
+			"mp5-healer", L["Restoration"], "Interface\\Icons\\Spell_Nature_MagicImmunity",
 		},
 		["MAGE"] = {
 			"caster-dps", L["Arcane"], "Interface\\Icons\\Spell_Holy_MagicalSentry",
@@ -63,7 +63,7 @@ local function loadData()
 			"melee-dps", L["Subtlety"], "Interface\\Icons\\Ability_Stealth",
 		},
 		["PALADIN"] = {
-			"healer", L["Holy"], "Interface\\Icons\\Spell_Holy_HolyBolt", 
+			"mp5-healer", L["Holy"], "Interface\\Icons\\Spell_Holy_HolyBolt", 
 			"tank", L["Protection"], "Interface\\Icons\\Spell_Holy_DevotionAura",
 			"melee-dps", L["Retribution"], "Interface\\Icons\\Spell_Holy_AuraOfLight",
 		},
