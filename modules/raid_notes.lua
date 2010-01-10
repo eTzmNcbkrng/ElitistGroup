@@ -75,33 +75,37 @@ function History:Update()
 			local defaultRole
 			local playerNote = ElitistGroup.userData[name].notes[ElitistGroup.playerName]
 			if( playerNote ) then
+				row.playerID = name
+				row.defaultRole = nil
+			
 				row.rating:SetValue(playerNote.rating)
 				row.comment.lastText = playerNote.comment or ""
 				row.comment:SetText(row.comment.lastText)
 			else
+				local specType = ElitistGroup:GetPlayerSpec(ElitistGroup.userData[name])
+				defaultRole = specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
+				row.playerID = name
+				row.defaultRole = defaultRole
+
 				row.rating:SetValue(3)
 				row.comment.lastText = ""
 				row.comment:SetText("")
-				
-				local specType = ElitistGroup:GetPlayerSpec(ElitistGroup.userData[name])
-				defaultRole = specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
 			end
-
+			
 			local role = defaultRole or playerNote.role
 			SetDesaturation(row.roleTank:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_TANK) == 0)
 			SetDesaturation(row.roleHealer:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_HEALER) == 0)
 			SetDesaturation(row.roleDamage:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_DAMAGE) == 0)
 			
 			for _, button in pairs(row) do
-				button.defaultRole = defaultRole
-				button.playerID = name
-				button:Show()
+				if( type(button) == "table" ) then button:Show() end
 			end
 		else
+			row.playerID = nil
+			row.defaultRole = nil
+			
 			for _, button in pairs(row) do
-				button.defaultRole = nil
-				button.playerID = nil
-				button:Hide()
+				if( type(button) == "table" ) then button:Hide() end
 			end
 		end
 	end
@@ -135,16 +139,16 @@ function History:CreateUI()
 	
 	local function UpdateComment(self)
 		local text = self:GetText()
-		if( text ~= self.lastText and self.playerID ) then
+		if( text ~= self.lastText and self.parent.playerID ) then
 			self.lastText = text
 			
-			local playerNote = getNote(self.playerID, self.defaultRole)
+			local playerNote = getNote(self.parent.playerID, self.parent.defaultRole)
 			playerNote.comment = ElitistGroup:SafeEncode(string.trim(text) ~= "" and text or nil)
 		end
 	end
 	
 	local function UpdateRole(self)
-		local playerNote = getNote(self.playerID, self.defaultRole)
+		local playerNote = getNote(self.parent.playerID, self.parent.defaultRole)
 		local isTank, isHealer, isDamage = bit.band(playerNote.role, ElitistGroup.ROLE_TANK) > 0, bit.band(playerNote.role, ElitistGroup.ROLE_HEALER) > 0, bit.band(playerNote.role, ElitistGroup.ROLE_DAMAGE) > 0
 		if( self.roleID == ElitistGroup.ROLE_TANK ) then
 			isTank = not isTank
@@ -159,7 +163,7 @@ function History:CreateUI()
 	end
 	
 	local function UpdateRating(self)
-		local playerNote = getNote(self.playerID, self.defaultRole)
+		local playerNote = getNote(self.parent.playerID, self.parent.defaultRole)
 		playerNote.rating = self:GetValue()
 	end
 
@@ -258,7 +262,7 @@ function History:CreateUI()
 	frame.scroll:SetScript("OnVerticalScroll", function(self, value) History.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 24, History.Update); History.scrollUpdate = nil end)
 	
 	local function viewDetailedInfo(self)
-		local userData = self.playerID and ElitistGroup.userData[self.playerID]
+		local userData = self.parent.playerID and ElitistGroup.userData[self.parent.playerID]
 		if( userData ) then
 			ElitistGroup.modules.Users:Toggle(userData)
 		end
@@ -298,7 +302,8 @@ function History:CreateUI()
 		row.roleTank:GetNormalTexture():SetTexCoord(0, 19/64, 22/64, 41/64)
 		row.roleTank:SetScript("OnClick", UpdateRole)
 		row.roleTank.roleID = ElitistGroup.ROLE_TANK
-
+		row.roleTank.parent = row
+		
 		row.roleHealer = CreateFrame("Button", nil, frame)
 		row.roleHealer:SetSize(18, 18)
 		row.roleHealer:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
@@ -306,6 +311,7 @@ function History:CreateUI()
 		row.roleHealer:SetPoint("LEFT", row.roleTank, "RIGHT", 6, 0)
 		row.roleHealer:SetScript("OnClick", UpdateRole)
 		row.roleHealer.roleID = ElitistGroup.ROLE_HEALER
+		row.roleHealer.parent = row
 
 		row.roleDamage = CreateFrame("Button", nil, frame)
 		row.roleDamage:SetSize(18, 18)
@@ -314,6 +320,7 @@ function History:CreateUI()
 		row.roleDamage:SetPoint("LEFT", row.roleHealer, "RIGHT", 6, 0)
 		row.roleDamage:SetScript("OnClick", UpdateRole)
 		row.roleDamage.roleID = ElitistGroup.ROLE_DAMAGE
+		row.roleDamage.parent = row
 		
 		-- Player rating
 		row.rating = CreateFrame("Slider", nil, frame)
@@ -323,9 +330,9 @@ function History:CreateUI()
 		row.rating:SetOrientation("HORIZONTAL")
 		row.rating:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
 		row.rating:SetMinMaxValues(1, 5)
-		row.rating:SetValue(3)
 		row.rating:SetValueStep(1)
 		row.rating:SetScript("OnValueChanged", UpdateRating)
+		row.rating.parent = row
 		
 		-- Player comment
 		row.comment = CreateFrame("EditBox", "ElitistGroupRaidNote" .. i, frame, "InputBoxTemplate")
@@ -334,6 +341,7 @@ function History:CreateUI()
 		row.comment:SetAutoFocus(false)
 		row.comment:SetScript("OnTextChanged", UpdateComment)
 		row.comment:SetMaxLetters(256)
+		row.comment.parent = row
 		
 		if( i > 1 ) then
 			row.name:SetPoint("TOPLEFT", frame.rows[i - 1].name, "BOTTOMLEFT", 0, -10)
