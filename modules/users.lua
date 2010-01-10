@@ -501,7 +501,7 @@ function Users:UpdateDungeonInfo()
 	end
 
 	for _, row in pairs(self.frame.dungeonFrame.rows) do row:Hide() end
-
+	
 	local id, rowID = 1, 1
 	local offset = FauxScrollFrame_GetOffset(self.frame.dungeonFrame.scroll)
 	for dataID=1, #(DungeonData.suggested), 4 do
@@ -509,15 +509,14 @@ function Users:UpdateDungeonInfo()
 			local row = self.frame.dungeonFrame.rows[rowID]
 			
 			local name, score, players, type = DungeonData.suggested[dataID], DungeonData.suggested[dataID + 1], DungeonData.suggested[dataID + 2], DungeonData.suggested[dataID + 3]
-			local percent = 1.0 - ((score - DungeonData.minLevel) / DungeonData.levelDiff)
-			-- This shows colors relative to how close the player is to the score, not sure if we want to use this.
-			--local percent = math.max(math.min(1 - ((score - self.activePlayerScore) / DungeonData.levelDiff), 1), 0)
+			local levelDiff = score - self.activePlayerScore
+			local percent = levelDiff <= 0 and 1 or levelDiff >= 30 and 0 or levelDiff <= 10 and 0.80 or levelDiff <= 20 and 0.50 or levelDiff <= 30 and 0.40
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			local heroicIcon = (type == "heroic" or type == "hard") and "|TInterface\\LFGFrame\\UI-LFG-ICON-HEROIC:16:13:-2:-1:32:32:0:16:0:20|t" or ""
 			
 			row.dungeonName:SetFormattedText("%s|cff%02x%02x00%s|r", heroicIcon, r, g, name)
-			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r score, %d-man (%s)"], r, g, score, players, DungeonData.types[type])
+			row.dungeonInfo:SetFormattedText(L["|cff%02x%02x00%d|r avg, %d-man (%s)"], r, g, score, players, DungeonData.types[type])
 			row:Show()
 
 			rowID = rowID + 1
