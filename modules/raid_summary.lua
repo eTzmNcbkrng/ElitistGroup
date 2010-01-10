@@ -8,7 +8,7 @@ local MAX_SUMMARY_ROWS = 10
 
 function Summary:Show()
 	ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
-	if( select(2, IsInInstance()) == "raid" ) then
+	if( IsInInstance() ) then
 		ElitistGroup.modules.Scan:QueueGroup("raid", GetNumRaidMembers())
 	end
 	
@@ -144,8 +144,8 @@ function Summary:Update()
 	end
 	
 	local queueSize = ElitistGroup.modules.Scan:QueueSize()
-	if( select(2, IsInInstance()) ~= "raid" ) then
-		self.frame.inspectQueue:SetText(L["Inspecting only in raid instances"])
+	if( IsInInstance() ) then
+		self.frame.inspectQueue:SetText(L["Inspecting only in an instance"])
 	elseif( queueSize == 0 ) then
 		self.frame.inspectQueue:SetText(L["Inspect queue empty"])
 	else
