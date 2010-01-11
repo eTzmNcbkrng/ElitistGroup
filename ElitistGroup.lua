@@ -14,7 +14,7 @@ function ElitistGroup:OnInitialize()
 				selectedTab = "notes",
 			},
 			inspect = {
-				window = true,
+				window = false,
 				tooltips = true,
 			},
 			database = {
