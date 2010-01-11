@@ -182,7 +182,7 @@ local function loadData()
 		[3859] = "caster", -- Springy Archnoweave
 		[3878] = "tank", -- Mind Amplification Dish, it is higher STA than the other one, going for the safe flagging for now. Perhaps flag as never?
 		[3603] = "tank/dps", -- Hand-Mounted Pyro Rocket
-		[3604] = "dps", -- Hyperspeed Accelerators
+		[3604] = "healer/dps", -- Hyperspeed Accelerators
 		[3599] = "never", -- Personal Electromagnetic Pulse Generator
 		[3605] = "physical-dps", -- Flexweave Underlay
 		[3883] = "tank", -- Rune of the Nerubian Carapace
