@@ -40,6 +40,7 @@ modules\raid_summary.lua
 modules\scan.lua
 modules\party_notes.lua
 modules\raid_notes.lua
+modules\inspect.lua
 modules\sync.lua
 modules\config.lua
 #@do-not-package@
