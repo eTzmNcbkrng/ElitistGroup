@@ -54,7 +54,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 	end
 	
 	-- Seems that we can inspect them
-	if( not pending.activeInspect and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 		pending.playerID = ElitistGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
@@ -174,7 +174,7 @@ function Scan:GetTalentData(classToken, inspect)
 		
 		specRole = talentMatches >= forceData.required and forceData.role
 	end
-		
+	
 	local first = select(3, GetTalentTabInfo(1, inspect, nil, activeTalentGroup))
 	local second = select(3, GetTalentTabInfo(2, inspect, nil, activeTalentGroup))
 	local third = select(3, GetTalentTabInfo(3, inspect, nil, activeTalentGroup))
