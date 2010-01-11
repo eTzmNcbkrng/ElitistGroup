@@ -1,4 +1,4 @@
-local ElitistGroup = select(2, ...)
+ElitistGroup = select(2, ...)
 ElitistGroup = LibStub("AceAddon-3.0"):NewAddon(ElitistGroup, "ElitistGroup", "AceEvent-3.0")
 local L = ElitistGroup.L
 
@@ -580,7 +580,3 @@ end
 function ElitistGroup:Print(msg)
 	DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99Elitist Group|r: " .. msg)
 end
-
---@debug@
-_G.ElitistGroup = ElitistGroup
---@end-debug@
