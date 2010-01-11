@@ -83,7 +83,6 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 	end
 end
 
-local buttonList = {"playerInfo", "notesInfo", "talentInfo", "trustedInfo", "gearInfo", "enchantInfo", "gemInfo"}
 function Summary:UpdateSingle(row)
 	if( not row.unitID or not UnitExists(row.unitID) ) then
 		row:Hide()
