@@ -144,7 +144,7 @@ function Summary:Update()
 	end
 	
 	local queueSize = ElitistGroup.modules.Scan:QueueSize()
-	if( IsInInstance() ) then
+	if( not IsInInstance() ) then
 		self.frame.inspectQueue:SetText(L["Inspecting only in an instance"])
 	elseif( queueSize == 0 ) then
 		self.frame.inspectQueue:SetText(L["Inspect queue empty"])
