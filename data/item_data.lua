@@ -207,7 +207,7 @@ local function loadData()
 		[50366] = "healer", -- Althor's Abacus (Heroic)
 		[50359] = "healer", -- Althor's Abacus
 		[44255] = "caster", -- Darkmoon Card: Greatness (+90 INT)
-		[44254] = "caster", -- Darkmoon Card: Greatness (+90 SPI)
+		[44254] = "caster-spirit", -- Darkmoon Card: Greatness (+90 SPI)
 		[44253] = "tank/dps", -- Darkmoon Card: Greantess (+90 AGI)
 		[42987] = "tank/dps", -- Darkmoon Card: Greatness (+90 STR)
 		[49464] = "caster", -- Shiny Shard of the Flame, this would be only useful if you have both trinkets, but still
