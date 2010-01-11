@@ -8,6 +8,8 @@ local function set(info, value)
 
 	if( info[#(info) - 1] == "comm" ) then
 		ElitistGroup.modules.Sync:Setup()
+	elseif( info[#(info) - 1] == "inspect" ) then
+		ElitistGroup.modules.Inspect:OnInitialize()
 	end
 end
 
@@ -43,8 +45,28 @@ local function loadOptions()
 					},
 				},
 			},
-			database = {
+			inspect = {
 				order = 2,
+				type = "group",
+				inline = true,
+				name = L["Inspection"],
+				args = {
+					window = {
+						order = 1,
+						type = "toggle",
+						name = L["Intergrade window"],
+						desc = L["Adds summary information to the main inspection window."],
+					},
+					tooltips = {
+						order = 2,
+						type = "toggle",
+						name = L["Intergrade tooltips"],
+						desc = L["Adds tooltips when mousing over inspected items indicating the items type, and if the gems and enchants pass."],
+					},
+				},
+			},
+			database = {
+				order = 3,
 				type = "group",
 				inline = true,
 				name = L["Database"],
@@ -79,7 +101,7 @@ local function loadOptions()
 				},
 			},
 			comm = {
-				order = 3,
+				order = 4,
 				type = "group",
 				inline = true,
 				name = L["Addon communication"],
