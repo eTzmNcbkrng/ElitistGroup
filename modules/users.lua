@@ -577,7 +577,8 @@ local function managePlayerNote()
 		end
 		
 		frame.manageNote = CreateFrame("Frame", nil, frame)
-		frame.manageNote:SetFrameLevel(40)
+		frame.manageNote:SetFrameLevel(100)
+		frame.manageNote:SetFrameStrata("MEDIUM")
 		frame.manageNote:SetBackdrop(backdrop)
 		frame.manageNote:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 		frame.manageNote:SetBackdropColor(0, 0, 0)
