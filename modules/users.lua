@@ -87,7 +87,6 @@ function Users:Show(userData)
 					else
 						slot.typeText:SetTextColor(1, 1, 1)
 					end
-					
 
 					if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
 						slot.extraText:SetText(L["Enhancements"])
@@ -126,9 +125,7 @@ function Users:Show(userData)
 		-- Now combine these too, in the same way you combine to make a better and more powerful robot
 		local equipSlot = frame.gearFrame.equipSlots[18]
 		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
-		local quality = equipmentData.totalScore >= 210 and ITEM_QUALITY_EPIC or equipmentData.totalScore >= 195 and ITEM_QUALITY_RARE or equipmentData.totalScore >= 170 and ITEM_QUALITY_UNCOMMON or ITEM_QUALITY_COMMON
-		
-		equipSlot.text:SetFormattedText("%s%d|r", ITEM_QUALITY_COLORS[quality].hex, equipmentData.totalScore)
+		equipSlot.text:SetFormattedText("%s%d|r", ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 		equipSlot.icon:SetTexture("Interface\\Icons\\" .. scoreIcon)
 		equipSlot.tooltip = L["Average item level of all the players equipped items, with modifiers for blue or lower quality items."]
 		equipSlot:Show()
