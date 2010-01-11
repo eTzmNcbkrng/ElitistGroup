@@ -288,6 +288,7 @@ function History:CreateUI()
 		row.name:SetScript("OnClick", viewDetailedInfo)
 		row.name:SetScript("OnEnter", OnEnter)
 		row.name:SetScript("OnLeave", OnLeave)
+		row.name.parent = row
 		
 		local fontString = row.name:GetFontString()
 		fontString:SetPoint("TOPLEFT", 0, 0)
