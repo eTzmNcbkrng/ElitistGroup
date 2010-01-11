@@ -265,7 +265,7 @@ local function loadData()
 		ATTACK_POWER = "ITEM_MOD_ATTACK_POWER_SHORT", POWER_REGEN0 = "ITEM_MOD_POWER_REGEN0_SHORT", SPELL_DAMAGE_DONE = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT",
 		SPELL_POWER = "ITEM_MOD_SPELL_POWER_SHORT", SPIRIT = "ITEM_MOD_SPIRIT_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_REGENERATION_SHORT",
 		HASTE_SPELL_RATING = "ITEM_MOD_HASTE_SPELL_RATING_SHORT", CRIT_SPELL_RATING = "ITEM_MOD_CRIT_SPELL_RATING_SHORT", INTELLECT = "ITEM_MOD_INTELLECT_SHORT", RESISTANCE0 = "RESISTANCE0_NAME",
-		STAMINA = "ITEM_MOD_STAMINA_SHORT", RESIST = "RESIST", CRIT_RATING = "ITEM_MOD_CRIT_RATING_SHORT", MANA_REGENERATION = "ITEM_MOD_MANA_SHORT", HIT_RATING = "ITEM_MOD_HIT_RATING_SHORT",
+		STAMINA = "ITEM_MOD_STAMINA_SHORT", RESIST = "RESIST", CRIT_RATING = "ITEM_MOD_CRIT_RATING_SHORT", MANA = "ITEM_MOD_MANA_SHORT", HIT_RATING = "ITEM_MOD_HIT_RATING_SHORT",
 		HASTE_RATING = "ITEM_MOD_HASTE_RATING_SHORT", SPELL_STATALL = "SPELL_STATALL", PARRY_RATING = "ITEM_MOD_PARRY_RATING_SHORT", HEALTH = "HEALTH", DAMAGE = "DAMAGE",
 		
 		HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["chance on melee attack"],
@@ -291,9 +291,10 @@ local function loadData()
 
 	-- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
 	ElitistGroup.Items.statTalents = {
+		{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 		{type = "never",		gems = "RESIST@"},
-		{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
+		{type = "never",		gems = "MANA@", exclusive = true},
 		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
 		{type = "physical-all",	default = "AGILITY@"},
