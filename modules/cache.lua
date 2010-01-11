@@ -23,7 +23,7 @@ function Cache:PLAYER_ENTERING_WORLD()
 	ElitistGroup.ITEM_TALENTTYPE = setmetatable({}, itemMetaTable)
 end
 
-local tooltip = CreateFrame("GameTooltip", "ElitistGroupTooltip", UIParent, "GameTooltipTemplate")
+local tooltip = CreateFrame("GameTooltip", "ElitistGroupScanTooltip", UIParent, "GameTooltipTemplate")
 tooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
 local function parseText(text)
@@ -46,7 +46,7 @@ emptyGemMetaTable = {
 
 		local total = 0
 		for i=1, MAX_NUM_SOCKETS do
-			local texture = _G["ElitistGroupTooltipTexture" .. i]
+			local texture = _G["ElitistGroupScanTooltipTexture" .. i]
 			if( texture and texture:IsVisible() ) then
 				total = total + 1
 			end
@@ -103,7 +103,7 @@ gemMetaTable = {
 		tooltip:SetHyperlink(link)
 
 		for i=1, tooltip:NumLines() do
-			local text = string.lower(_G["ElitistGroupTooltipTextLeft" .. i]:GetText())
+			local text = string.lower(_G["ElitistGroupScanTooltipTextLeft" .. i]:GetText())
 			for i=1, #(ItemData.orderedStatMap) do
 				local key = ItemData.orderedStatMap[i]
 				if( string.match(text, ItemData.safeStatMatch[key]) ) then
@@ -145,13 +145,13 @@ enchantMetaTable = {
 
 		local enchantText
 		for i=1, tooltip:NumLines() do
-			local text = string.lower(_G["ElitistGroupTooltipTextLeft" .. i]:GetText())
-			local r, g, b = _G["ElitistGroupTooltipTextLeft" .. i]:GetTextColor()
+			local text = string.lower(_G["ElitistGroupScanTooltipTextLeft" .. i]:GetText())
+			local r, g, b = _G["ElitistGroupScanTooltipTextLeft" .. i]:GetTextColor()
 									
 			-- If we don't find the enchant up top, but we know one exists then it's an engineering enchant, which means the next line will have the enchant in it
 			if( string.match(text, ITEM_SPELL_TRIGGER_ONUSE) ) then
 				if( tooltip:NumLines() > i ) then
-					enchantText = string.lower(_G["ElitistGroupTooltipTextLeft" .. i + 1]:GetText())
+					enchantText = string.lower(_G["ElitistGroupScanTooltipTextLeft" .. i + 1]:GetText())
 				end
 				break
 			-- First green text we find that isn't the Use: is the enchant
@@ -193,7 +193,7 @@ local function getRelicSpecType(link)
 		
 	local equipText
 	for i=tooltip:NumLines(), 1, -1 do
-		local text = string.lower(_G["ElitistGroupTooltipTextLeft" .. i]:GetText())
+		local text = string.lower(_G["ElitistGroupScanTooltipTextLeft" .. i]:GetText())
 		if( string.match(text, ITEM_ONEQUIP) ) then
 			equipText = text
 			break
@@ -260,7 +260,7 @@ itemMetaTable = {
 			
 			local statText
 			for i=tooltip:NumLines(), 1, -1 do
-				local row = _G["ElitistGroupTooltipTextLeft" .. i]
+				local row = _G["ElitistGroupScanTooltipTextLeft" .. i]
 				local r, g, b = row:GetTextColor()
 				
 				if( r == 0 and g > 0.97 and b == 0 ) then
