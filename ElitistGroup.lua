@@ -133,6 +133,11 @@ function ElitistGroup:OnInitialize()
 	self.modules.Sync:Setup()
 end
 
+function ElitistGroup:GetItemColor(itemLevel)
+	local quality = itemLevel >= 210 and ITEM_QUALITY_EPIC or itemLevel >= 195 and ITEM_QUALITY_RARE or itemLevel >= 170 and ITEM_QUALITY_UNCOMMON or ITEM_QUALITY_COMMON
+	return ITEM_QUALITY_COLORS[quality].hex
+end
+
 function ElitistGroup:GetItemLink(link)
 	return link and string.match(link, "|H(.-)|h")
 end
