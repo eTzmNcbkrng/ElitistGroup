@@ -707,7 +707,6 @@ function Users:CreateUI()
 		end
 	end
 	
-	local extraTooltip
 	local function OnEnter(self)
 		if( self.tooltip ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -730,20 +729,16 @@ function Users:CreateUI()
 			GameTooltip:Show()
 			
 			-- Show the item as a second though
-			extraTooltip = extraTooltip or CreateFrame("GameTooltip", "ElitistGroupUserTooltip", UIParent, "GameTooltipTemplate")
-			extraTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-			extraTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
-			extraTooltip:SetHyperlink(self.equippedItem)
-			extraTooltip:Show()
+			ElitistGroup.tooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
+			ElitistGroup.tooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
+			ElitistGroup.tooltip:SetHyperlink(self.equippedItem)
+			ElitistGroup.tooltip:Show()
 		end
 	end
 
 	local function OnLeave(self)
 		GameTooltip:Hide()
-		
-		if( extraTooltip ) then
-			extraTooltip:Hide()
-		end
+		ElitistGroup.tooltip:Hide()
 	end
 		
 	-- Main container

@@ -13,6 +13,10 @@ function ElitistGroup:OnInitialize()
 				databaseExpanded = true,
 				selectedTab = "notes",
 			},
+			inspect = {
+				window = true,
+				tooltips = true,
+			},
 			database = {
 				pruneBasic = 30,
 				pruneFull = 120,
@@ -39,7 +43,9 @@ function ElitistGroup:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 	
 	self.playerName = string.format("%s-%s", UnitName("player"), GetRealmName())
-
+	self.tooltip = CreateFrame("GameTooltip", "ElitistGroupTooltip", UIParent, "GameTooltipTemplate")
+	self.tooltip:Hide()
+	
 	-- God bless metatables
 	self.writeQueue = {}
 	self.userData = setmetatable({}, {
