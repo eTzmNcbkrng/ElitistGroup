@@ -59,16 +59,23 @@ emptyGemMetaTable = {
 
 -- Find the item type based on stats used
 local function matchStats(overrideType)
+	local totalStats = 0
+	for key in pairs(statCache) do totalStats = totalStats + 1 end
+	
 	for i=1, #(ItemData.statTalents) do
 		local data = ItemData.statTalents[i]
+		-- Only use this if other stats are present
 		if( not data.require or ( statCache[data.require] or ( data.require2 and statCache[data.require2] ) ) ) then
-			local statString = data.default or data[overrideType]
-			if( data[overrideType] and data.default ) then statString = statString .. data[overrideType] end
-			
-			if( statString ) then
-				for statKey in string.gmatch(statString, "(.-)@") do
-					if( statCache[ItemData.statMap[statKey]] ) then
-						return data.type
+			-- Only use this if it's the exclusive stat, for matching things like pure MP5 gems, not hybrids
+			if( not data.exclusive or totalStats == 1 ) then
+				local statString = data.default or data[overrideType]
+				if( data[overrideType] and data.default ) then statString = statString .. data[overrideType] end
+				
+				if( statString ) then
+					for statKey in string.gmatch(statString, "(.-)@") do
+						if( statCache[ItemData.statMap[statKey]] ) then
+							return data.type
+						end
 					end
 				end
 			end
@@ -207,8 +214,17 @@ local function getRelicSpecType(link)
 			return type
 		end
 	end
-
-	return "unknown"
+	
+	-- Failed to find the relic type, scan for stats and see if we can identify it that way
+	table.wipe(statCache)
+	for i=1, #(ItemData.orderedStatMap) do
+		local key = ItemData.orderedStatMap[i]
+		if( string.match(equipText, ItemData.safeStatMatch[key]) ) then
+			statCache[key] = true
+		end
+	end
+	
+	return matchStats("relic")
 end
 
 itemMetaTable = {
