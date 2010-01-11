@@ -54,13 +54,13 @@ local function loadOptions()
 					window = {
 						order = 1,
 						type = "toggle",
-						name = L["Intergrade window"],
+						name = L["Integrate window"],
 						desc = L["Adds summary information to the main inspection window."],
 					},
 					tooltips = {
 						order = 2,
 						type = "toggle",
-						name = L["Intergrade tooltips"],
+						name = L["Integrate tooltips"],
 						desc = L["Adds tooltips when mousing over inspected items indicating the items type, and if the gems and enchants pass."],
 					},
 				},
