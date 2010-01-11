@@ -142,6 +142,7 @@ local function loadData()
 
 	-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 	ElitistGroup.Items.enchantOverrides = {
+		[3253] = "never", -- Armsman
 		[3852] = "tank/pvp", -- Greater Inscription of the Gladiator
 		[3225] = "dps", -- Executioner
 		[3870] = "tank/pvp", -- Blood Draining
@@ -300,6 +301,7 @@ local function loadData()
 		{type = "physical-all",	default = "AGILITY@"},
 		{type = "physical-dps", default = "ARMOR_PENETRATION_RATING@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 		{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
+		{type = "melee",		gems = "STRENGTH@", require = "ITEM_MOD_STAMINA_SHORT"},
 		{type = "caster-spirit",gems = "SPIRIT@", enchants = "SPIRIT@"},
 		{type = "caster-spirit",default = "SPIRIT@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@", gems = "MANA@", enchants = "MANA@"},
