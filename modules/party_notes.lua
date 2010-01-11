@@ -66,7 +66,7 @@ function History:PLAYER_LEAVING_WORLD()
 end
 
 function History:PARTY_MEMBERS_CHANGED(event)
-	if( GetNumRaidMembers() == 0 ) then
+	if( GetNumPartyMembers() == 0 ) then
 		self.resetGroup = true
 	elseif( not event or ( GetNumPartyMembers() == MAX_PARTY_MEMBERS and select(2, IsInInstance()) == "party" ) ) then
 		if( self.resetGroup ) then
