@@ -34,7 +34,7 @@ local function loadData()
 
 	ElitistGroup.Items.validInventorySlots = {}
 	for slotType in pairs(ElitistGroup.Items.inventoryToID) do
-		ElitistGroup.Items.validInventorySlots[GetInventorySlotInfo(slotType)] = true
+		ElitistGroup.Items.validInventorySlots[GetInventorySlotInfo(slotType)] = slotType
 	end
 
 	-- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
@@ -95,7 +95,7 @@ local function loadData()
 		[getSpell(6807)] = "feral-tank", -- Maul
 		[getSpell(50256)] = "tank/dps", -- Swipe
 		[getSpell(33917)] = "tank/dps", -- Mangle
-		[getSpell(1079)] = "melee-dps", -- Rip
+		[getSpell(1079) .. " "] = "melee-dps", -- Rip, the space is to stop this from matching "Riptide"
 		[getSpell(5221)] = "melee-dps", -- Shred
 		[getSpell(774)] = "healer", -- Rejuvenation
 		[getSpell(8936)] = "healer", -- Regrowth
