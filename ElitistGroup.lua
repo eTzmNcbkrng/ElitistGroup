@@ -57,14 +57,14 @@ function ElitistGroup:OnInitialize()
 			
 			local func, msg = loadstring("return " .. ElitistGroup.db.faction.users[name])
 			if( func ) then
-				func = func()
+				func = func() or false
 			elseif( msg ) then
 				error(msg, 3)
-				tbl[name] = false
+				rawset(tbl, name, false)
 				return false
 			end
 			
-			tbl[name] = func
+			rawset(tbl, name, func)
 			return tbl[name]
 		end
 	})
