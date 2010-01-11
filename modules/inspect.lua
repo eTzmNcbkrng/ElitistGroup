@@ -183,7 +183,6 @@ function Inspect:SetupSummary()
 			self.frame.enchantInfo.disableWrap = not enchantData.noData
 		else
 			self.frame.enchantInfo:SetText(L["Enchants"])
-			self.frame.enchantInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
 			self.frame.enchantInfo.tooltip = L["No enchants found."]
 			self.frame.enchantInfo.disableWrap = nil
 		end
