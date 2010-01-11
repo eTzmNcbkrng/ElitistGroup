@@ -75,6 +75,7 @@ function Users:Show(userData)
 					slot.equippedItem = itemLink
 					slot.gemTooltip = gemTooltips[itemLink]
 					slot.enchantTooltip = enchantTooltips[itemLink]
+					slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
 					slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
 					slot.icon:SetTexture(itemIcon)
 					slot.typeText:SetText(slot.itemTalentType)
@@ -717,7 +718,7 @@ function Users:CreateUI()
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			
 			if( self.itemTalentType ) then
-				GameTooltip:SetText(string.format(L["|cfffed000Item Type:|r %s"], self.itemTalentType), 1, 1, 1)
+				GameTooltip:SetText(string.format(L["|cfffed000Item Type:|r %s%s"], self.isBadType, self.itemTalentType), 1, 1, 1)
 			end
 			if( self.enchantTooltip ) then
 				GameTooltip:AddLine(self.enchantTooltip)
