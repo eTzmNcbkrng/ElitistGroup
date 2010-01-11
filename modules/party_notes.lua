@@ -60,8 +60,13 @@ function History:UNIT_NAME_UPDATE(event, unit)
 	end
 end
 
+function History:PLAYER_LEAVING_WORLD()
+	self.resetGroup = true
+	self:UnregisterEvent("PLAYER_LEAVING_WORLD")
+end
+
 function History:PARTY_MEMBERS_CHANGED(event)
-	if( GetNumPartyMembers() == 0 ) then
+	if( GetNumRaidMembers() == 0 ) then
 		self.resetGroup = true
 	elseif( not event or ( GetNumPartyMembers() == MAX_PARTY_MEMBERS and select(2, IsInInstance()) == "party" ) ) then
 		if( self.resetGroup ) then
@@ -81,6 +86,8 @@ function History:PARTY_MEMBERS_CHANGED(event)
 end
 
 function History:LFG_COMPLETION_REWARD()
+	self:RegisterEvent("PLAYER_LEAVING_WORLD")
+	
 	if( ElitistGroup.db.profile.general.autoPopup ) then
 		wasAutoPopped = true
 		self:Show()
