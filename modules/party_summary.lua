@@ -180,8 +180,8 @@ function Summary:UpdateSingle(row)
 		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 		
 		-- People probably want us to build the gear info, I'd imagine
+		row.gearInfo:SetFormattedText(L["Equipment (%s%d|r)"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 		if( equipmentData.totalBad == 0 ) then
-			row.gearInfo:SetFormattedText(L["Equipment (%d)"], equipmentData.totalScore)
 			row.gearInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 			row.gearInfo.tooltip = string.format(L["Equipment: |cffffffffAll good|r"], equipmentData.totalEquipped)
 		else
@@ -193,7 +193,6 @@ function Summary:UpdateSingle(row)
 				end
 			end
 
-			row.gearInfo:SetFormattedText(L["Equipment (%d)"], equipmentData.totalScore)
 			row.gearInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 			row.gearInfo.tooltip = gearTooltip
 		end
