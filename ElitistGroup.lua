@@ -8,7 +8,7 @@ function ElitistGroup:OnInitialize()
 			expExpanded = {},
 			positions = {},
 			general = {
-				autoPopup = true,
+				autoPopup = false,
 				autoSummary = false,
 				databaseExpanded = true,
 				selectedTab = "notes",
