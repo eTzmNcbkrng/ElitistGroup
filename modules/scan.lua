@@ -47,12 +47,13 @@ function Scan:OnInitialize()
 end
 
 hooksecurefunc("NotifyInspect", function(unit)
+	if( InCombatLockdown() ) then return end
+	if( ( unit == "mouseover" or unit == "target" ) and pending.expirationTime and pending.expirationTime > GetTime() ) then return end
+	
 	if( CanInspect(unit) ) then
 		pending.activeInspect = true
 		pending.expirationTime = GetTime() + INSPECTION_TIMEOUT
 	end
-	
-	if( InCombatLockdown() ) then return end
 
 	-- Seems that we can inspect them
 	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
