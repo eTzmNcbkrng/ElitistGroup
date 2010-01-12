@@ -47,14 +47,18 @@ function Scan:OnInitialize()
 end
 
 hooksecurefunc("NotifyInspect", function(unit)
-	-- Inspect timed out, wipe the data we had
-	if( not pending.activeInspect or pending.expirationTime and pending.expirationTime < GetTime() ) then
-		table.wipe(pending)
-		table.wipe(pendingGear)
+	if( CanInspect(unit) ) then
+		pending.activeInspect = true
+		pending.expirationTime = GetTime() + INSPECTION_TIMEOUT
 	end
 	
+	if( InCombatLockdown() ) then return end
+
 	-- Seems that we can inspect them
 	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+		table.wipe(pending)
+		table.wipe(pendingGear)
+
 		pending.playerID = ElitistGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
@@ -73,11 +77,6 @@ hooksecurefunc("NotifyInspect", function(unit)
 
 		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
 		Scan.frame:Show()
-	end
-
-	if( CanInspect(unit) ) then
-		pending.activeInspect = true
-		pending.expirationTime = GetTime() + INSPECTION_TIMEOUT
 	end
 end)
 
