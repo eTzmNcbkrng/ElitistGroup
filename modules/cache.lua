@@ -68,13 +68,16 @@ local function matchStats(overrideType)
 		if( not data.require or ( statCache[data.require] or ( data.require2 and statCache[data.require2] ) ) ) then
 			-- Only use this if it's the exclusive stat, for matching things like pure MP5 gems, not hybrids
 			if( not data.exclusive or totalStats == 1 ) then
-				local statString = data.default or data[overrideType]
-				if( data[overrideType] and data.default ) then statString = statString .. data[overrideType] end
-				
-				if( statString ) then
-					for statKey in string.gmatch(statString, "(.-)@") do
-						if( statCache[ItemData.statMap[statKey]] ) then
-							return data.type
+				-- Skip this if the stat is present
+				if( not data.skipOn or ( statCache[data.skipOn] or ( data.skipOn2 and statCache[data.skipOn2] ) ) ) then
+					local statString = data.default or data[overrideType]
+					if( data[overrideType] and data.default ) then statString = statString .. data[overrideType] end
+					
+					if( statString ) then
+						for statKey in string.gmatch(statString, "(.-)@") do
+							if( statCache[ItemData.statMap[statKey]] ) then
+								return data.type
+							end
 						end
 					end
 				end
