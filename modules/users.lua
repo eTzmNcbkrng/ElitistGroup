@@ -275,7 +275,6 @@ function Users:Show(userData)
 	self.activeDataNotes = 0
 	for _ in pairs(userData.notes) do 
 		self.activeDataNotes = self.activeDataNotes + 1
-		break
 	end
 
 	self:UpdateDatabasePage()
