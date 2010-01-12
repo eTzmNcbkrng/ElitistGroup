@@ -63,6 +63,7 @@ end
 function History:PLAYER_LEAVING_WORLD()
 	self.resetGroup = true
 	self:UnregisterEvent("PLAYER_LEAVING_WORLD")
+	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
 end
 
 function History:PARTY_MEMBERS_CHANGED(event)
@@ -87,6 +88,13 @@ end
 
 function History:LFG_COMPLETION_REWARD()
 	self:RegisterEvent("PLAYER_LEAVING_WORLD")
+	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+	
+	-- For things like Auchenai Crypts where we can complete the dungeon but still be fighting a boss
+	if( InCombatLockdown() ) then
+		self:RegisterEvent("PLAYER_REGEN_ENABLED", "LFG_COMPLETION_REWARD")
+		return
+	end
 	
 	if( ElitistGroup.db.profile.general.autoPopup ) then
 		wasAutoPopped = true
