@@ -142,6 +142,7 @@ local function loadData()
 
 	-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 	ElitistGroup.Items.enchantOverrides = {
+		[3826] = "all", -- Icewalker
 		[3253] = "never", -- Armsman
 		[3852] = "tank/pvp", -- Greater Inscription of the Gladiator
 		[3225] = "dps", -- Executioner
@@ -272,7 +273,7 @@ local function loadData()
 		HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["chance on melee attack"],
 		CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"], RANGED_CRITICAL_STRIKE = L["ranged critical"],
 		MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
-		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"],
+		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"], WHEN_HIT = L["when hit"],
 	}
 
 	ElitistGroup.Items.safeStatMatch = {}
@@ -296,6 +297,7 @@ local function loadData()
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 		{type = "never",		gems = "RESIST@"},
 		{type = "never",		gems = "MANA@", exclusive = true},
+		{type = "tank",			trinkets = "WHEN_HIT@"},
 		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
 		{type = "physical-all",	default = "AGILITY@"},
