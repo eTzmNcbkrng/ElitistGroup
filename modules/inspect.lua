@@ -125,7 +125,8 @@ function Inspect:SetupSummary()
 	self:CreateSummary()
 	
 	local userData = self.inspectID and ElitistGroup.userData[self.inspectID]
-	if( not userData ) then
+	local hasData = userData and ( userData.talentTree1 ~= 0 or userData.talentTree2 ~= 0 or userData.talentTree3 ~= 0 )
+	if( not hasData ) then
 		for _, key in pairs(buttonList) do
 			self.frame[key]:SetText(nil)
 			self.frame[key].tooltip = nil
@@ -135,7 +136,9 @@ function Inspect:SetupSummary()
 		self.frame.enchantInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
 		self.frame.enchantInfo.tooltip = L["Data is loading, please wait."]
 		self.frame.enchantInfo.disableWrap = nil
-	else
+	end
+	
+	if( userData ) then
 		-- Make sure they are talented enough
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
@@ -171,38 +174,40 @@ function Inspect:SetupSummary()
 		end
 		
 		-- Build enchants
-		if( enchantData.pass and not enchantData.noData ) then
-			self.frame.enchantInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
-		else
-			self.frame.enchantInfo:GetFontString():SetTextColor(1.0, 0.15, 0.15, 1)
-		end
-		
-		if( not enchantData.noData ) then
-			self.frame.enchantInfo:SetText(L["Enchants"])
-			self.frame.enchantInfo.tooltip = enchantTooltip
-			self.frame.enchantInfo.disableWrap = not enchantData.noData
-		else
-			self.frame.enchantInfo:SetText(L["Enchants"])
-			self.frame.enchantInfo.tooltip = L["No enchants found."]
-			self.frame.enchantInfo.disableWrap = nil
-		end
+		if( hasData ) then
+			if( enchantData.pass and not enchantData.noData ) then
+				self.frame.enchantInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
+			else
+				self.frame.enchantInfo:GetFontString():SetTextColor(1.0, 0.15, 0.15, 1)
+			end
+			
+			if( not enchantData.noData ) then
+				self.frame.enchantInfo:SetText(L["Enchants"])
+				self.frame.enchantInfo.tooltip = enchantTooltip
+				self.frame.enchantInfo.disableWrap = not enchantData.noData
+			else
+				self.frame.enchantInfo:SetText(L["Enchants"])
+				self.frame.enchantInfo.tooltip = L["No enchants found."]
+				self.frame.enchantInfo.disableWrap = nil
+			end
 
-		-- Build gems
-		if( gemData.pass and not gemData.noData ) then
-			self.frame.gemInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
-		else
-			self.frame.gemInfo:GetFontString():SetTextColor(1.0, 0.15, 0.15, 1)
-		end
+			-- Build gems
+			if( gemData.pass and not gemData.noData ) then
+				self.frame.gemInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
+			else
+				self.frame.gemInfo:GetFontString():SetTextColor(1.0, 0.15, 0.15, 1)
+			end
 
-		if( not gemData.noData ) then
-			self.frame.gemInfo:SetText(L["Gems"])
-			self.frame.gemInfo.tooltip = gemTooltip
-			self.frame.gemInfo.disableWrap = not gemData.noData
-		else
-			self.frame.gemInfo:SetText(L["Gems"])
-			self.frame.gemInfo.tooltip = L["No gems found."]
-			self.frame.gemInfo.disableWrap = nil
-		end		
+			if( not gemData.noData ) then
+				self.frame.gemInfo:SetText(L["Gems"])
+				self.frame.gemInfo.tooltip = gemTooltip
+				self.frame.gemInfo.disableWrap = not gemData.noData
+			else
+				self.frame.gemInfo:SetText(L["Gems"])
+				self.frame.gemInfo.tooltip = L["No gems found."]
+				self.frame.gemInfo.disableWrap = nil
+			end		
+		end
 		
 		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
 	end
@@ -226,7 +231,7 @@ function Inspect:CreateSummary()
 		GameTooltip:Hide()
 	end
 	
-	local frame = CreateFrame("Frame", nil, InspectFrame)
+	local frame = CreateFrame("Frame", nil, InspectModelFrame)
 	frame:SetFrameLevel(100)
 	frame:SetSize(1, 1)
 	frame:Hide()
