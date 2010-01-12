@@ -59,20 +59,29 @@ local function loadData()
 
 	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-caster"] = L["Priest (Discipline)"]}
 
-	ElitistGroup.Items.talentToSpec = {
+	ElitistGroup.Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
-		["disc-healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["caster-dps"] = {["caster-spirit"] = true, ["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
 		["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
 		["range-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
 		["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 		["feral-tank"] = {["pvp"] = true},
+		["dk-tank"] = false, -- Set below
+		["disc-healer"] = false, -- Set below
 	}
+		
+	ElitistGroup.Items.talentToRole["dk-tank"] = ElitistGroup.Items.talentToRole.tank
+	ElitistGroup.Items.talentToRole["disc-healer"] = ElitistGroup.Items.talentToRole.healer
 	
 	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
-	for type in pairs(ElitistGroup.Items.talentToSpec["melee-dps"]) do ElitistGroup.Items.talentToSpec["feral-tank"][type] = true end
-	for type in pairs(ElitistGroup.Items.talentToSpec["tank"]) do ElitistGroup.Items.talentToSpec["feral-tank"][type] = true end
+	for type in pairs(ElitistGroup.Items.talentToRole["melee-dps"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
+	for type in pairs(ElitistGroup.Items.talentToRole["tank"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
+
+	-- This will likely have to be cleaned up, but for now this will allow overrides on what is allowed based on slot
+	ElitistGroup.Items.roleOverrides = {
+		["dk-tank"] = {type = "weapons", ["physical-dps"] = true, ["dps"] = true, ["melee-dps"] = true}
+	}
 
 	local function getSpell(id)
 		local name = GetSpellInfo(id)
@@ -297,14 +306,14 @@ local function loadData()
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 		{type = "never",		gems = "RESIST@"},
 		{type = "never",		gems = "MANA@", exclusive = true},
-		{type = "tank",			trinkets = "WHEN_HIT@"},
+		{type = "tank",			default = "DEFENSE_SKILL_RATING@", trinkets = "WHEN_HIT@"},
 		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
 		{type = "physical-all",	default = "AGILITY@"},
 		{type = "physical-dps", default = "ARMOR_PENETRATION_RATING@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 		{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
 		{type = "melee",		gems = "STRENGTH@", require = "ITEM_MOD_STAMINA_SHORT"},
-		{type = "caster-spirit",gems = "SPIRIT@", enchants = "SPIRIT@"},
+		{type = "caster-spirit",gems = "SPIRIT@", enchants = "SPIRIT@", trinkets = "SPIRIT@"},
 		{type = "caster-spirit",default = "SPIRIT@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "caster",		default = "POWER_REGEN0@SPELL_DAMAGE_DONE@SPELL_POWER@MANA_REGENERATION@HASTE_SPELL_RATING@CRIT_SPELL_RATING@INTELLECT@", gems = "MANA@", enchants = "MANA@"},
 		{type = "caster",		default = "MANA@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
