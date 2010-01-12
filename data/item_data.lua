@@ -186,7 +186,7 @@ local function loadData()
 		[3603] = "tank/dps", -- Hand-Mounted Pyro Rocket
 		[3604] = "healer/dps", -- Hyperspeed Accelerators
 		[3599] = "never", -- Personal Electromagnetic Pulse Generator
-		[3605] = "physical-dps", -- Flexweave Underlay
+		[3605] = "physical-all", -- Flexweave Underlay
 		[3883] = "tank", -- Rune of the Nerubian Carapace
 		[3847] = "tank", -- Rune of the Stoneskin Gargoyle
 		[3368] = "melee-dps", -- Rune of the Fallen Crusader
