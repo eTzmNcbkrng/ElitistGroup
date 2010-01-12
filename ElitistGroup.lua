@@ -303,11 +303,10 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 	return gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"], totalLines
 end
 
-
 local MAINHAND_SLOT, OFFHAND_SLOT, WAIST_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot"), GetInventorySlotInfo("WaistSlot")
 function ElitistGroup:GetGearSummary(userData)
 	local spec = self:GetPlayerSpec(userData)
-	local validSpecTypes = self.Items.talentToSpec[spec]
+	local validSpecTypes = self.Items.talentToRole[spec]
 	local equipment, gems, enchants = self:GetTable(), self:GetTable(), self:GetTable()
 	
 	equipment.totalScore = 0
@@ -335,7 +334,9 @@ function ElitistGroup:GetGearSummary(userData)
 			equipment.totalEquipped = equipment.totalEquipped + 1
 			
 			local itemTalent = self.ITEM_TALENTTYPE[baseItemLink]
-			if( itemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[itemTalent] ) then
+			local equipID = self.Items.equipToType[itemEquipType]
+			local roleOverride = self.Items.roleOverrides[spec] and self.Items.roleOverrides[spec].type == equipID and self.Items.roleOverrides[spec]
+			if( itemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[itemTalent] and ( not roleOverride or not roleOverride[itemTalent] ) ) then
 				equipment.pass = nil
 				equipment[itemLink] = itemTalent
 				equipment.totalBad = equipment.totalBad + 1
