@@ -16,8 +16,6 @@ local GEAR_CHECK_INTERVAL = 0.10
 local pending, pendingGear, inspectQueue, inspectBadGems = {}, {}, {}, {}
 
 function Scan:OnInitialize()
-	self:RegisterEvent("INSPECT_TALENT_READY")
-	self:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
 	self:RegisterEvent("PLAYER_LEAVING_WORLD", "ResetQueue")
 	
 	self.frame = CreateFrame("Frame")
@@ -72,6 +70,8 @@ hooksecurefunc("NotifyInspect", function(unit)
 		pending.guid = UnitGUID(unit)
 		
 		Scan:UpdateUnitData(unit)
+		Scan:RegisterEvent("INSPECT_TALENT_READY")
+		Scan:RegisterEvent("INSPECT_ACHIEVEMENT_READY")
 		
 		if( AchievementFrameComparison ) then
 			AchievementFrameComparison:UnregisterEvent("INSPECT_ACHIEVEMENT_READY")
@@ -81,6 +81,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 end)
 
 hooksecurefunc("ClearAchievementComparisonUnit", function(unit)
+	Scan:UnregisterEvent("INSPECT_ACHIEVEMENT_READY")
 	if( pending.achievements ) then
 		pending.achievements = nil
 	
@@ -136,6 +137,8 @@ function Scan:CheckInspectGear()
 end
 
 function Scan:INSPECT_ACHIEVEMENT_READY()
+	self:UnregisterEvent("INSPECT_ACHIEVEMENT_READY")
+	
 	if( pending.playerID and pending.achievements and ElitistGroup.userData[pending.playerID] ) then
 		local userData = ElitistGroup.userData[pending.playerID]
 		for achievementID in pairs(ElitistGroup.Dungeons.achievements) do
@@ -155,6 +158,8 @@ end
 
 -- Inspection seems to block until INSPECT_TALENT_READY is fired, then it unblocks
 function Scan:INSPECT_TALENT_READY()
+	self:UnregisterEvent("INSPECT_TALENT_READY")
+	
 	if( pending.playerID and pending.talents and ElitistGroup.userData[pending.playerID] ) then
 		pending.talents = nil
 		
