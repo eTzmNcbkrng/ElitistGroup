@@ -47,8 +47,9 @@ function Scan:OnInitialize()
 end
 
 hooksecurefunc("NotifyInspect", function(unit)
-	if( InCombatLockdown() ) then return end
-	if( ( unit == "mouseover" or unit == "target" ) and pending.expirationTime and pending.expirationTime > GetTime() ) then return end
+	if( InCombatLockdown() or not Scan.allowInspect ) then return end
+	--if( ( unit == "mouseover" or unit == "target" ) and pending.expirationTime and pending.expirationTime > GetTime() ) then return end
+	Scan.allowInspect = nil
 	
 	if( CanInspect(unit) ) then
 		pending.activeInspect = true
@@ -191,6 +192,7 @@ function Scan:ManualCreateCore(playerID, level, classToken)
 	userData.server = server
 	userData.level = level
 	userData.classToken = classToken
+	userData.pruned = nil
 	
 	ElitistGroup.userData[playerID] = userData
 	ElitistGroup.writeQueue[playerID] = true
@@ -207,6 +209,7 @@ function Scan:CreateCoreTable(unit)
 	userData.server = server and server ~= "" and server or GetRealmName()
 	userData.level = UnitLevel(unit)
 	userData.classToken = select(2, UnitClass(unit))
+	userData.pruned = nil
 	
 	ElitistGroup.userData[playerID] = userData
 	ElitistGroup.writeQueue[playerID] = true
@@ -265,11 +268,8 @@ function Scan:UpdatePlayerData()
 end
 
 function Scan:InspectUnit(unit)
-	if( UnitIsUnit(unit, "player") ) then
-		self:UpdatePlayerData()
-	else
-		NotifyInspect(unit)
-	end
+	self.allowInspect = true
+	NotifyInspect(unit)
 end
 
 -- Handle the queuing aspect of inspection
@@ -352,8 +352,8 @@ function Scan:ProcessQueue()
 	for i=#(inspectQueue), 1, -1 do
 		local unit = inspectQueue[i]
 		if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
-			NotifyInspect(unit)
-
+			self:InspectUnit(unit)
+			
 			table.remove(inspectQueue, i)
 			inspectQueue[unit] = nil
 			break
