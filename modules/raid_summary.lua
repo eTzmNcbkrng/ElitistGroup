@@ -7,8 +7,14 @@ local userSummaryData, sortedData, queuedUnits = {}, {}, {}
 local MAX_SUMMARY_ROWS = 10
 
 function Summary:Show()
-	ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
-	if( IsInInstance() ) then
+	local inInstance, instanceType = IsInInstance()
+	if( instanceType == "pvp" or instanceType == "arena" ) then
+		ElitistGroup.modules.Sync:CommMessage("REQGEAR", "BATTLEGROUND")
+	elseif( GetNumRaidMembers() > 0 ) then
+		ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
+	end
+	
+	if( inInstance ) then
 		ElitistGroup.modules.Scan:QueueGroup("raid", GetNumRaidMembers())
 	end
 	
