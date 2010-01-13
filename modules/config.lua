@@ -240,7 +240,7 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 	-- Show the players data
 	if( cmd == "" ) then
 		local playerID
-		if( UnitExists("target") and UnitIsFriend("target", "player") ) then
+		if( UnitExists("target") and UnitIsFriend("target", "player") and not UnitIsUnit("target", "player") ) then
 			if( CanInspect("target", true) ) then
 				playerID = ElitistGroup:GetPlayerID("target")
 				if( not ElitistGroup.modules.Scan:IsInspectPending() ) then
