@@ -17,6 +17,19 @@ function Inspect:ADDON_LOADED(event, addon)
 	if( addon ~= "Blizzard_InspectUI" ) then return end
 	self:UnregisterEvent("ADDON_LOADED")
 	
+	-- Tell EG that it's ok to inspect this because it's user initiated
+	local orig_InspectFrame_Show = InspectFrame_Show
+	InspectFrame_Show = function(...)
+		ElitistGroup.modules.Scan.allowInspect = true
+		return orig_InspectFrame_Show(...)
+	end
+	
+	local orig_InspectFrame_UnitChanged = InspectFrame_UnitChanged
+	InspectFrame_UnitChanged = function(...)
+		ElitistGroup.modules.Scan.allowInspect = true
+		return orig_InspectFrame_UnitChanged(...)
+	end
+	
 	local function OnShow()
 		local self = Inspect
 		
@@ -42,7 +55,6 @@ function Inspect:ADDON_LOADED(event, addon)
 	
 	InspectFrame:HookScript("OnShow", OnShow)
 	InspectFrame:HookScript("OnHide", function() Inspect:UnregisterMessage("SG_DATA_UPDATED") end)
-	hooksecurefunc("InspectFrame_UnitChanged", OnShow)
 	if( InspectFrame:IsVisible() ) then OnShow() end
 end
 
