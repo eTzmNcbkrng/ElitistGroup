@@ -77,6 +77,7 @@ function Users:Show(userData)
 					slot.enchantTooltip = enchantTooltips[itemLink]
 					slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
 					slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
+					slot.fullItemLink = fullItemLink
 					slot.icon:SetTexture(itemIcon)
 					slot.typeText:SetText(slot.itemTalentType)
 					slot:Enable()
@@ -100,7 +101,10 @@ function Users:Show(userData)
 					slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 					slot.extraText:SetText("")
 					slot.typeText:SetText("")
+					slot.fullItemLink = nil
 					slot.equippedItem = nil
+					slot.enchantTooltip = nil
+					slot.gemTooltip = nil
 					slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
 					slot:Disable()
 					slot:Show()
@@ -115,6 +119,10 @@ function Users:Show(userData)
 				slot.extraText:SetText("")
 				slot.typeText:SetText("")
 				slot.tooltip = L["No item equipped"]
+				slot.fullItemLink = nil
+				slot.equippedItem = nil
+				slot.enchantTooltip = nil
+				slot.gemTooltip = nil
 				slot:Disable()
 				slot:Show()
 			end
@@ -949,7 +957,12 @@ function Users:CreateUI()
 	frame.pruneInfo:SetJustifyV("TOP")
 	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /ElitistGroup and change the value."])
 
-	local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
+	local function OnItemClick(self)
+		if( self.fullItemLink ) then
+			HandleModifiedItemClick(self.fullItemLink)
+		end
+	end
+		local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
 	frame.gearFrame.equipSlots = {}
 	for i=1, 18 do
 		local slot = CreateFrame("Button", nil, frame.gearFrame)
@@ -957,6 +970,7 @@ function Users:CreateUI()
 		slot:SetWidth(100)
 		slot:SetScript("OnEnter", OnEnter)
 		slot:SetScript("OnLeave", OnLeave)
+		slot:SetScript("OnClick", OnItemClick)
 		slot:SetMotionScriptsWhileDisabled(true)
 		slot.icon = slot:CreateTexture(nil, "BACKGROUND")
 		slot.icon:SetHeight(30)
