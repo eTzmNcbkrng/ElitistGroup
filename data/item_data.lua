@@ -152,7 +152,7 @@ local function loadData()
 	-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 	ElitistGroup.Items.enchantOverrides = {
 		[3826] = "all", -- Icewalker
-		[3253] = "never", -- Armsman
+		[3253] = "tank", -- Armsman
 		[3852] = "tank/pvp", -- Greater Inscription of the Gladiator
 		[3225] = "dps", -- Executioner
 		[3870] = "tank/pvp", -- Blood Draining
