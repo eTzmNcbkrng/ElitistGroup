@@ -9,10 +9,11 @@ ElitistGroup.MAX_LINK_LENGTH = 80
 ElitistGroup.MAX_NOTE_LENGTH = 256
 
 local MAX_QUEUE_RETRIES = 50
-local QUEUE_RETRY_TIME = 2
+local MAX_GEM_RETRIES = 50
+local QUEUE_RECHECK_TIME = 2
 local INSPECTION_TIMEOUT = 2
 local GEAR_CHECK_INTERVAL = 0.10
-local pending, pendingGear, inspectQueue = {}, {}, {}
+local pending, pendingGear, inspectQueue, inspectBadGems = {}, {}, {}, {}
 
 function Scan:OnInitialize()
 	self:RegisterEvent("INSPECT_TALENT_READY")
@@ -25,7 +26,7 @@ function Scan:OnInitialize()
 			self.queueTimer = self.queueTimer - elapsed
 			
 			if( self.queueTimer <= 0 ) then
-				self.queueTimer = self.queueTimer + QUEUE_RETRY_TIME
+				self.queueTimer = self.queueTimer + QUEUE_RECHECK_TIME
 				Scan:ProcessQueue()
 			end
 		end
@@ -65,9 +66,10 @@ hooksecurefunc("NotifyInspect", function(unit)
 		pending.classToken = select(2, UnitClass(unit))
 		pending.totalChecks = 0
 		pending.talents = true
+		pending.achievements = true
+		pending.gear = true
 		pending.unit = unit
 		pending.guid = UnitGUID(unit)
-		pending.achievements = true
 		
 		Scan:UpdateUnitData(unit)
 		
@@ -75,10 +77,6 @@ hooksecurefunc("NotifyInspect", function(unit)
 			AchievementFrameComparison:UnregisterEvent("INSPECT_ACHIEVEMENT_READY")
 		end
 		SetAchievementComparisonUnit(unit)
-		
-
-		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
-		Scan.frame:Show()
 	end
 end)
 
@@ -92,9 +90,19 @@ hooksecurefunc("ClearAchievementComparisonUnit", function(unit)
 	end
 end)
 
+-- If we have all the necessary data, we can head off to the next queued unit
+local function checkPending(unit)
+	if( inspectQueue[unit] and not pending.achievements and not pending.gear and not pending.talents ) then
+		pending.activeInspect = nil
+		pending.expirationTime = nil
+		self:ProcessQueue()
+	end
+end
+
 function Scan:CheckInspectGear()
 	if( not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
+		pending.gear = nil
 		return
 	end
 	
@@ -112,15 +120,18 @@ function Scan:CheckInspectGear()
 	end
 	
 	if( totalPending == 0 ) then
+		inspectBadGems[pending.unit] = nil
+		for i=#(inspectBadGems), 1, -1 do
+			if( inspectBadGems[i] == pending.unit ) then
+				table.remove(inspectBadGems, i)
+			end
+		end
+		
+		pending.gear = nil
 		self.frame.gearTimer = nil
 		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
 
-		-- If achievements and talent data is already available, we have all the info we need and inspects can unblock
-		if( not pending.achievements and not pending.talents ) then
-			pending.activeInspect = nil
-			pending.expirationTime = nil
-			self:ProcessQueue()
-		end
+		checkPending(pending.unit)
 	end
 end
 
@@ -138,6 +149,7 @@ function Scan:INSPECT_ACHIEVEMENT_READY()
 		
 		ClearAchievementComparisonUnit()
 		self:SendMessage("SG_DATA_UPDATED", "achievements", pending.playerID)
+		checkPending(pending.unit)
 	end
 end
 
@@ -155,6 +167,7 @@ function Scan:INSPECT_TALENT_READY()
 		userData.specRole = specRole
 		
 		self:SendMessage("SG_DATA_UPDATED", "talents", pending.playerID)
+		checkPending(pending.unit)
 	end
 end
 
@@ -221,27 +234,55 @@ end
 function Scan:UpdateUnitData(unit)
 	self:CreateCoreTable(unit)
 
+	local badGems
 	local userData = ElitistGroup.userData[ElitistGroup:GetPlayerID(unit)]
 	userData.scanned = time()
-
-	table.wipe(userData.equipment)
+	
 	for itemType in pairs(ElitistGroup.Items.inventoryToID) do
 		local inventoryID = GetInventorySlotInfo(itemType)
 		local itemLink = GetInventoryItemLink(unit, inventoryID)
 		
-		userData.equipment[inventoryID] = ElitistGroup:GetItemLink(itemLink)
-				
-		-- Basically, this makes sure that either the item has no sockets that need to be loaded, or that the data isn't already present
-		if( pending.unit == unit and itemLink ) then
+		-- No item, clear it
+		if( not itemLink ) then
+			userData.equipment[inventoryID] = nil
+		-- We didn't inspect the person, no data yet or we have a previous one saved, but the itemid changed
+		elseif( pending.unit ~= unit or ( userData.equipment[inventoryID] and string.match(itemLink, "item:(%d+)") ~= string.match(userData.equipment[inventoryID], "item:(%d+)") ) ) then
+			userData.equipment[inventoryID] = itemLink
+		-- We have data, and the item is the same figure out what is different.
+		else
+			-- The item has gems, so we need to make sure we have data for it (or don't)
 			local totalSockets = ElitistGroup.EMPTY_GEM_SLOTS[itemLink]
 			if( totalSockets > 0 ) then
-				local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
-				local totalUsed = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
-				if( totalUsed ~= totalSockets ) then
+				local enchantID, gem1, gem2, gem3 = string.match(itemLink, "item:%d+:(%d+):(%d+):(%d+):(%d+)")
+				-- Invalid gem data, queue it up, don't change the saved data
+				if( gem1 == "0" and gem2 == "0" and gem3 == "0" ) then
 					pendingGear[inventoryID] = itemLink
+					badGems = true
+					
+					-- Set it in case we don't have it already
+					userData.equipment[inventoryID] = userData.equipment[inventoryID] or userData.equipment[inventoryID]
+					
+				-- Have data! save it and don't worry
+				else
+					userData.equipment[inventoryID] = itemLink
 				end
+			-- No sockets, just save
+			else
+				userData.equipment[inventoryID] = itemLink
 			end
 		end
+	end
+	
+	if( badGems ) then
+		inspectQueue.gear = true
+		
+		if( inspectQueue[unit] and not inspectBadGems[unit] ) then
+			inspectBadGems[unit] = 0
+			table.insert(inspectBadGems, unit)
+		end
+
+		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
+		Scan.frame:Show()
 	end
 end
 
@@ -282,7 +323,7 @@ function Scan:UnitIsQueued(unit)
 end
 
 function Scan:QueueSize()
-	return #(inspectQueue)
+	return #(inspectQueue) + #(inspectBadGems)
 end
 
 -- Try and speed up the queue so people who are initially in range are done first not perfectly obviously, but better than nothing
@@ -308,6 +349,7 @@ function Scan:QueueGroup(unitType, total)
 		end
 	end
 	
+	table.wipe(inspectBadGems)
 	table.sort(inspectQueue, sortQueue)
 	self:QueueStart()
 end
@@ -315,6 +357,7 @@ end
 function Scan:QueueUnit(unit)
 	if( not inspectQueue[unit] ) then
 		inspectQueue[unit] = 0
+		inspectBadGems[unit] = nil
 		table.insert(inspectQueue, unit)
 	end
 end
@@ -325,7 +368,7 @@ function Scan:QueueStart()
 
 	if( not InCombatLockdown() ) then
 		self:ProcessQueue()
-		self.frame.queueTimer = QUEUE_RETRY_TIME
+		self.frame.queueTimer = QUEUE_RECHECK_TIME
 		self.frame:Show()
 	end
 end
@@ -336,18 +379,44 @@ function Scan:PLAYER_REGEN_DISABLED()
 end
 
 function Scan:PLAYER_REGEN_ENABLED()
-	self.frame.queueTimer = QUEUE_RETRY_TIME
+	self.frame.queueTimer = QUEUE_RECHECK_TIME
 	self:ProcessQueue()
 end
 
+--hooksecurefunc("NotifyInspect", function(...) print(...) end)
+
+local checkGemQueue
 function Scan:ProcessQueue()
-	if( #(inspectQueue) == 0 ) then
+	if( #(inspectQueue) == 0 and #(inspectBadGems) == 0 ) then
 		self:ResetQueue()
 		return
 	elseif( pending.activeInspect and ( pending.expirationTime and pending.expirationTime > GetTime() ) ) then
 		return
 	end
 	
+	-- First check the bad gem queue
+	if( not checkGemQueue ) then
+		for i=#(inspectBadGems), 1, -1 do
+			local unit = inspectBadGems[i]
+			if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+				checkGemQueue = true
+				self:InspectUnit(unit)
+				break
+			-- Kill them, figuratively
+			elseif( inspectBadGems[unit] > MAX_GEM_RETRIES ) then
+				table.remove(inspectBadGems, i)
+			else
+				inspectBadGems[unit] = inspectBadGems[unit] + 1
+			end
+		end
+	
+		if( checkGemQueue or pending.activeInspect and ( pending.expirationTime and pending.expirationTime > GetTime() ) ) then
+			return
+		end
+	end
+	
+	checkGemQueue = nil
+
 	-- Find the first unit we can inspect
 	for i=#(inspectQueue), 1, -1 do
 		local unit = inspectQueue[i]
@@ -368,8 +437,11 @@ function Scan:ProcessQueue()
 end
 
 function Scan:ResetQueue()
+	checkGemQueue = nil
 	self.frame.queueTimer = nil
+
 	self:UnregisterEvent("PLAYER_REGEN_DISABLED")
 	self:UnregisterEvent("PLAYER_REGEN_ENABLED")
 	table.wipe(inspectQueue)
+	table.wipe(inspectBadGems)
 end
