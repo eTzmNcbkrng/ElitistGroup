@@ -198,23 +198,25 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	local enchantTooltips, gemTooltips = self:GetTable(), self:GetTable()
 	
 	-- Compile all the gems into tooltips per item
+	local unusedTooltip = ""
 	local lastItemLink, totalBad
 	for i=1, #(gemData), 3 do
 		local itemLink, gemLink, arg = gemData[gemData[i]], gemData[i + 1], gemData[i + 2]
 		
 		if( lastItemLink ~= itemLink ) then
 			if( lastItemLink ) then
-				gemTooltips[lastItemLink] = string.format(L["Gems: |cffff2020[!]|r |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
+				gemTooltips[lastItemLink] = string.format(L["Gems: |cffff2020[!]|r |cffffffff%d bad|r%s%s"], totalBad, unusedTooltip, gemTooltips[lastItemLink])
 			end
 			
 			gemTooltips[itemLink] = ""
+			unusedTooltip = ""
 			lastItemLink = itemLink
 			totalBad = 0
 		end
 		totalBad = totalBad + 1
 				
 		if( arg == "missing" ) then
-			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. L["Unused sockets"]
+			unusedTooltip = string.format(L[" (%d unused |4socket:sockets;)"], gemLink)
 		elseif( type(arg) == "string" ) then
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, ElitistGroup.Items.itemRoleText[arg] or arg)
 		else
@@ -224,7 +226,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	
 	-- And grab the last one
 	if( lastItemLink ) then
-		gemTooltips[lastItemLink] = string.format(L["Gems: |cffff2020[!]|r |cffffffff%d bad|r%s"], totalBad, gemTooltips[lastItemLink])
+		gemTooltips[lastItemLink] = string.format(L["Gems: |cffff2020[!]|r |cffffffff%d bad|r%s%s"], totalBad, unusedTooltip, gemTooltips[lastItemLink])
 	end
 	
 	-- Now compile all the enchants
@@ -237,11 +239,16 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		end
 	end
 		
-	-- Add the default pass tooltips to anything without them
+	-- Add the pass/no socket stuff
 	for _, link in pairs(equipment) do
 		gemTooltips[link] = gemTooltips[link] or self.EMPTY_GEM_SLOTS[link] == 0 and L["Gems: |cffffffffNo sockets|r"] or L["Gems: |cffffffffPass|r"]
-		
-		enchantTooltips[link] = enchantTooltips[link] or L["Enchant: |cffffffffPass|r"]
+	end
+	
+	for inventoryID, inventoryKey in pairs(ElitistGroup.Items.validInventorySlots) do
+		local link = equipment[inventoryID]
+		if( link  ) then
+			enchantTooltips[link] = enchantTooltips[link] or enchantData[inventoryKey] and L["Enchant: |cffffffffPass|r"] or L["Enchant: |cffffffffCannot enchant|r"]
+		end
 	end
 	
 	return enchantTooltips, gemTooltips
@@ -346,6 +353,7 @@ function ElitistGroup:GetGearSummary(userData)
 			local unenchantable = ElitistGroup.Items.unenchantableTypes[itemEquipType]
 			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
 				enchants.total = enchants.total + 1
+				enchants[ElitistGroup.Items.validInventorySlots[inventoryID]] = true
 
 				local enchantTalent = ElitistGroup.ENCHANT_TALENTTYPE[enchantItemLink]
 				if( enchantTalent ~= "none" ) then
@@ -406,11 +414,11 @@ function ElitistGroup:GetGearSummary(userData)
 
 			if( itemUnsocketed > 0 ) then
 				table.insert(gems, fullItemLink)
-				table.insert(gems, false)
+				table.insert(gems, itemUnsocketed)
 				table.insert(gems, "missing")
 				
 				gems.pass = nil
-				gems.totalBad = gems.totalBad + 1
+				gems.totalBad = gems.totalBad + itemUnsocketed
 				gems[fullItemLink] = itemLink
 			end
 		end
