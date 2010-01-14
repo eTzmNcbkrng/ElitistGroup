@@ -270,7 +270,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			if( arg == "buckle" ) then
 				table.insert(tempList, string.format(L["%s - Missing belt buckle or gem"], fullItemLink))
 			elseif( arg == "missing" ) then
-				table.insert(tempList, string.format(L["%s - Missing gems"], fullItemLink))
+				table.insert(tempList, string.format(L["%s - %d missing |4gem:gems;"], fullItemLink, gemData[i + 1]))
 			elseif( type(arg) == "string" ) then
 				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, ElitistGroup.Items.itemRoleText[arg] or arg))
 			else
@@ -348,7 +348,7 @@ function ElitistGroup:GetGearSummary(userData)
 				equipment[itemLink] = itemTalent
 				equipment.totalBad = equipment.totalBad + 1
 			end
-			
+
 			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
 			local unenchantable = ElitistGroup.Items.unenchantableTypes[itemEquipType]
 			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
@@ -376,7 +376,7 @@ function ElitistGroup:GetGearSummary(userData)
 					enchants.pass = nil
 				end
 			end
-			
+
 			-- Last but not least, off to the gems
 			gems.total = gems.total + self.EMPTY_GEM_SLOTS[itemLink]
 			
@@ -410,8 +410,8 @@ function ElitistGroup:GetGearSummary(userData)
 						end
 					end
 				end
-			end	
-
+			end
+			
 			if( itemUnsocketed > 0 ) then
 				table.insert(gems, fullItemLink)
 				table.insert(gems, itemUnsocketed)
