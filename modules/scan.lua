@@ -265,7 +265,7 @@ function Scan:UpdateUnitData(unit)
 					badGems = true
 					
 					-- Set it in case we don't have it already
-					userData.equipment[inventoryID] = userData.equipment[inventoryID] or userData.equipment[inventoryID]
+					userData.equipment[inventoryID] = userData.equipment[inventoryID] or itemLink
 					
 				-- Have data! save it and don't worry
 				else
