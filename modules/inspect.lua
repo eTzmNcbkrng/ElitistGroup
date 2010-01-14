@@ -1,7 +1,7 @@
 local ElitistGroup = select(2, ...)
 local Inspect = ElitistGroup:NewModule("Inspect", "AceEvent-3.0")
 local L = ElitistGroup.L
-local buttonList = {"talentInfo", "gearInfo", "enchantInfo", "gemInfo"}
+local buttonList = {"gemInfo", "enchantInfo", "gearInfo", "talentInfo"}
 
 function Inspect:OnInitialize()
 	if( ElitistGroup.db.profile.inspect.window or ElitistGroup.db.profile.inspect.tooltips ) then
@@ -152,12 +152,13 @@ function Inspect:SetupSummary(updateType)
 		if( not updateType or updateType == "talents" ) then
 			-- Make sure they are talented enough
 			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+			specType = ElitistGroup.Talents.talentText[specType] or specType
 			if( not userData.unspentPoints ) then
-				self.frame.talentInfo:SetFormattedText("%d/%d/%d", userData.talentTree1, userData.talentTree2, userData.talentTree3)
-				self.frame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
+				self.frame.talentInfo:SetFormattedText("%d/%d/%d [%s]", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
+				self.frame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, specType)
 			else
 				self.frame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-				self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+				self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, specTyep)
 			end
 		end
 		
@@ -262,7 +263,7 @@ function Inspect:CreateSummary()
 		fontString:SetPoint("RIGHT", button, "RIGHT", -2, 0)
 		fontString:SetJustifyH("RIGHT")
 		fontString:SetJustifyV("CENTER")
-		fontString:SetWidth(button:GetWidth())
+		fontString:SetWidth(button:GetWidth() + (i == 4 and 40 or 0))
 		fontString:SetHeight(15)
 		
 		if( i > 1 ) then
