@@ -165,6 +165,10 @@ function ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 end
 
 function ElitistGroup:GetPlayerSpec(playerData)
+	if( not playerData.talentTree1 or not playerData.talentTree2 or not playerData.talentTree3 ) then
+		return "unknown", L["Unknown"], "Interface\\Icons\\INV_Misc_QuestionMark"
+	end
+	
 	local treeOffset
 	if( playerData.talentTree1 > playerData.talentTree2 and playerData.talentTree1 > playerData.talentTree3 ) then
 		treeOffset = 1
