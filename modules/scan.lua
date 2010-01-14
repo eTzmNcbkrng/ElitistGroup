@@ -403,7 +403,7 @@ function Scan:ProcessQueue()
 	if( not checkGemQueue ) then
 		for i=#(inspectBadGems), 1, -1 do
 			local unit = inspectBadGems[i]
-			if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+			if( UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 				checkGemQueue = true
 				self:InspectUnit(unit)
 				break
@@ -425,7 +425,7 @@ function Scan:ProcessQueue()
 	-- Find the first unit we can inspect
 	for i=#(inspectQueue), 1, -1 do
 		local unit = inspectQueue[i]
-		if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+		if( UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 			self:InspectUnit(unit)
 			
 			table.remove(inspectQueue, i)
