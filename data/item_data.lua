@@ -210,6 +210,7 @@ local function loadData()
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	ElitistGroup.Items.itemOverrides = {
+		[50458] = "dps", -- Bizuri's Totem of Shattered Ice
 		[47666] = "dps", -- Totem of Electrifying Wind
 		[40707] = "tank", -- Libram of Obstruction
 		[32368] = "tank", -- Tome of the Lightbringer
