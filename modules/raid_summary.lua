@@ -65,14 +65,17 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 			end
 		end
 		
+		if( type == "gems" ) then
+			summaryData.totalGems = gemData.total
+			summaryData.gems = gemData.totalBad
+			summaryData.gemTooltip = gemTooltip
+		end
+
 		summaryData.totalEquipment = equipmentData.totalEquipped
 		summaryData.equipment = equipmentData.totalBad
 		summaryData.totalEnchants = enchantData.total
 		summaryData.enchants = enchantData.totalBad
 		summaryData.enchantTooltip = enchantTooltip
-		summaryData.totalGems = gemData.total
-		summaryData.gems = gemData.totalBad
-		summaryData.gemTooltip = gemTooltip
 		summaryData.average = math.floor(equipmentData.totalScore)
 		summaryData.rating = 0
 		summaryData.totalRatings = 0
