@@ -57,7 +57,7 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["druid"] = L["Caster (Druid)"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Disc Priest/Druid"]}
 
 	ElitistGroup.Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
@@ -68,17 +68,18 @@ local function loadData()
 		["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 		["feral-tank"] = {["pvp"] = true},
 		["dk-tank"] = false, -- Set below
-		["disc-healer"] = false,
+		["disc-priest"] = false,
 		["resto-druid"] = false, 
 		["balance-druid"] = false,
 	}
 		
 	ElitistGroup.Items.talentToRole["dk-tank"] = ElitistGroup.Items.talentToRole.tank
-	ElitistGroup.Items.talentToRole["disc-healer"] = ElitistGroup.Items.talentToRole.healer
+	ElitistGroup.Items.talentToRole["disc-priest"] = CopyTable(ElitistGroup.Items.talentToRole.healer)
+	ElitistGroup.Items.talentToRole["disc-priest"].manaless = true
 	ElitistGroup.Items.talentToRole["resto-druid"] = CopyTable(ElitistGroup.Items.talentToRole.healer)
-	ElitistGroup.Items.talentToRole["resto-druid"].druid = true
+	ElitistGroup.Items.talentToRole["resto-druid"].manaless = true
 	ElitistGroup.Items.talentToRole["balance-druid"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])	
-	ElitistGroup.Items.talentToRole["balance-druid"].druid = true
+	ElitistGroup.Items.talentToRole["balance-druid"].manaless = true
 
 	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
 	for type in pairs(ElitistGroup.Items.talentToRole["melee-dps"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
@@ -216,8 +217,8 @@ local function loadData()
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	ElitistGroup.Items.itemOverrides = {
-		[35503] = "druid", -- Ember Skyfire Diamond
-		[41333] = "druid", -- Ember Skyflare Diamond
+		[35503] = "manaless", -- Ember Skyfire Diamond
+		[41333] = "manaless", -- Ember Skyflare Diamond
 		[50458] = "dps", -- Bizuri's Totem of Shattered Ice
 		[47666] = "dps", -- Totem of Electrifying Wind
 		[40707] = "tank", -- Libram of Obstruction
@@ -259,7 +260,7 @@ local function loadData()
 		[44087] = "never", -- Persistent Earthshatter Diamond
 		[41381] = "never", -- Persistent Earthsiege Diamond
 		[32640] = "never", -- Potent Unstable Diamond
-		[41376] = "disc-healer", -- Revitalizing Skyflare Diamond
+		[41376] = "disc-priest", -- Revitalizing Skyflare Diamond
 		[25894] = "never", -- Swift Skyfire Diamond
 		[41339] = "never", -- Swift Skyflare Diamond
 		[28557] = "never", -- Swift Starfire Diamond
