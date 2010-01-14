@@ -4,7 +4,7 @@ local L = ElitistGroup.L
 local function loadData()
 	local Talents = ElitistGroup.Talents
 
-	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-healer"] = L["Healer"], ["dk-tank"] = L["Tank"]}
+	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-healer"] = L["Healer"], ["dk-tank"] = L["Tank"], ["resto-druid"] = L["Healer"], ["balance-druid"] = L["Caster DPS"]}
 
 	-- required = How many of the talents the class needs
 	-- the number set for the talent is how many they need
@@ -48,9 +48,9 @@ local function loadData()
 			"caster-dps", L["Destruction"], "Interface\\Icons\\Spell_Shadow_RainOfFire",
 		},
 		["DRUID"] = {
-			"caster-dps", L["Balance"], "Interface\\Icons\\Spell_Nature_Lightning",
+			"balance-druid", L["Balance"], "Interface\\Icons\\Spell_Nature_Lightning",
 			"melee-dps", L["Feral"], "Interface\\Icons\\Ability_Racial_BearForm",
-			"healer", L["Restoration"], "Interface\\Icons\\Spell_Nature_HealingTouch",
+			"resto-druid", L["Restoration"], "Interface\\Icons\\Spell_Nature_HealingTouch",
 		},
 		["WARRIOR"] = {
 			"melee-dps", L["Arms"], "Interface\\Icons\\Ability_Rogue_Eviscerate", 
