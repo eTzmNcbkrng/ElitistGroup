@@ -4,7 +4,7 @@ local L = ElitistGroup.L
 local function loadData()
 	local Talents = ElitistGroup.Talents
 
-	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-healer"] = L["Healer"], ["dk-tank"] = L["Tank"], ["resto-druid"] = L["Healer"], ["balance-druid"] = L["Caster DPS"]}
+	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-priest"] = L["Healer"], ["dk-tank"] = L["Tank"], ["resto-druid"] = L["Healer"], ["balance-druid"] = L["Caster DPS"]}
 
 	-- required = How many of the talents the class needs
 	-- the number set for the talent is how many they need
@@ -73,7 +73,7 @@ local function loadData()
 			"range-dps", L["Survival"], "Interface\\Icons\\Ability_Hunter_SwiftStrike",
 		},
 		["PRIEST"] = {
-			"disc-healer", L["Discipline"], "Interface\\Icons\\Spell_Holy_WordFortitude",
+			"disc-priest", L["Discipline"], "Interface\\Icons\\Spell_Holy_WordFortitude",
 			"healer", L["Holy"], "Interface\\Icons\\Spell_Holy_HolyBolt",
 			"caster-dps", L["Shadow"], "Interface\\Icons\\Spell_Shadow_ShadowWordPain",
 		},
