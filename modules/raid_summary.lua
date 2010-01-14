@@ -65,7 +65,7 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 			end
 		end
 		
-		if( type == "gems" ) then
+		if( type == "gems" or gemData.total > 0 ) then
 			summaryData.totalGems = gemData.total
 			summaryData.gems = gemData.totalBad
 			summaryData.gemTooltip = gemTooltip
@@ -209,7 +209,7 @@ function Summary:Update()
 				row.gems.disableWrap = nil
 				
 				if( summaryData.equipment == -1 ) then
-					row.equipment:SetText(L["Loading"])
+					row.equipment:SetText("---")
 					row.equipment.tooltip = L["Loading data"]
 				elseif( summaryData.equipment == 0 ) then
 					row.equipment:SetText("|cff20ff20100%|r")
@@ -225,7 +225,7 @@ function Summary:Update()
 				end
 
 				if( summaryData.enchants == -1 ) then
-					row.enchants:SetText(L["Loading"])
+					row.enchants:SetText("---")
 					row.enchants.tooltip = L["Loading data"]
 				elseif( summaryData.enchants == 0 ) then
 					row.enchants:SetText("|cff20ff20100%|r")
@@ -241,7 +241,7 @@ function Summary:Update()
 				end
 
 				if( summaryData.gems == -1 ) then
-					row.gems:SetText(L["Loading"])
+					row.gems:SetText("---")
 					row.gems.tooltip = L["Loading data"]
 				elseif( summaryData.gems == 0 ) then
 					row.gems:SetText("|cff20ff20100%|r")
