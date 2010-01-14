@@ -103,6 +103,10 @@ function Scan:CheckInspectGems()
 	if( not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
 		pending.gems = nil
+		
+		if( pending.playerID ) then
+			self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
+		end
 		return
 	end
 	
