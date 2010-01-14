@@ -34,7 +34,7 @@ function Scan:OnInitialize()
 			
 			if( self.gearTimer <= 0 ) then
 				self.gearTimer = self.gearTimer + GEAR_CHECK_INTERVAL
-				Scan:CheckInspectGear()
+				Scan:CheckInspectGems()
 			end
 		end
 		
@@ -99,10 +99,10 @@ local function checkPending(unit)
 	end
 end
 
-function Scan:CheckInspectGear()
+function Scan:CheckInspectGems()
 	if( not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
-		pending.gear = nil
+		pending.gems = nil
 		return
 	end
 	
@@ -127,9 +127,9 @@ function Scan:CheckInspectGear()
 			end
 		end
 		
-		pending.gear = nil
+		pending.gems = nil
 		self.frame.gearTimer = nil
-		self:SendMessage("SG_DATA_UPDATED", "gear", pending.playerID)
+		self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
 
 		checkPending(pending.unit)
 	end
@@ -278,7 +278,7 @@ function Scan:UpdateUnitData(unit)
 	end
 	
 	if( badGems ) then
-		inspectQueue.gear = true
+		inspectQueue.gems = true
 		
 		if( inspectQueue[unit] and not inspectBadGems[unit] ) then
 			inspectBadGems[unit] = 0
@@ -287,6 +287,8 @@ function Scan:UpdateUnitData(unit)
 
 		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
 		Scan.frame:Show()
+	elseif( pending.unit == unit ) then
+		self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
 	end
 end
 
