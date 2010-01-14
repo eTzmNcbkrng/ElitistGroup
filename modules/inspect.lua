@@ -145,6 +145,11 @@ function Inspect:SetupSummary()
 			self.frame[key].tooltip = nil
 		end
 
+		self.frame.gemInfo:SetText(L["Loading"])
+		self.frame.gemInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
+		self.frame.gemInfo.tooltip = L["Data is loading, please wait."]
+		self.frame.gemInfo.disableWrap = nil
+
 		self.frame.enchantInfo:SetText(L["Loading"])
 		self.frame.enchantInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
 		self.frame.enchantInfo.tooltip = L["Data is loading, please wait."]
@@ -167,8 +172,7 @@ function Inspect:SetupSummary()
 		
 		-- People probably want us to build the gear info, I'd imagine
 		if( equipmentData.totalBad == 0 ) then
-			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
-			self.frame.gearInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
+			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear [|cff20ff20100%%|r]"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 			self.frame.gearInfo.tooltip = L["Equipment: |cffffffffAll good|r"]
 			self.frame.gearInfo.disableWrap = true
 		else
@@ -179,44 +183,42 @@ function Inspect:SetupSummary()
 					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
-
-			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
-			self.frame.gearInfo:GetFontString():SetTextColor(1, 0.15, 0.15, 1)
+			
+			local percent = math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped)
+			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear [|cff%02x%02x00%d%%|r]"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore, r, g, percent * 100)
 			self.frame.gearInfo.tooltip = gearTooltip
 			self.frame.gearInfo.disableWrap = true
 		end
 		
 		-- Build enchants
 		if( hasData ) then
-			if( enchantData.pass and not enchantData.noData ) then
-				self.frame.enchantInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
-			else
-				self.frame.enchantInfo:GetFontString():SetTextColor(1.0, 0.15, 0.15, 1)
-			end
-			
 			if( not enchantData.noData ) then
-				self.frame.enchantInfo:SetText(L["Enchants"])
+				local percent = math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total)
+				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+
+				self.frame.enchantInfo:SetFormattedText(L["Enchants [|cff%02x%02x00%d%%|r]"], r, g, percent * 100)
 				self.frame.enchantInfo.tooltip = enchantTooltip
 				self.frame.enchantInfo.disableWrap = not enchantData.noData
 			else
-				self.frame.enchantInfo:SetText(L["Enchants"])
+				self.frame.enchantInfo:SetText(L["Enchants [|cffff20200%|r]"])
 				self.frame.enchantInfo.tooltip = L["No enchants found."]
 				self.frame.enchantInfo.disableWrap = nil
 			end
 
 			-- Build gems
-			if( gemData.pass and not gemData.noData ) then
-				self.frame.gemInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
-			else
-				self.frame.gemInfo:GetFontString():SetTextColor(1.0, 0.15, 0.15, 1)
-			end
-
 			if( not gemData.noData ) then
-				self.frame.gemInfo:SetText(L["Gems"])
+				local percent = math.min(1, (gemData.total - gemData.totalBad) / gemData.total)
+				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+
+				self.frame.gemInfo:SetFormattedText(L["Gems [|cff%02x%02x00%d%%|r]"], r, g, percent * 100)
 				self.frame.gemInfo.tooltip = gemTooltip
 				self.frame.gemInfo.disableWrap = not gemData.noData
 			else
-				self.frame.gemInfo:SetText(L["Gems"])
+				self.frame.gemInfo:SetText(L["Gems [|cffff20200%|r]"])
 				self.frame.gemInfo.tooltip = L["No gems found."]
 				self.frame.gemInfo.disableWrap = nil
 			end		
@@ -270,7 +272,7 @@ function Inspect:CreateSummary()
 		if( i > 1 ) then
 			button:SetPoint("TOPRIGHT", frame[buttonList[i - 1]], "BOTTOMRIGHT", 0, -4)
 		else
-			button:SetPoint("TOPRIGHT", InspectTrinket0Slot, "TOPLEFT", -10, -1)
+			button:SetPoint("TOPRIGHT", InspectFinger1Slot, "TOPLEFT", -8, -25)
 		end
 		
 		frame[key] = button
