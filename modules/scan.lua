@@ -248,7 +248,7 @@ function Scan:UpdateUnitData(unit)
 	
 	for itemType in pairs(ElitistGroup.Items.inventoryToID) do
 		local inventoryID = GetInventorySlotInfo(itemType)
-		local itemLink = GetInventoryItemLink(unit, inventoryID)
+		local itemLink = ElitistGroup:GetItemLink(GetInventoryItemLink(unit, inventoryID))
 		
 		-- No item, clear it
 		if( not itemLink ) then
