@@ -54,15 +54,15 @@ function Inspect:ADDON_LOADED(event, addon)
 		return orig_InspectFrame_UnitChanged(...)
 	end
 	
-		InspectFrame:HookScript("OnShow", OnShow)
+	InspectFrame:HookScript("OnShow", OnShow)
 	InspectFrame:HookScript("OnHide", function() Inspect:UnregisterMessage("SG_DATA_UPDATED") end)
 	if( InspectFrame:IsVisible() ) then OnShow() end
 end
 
 function Inspect:SG_DATA_UPDATED(event, type, playerID)
-	if( self.inspectID == playerID ) then
+	if( self.inspectID == playerID and type ~= "note" ) then
 		if( ElitistGroup.db.profile.inspect.window ) then
-			self:SetupSummary()
+			self:SetupSummary(type)
 		end
 		
 		if( ElitistGroup.db.profile.inspect.tooltips ) then
@@ -134,37 +134,31 @@ function Inspect:SetupTooltips()
 	end
 end
 
-function Inspect:SetupSummary()
+function Inspect:SetupSummary(updateType)
 	self:CreateSummary()
 	
 	local userData = self.inspectID and ElitistGroup.userData[self.inspectID]
 	local hasData = userData and ( userData.talentTree1 ~= 0 or userData.talentTree2 ~= 0 or userData.talentTree3 ~= 0 )
 	if( not hasData ) then
 		for _, key in pairs(buttonList) do
-			self.frame[key]:SetText(nil)
-			self.frame[key].tooltip = nil
+			self.frame[key]:SetText(L["Loading"])
+			self.frame[key]:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
+			self.frame[key].tooltip = L["Data is loading, please wait."]
+			self.frame[key].disableWrap = nil
 		end
-
-		self.frame.gemInfo:SetText(L["Loading"])
-		self.frame.gemInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
-		self.frame.gemInfo.tooltip = L["Data is loading, please wait."]
-		self.frame.gemInfo.disableWrap = nil
-
-		self.frame.enchantInfo:SetText(L["Loading"])
-		self.frame.enchantInfo:GetFontString():SetTextColor(GameFontHighlight:GetTextColor())
-		self.frame.enchantInfo.tooltip = L["Data is loading, please wait."]
-		self.frame.enchantInfo.disableWrap = nil
 	end
 	
 	if( userData ) then
-		-- Make sure they are talented enough
-		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
-		if( not userData.unspentPoints ) then
-			self.frame.talentInfo:SetFormattedText("%d/%d/%d", userData.talentTree1, userData.talentTree2, userData.talentTree3)
-			self.frame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
-		else
-			self.frame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-			self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+		if( not updateType or updateType == "talents" ) then
+			-- Make sure they are talented enough
+			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+			if( not userData.unspentPoints ) then
+				self.frame.talentInfo:SetFormattedText("%d/%d/%d", userData.talentTree1, userData.talentTree2, userData.talentTree3)
+				self.frame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
+			else
+				self.frame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
+				self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+			end
 		end
 		
 		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
@@ -183,7 +177,7 @@ function Inspect:SetupSummary()
 					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
-			
+		
 			local percent = math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
@@ -192,8 +186,8 @@ function Inspect:SetupSummary()
 			self.frame.gearInfo.disableWrap = true
 		end
 		
-		-- Build enchants
 		if( hasData ) then
+			-- Build enchants
 			if( not enchantData.noData ) then
 				local percent = math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total)
 				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
@@ -208,20 +202,22 @@ function Inspect:SetupSummary()
 				self.frame.enchantInfo.disableWrap = nil
 			end
 
-			-- Build gems
-			if( not gemData.noData ) then
-				local percent = math.min(1, (gemData.total - gemData.totalBad) / gemData.total)
-				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
-				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+			if( not updateType or updateType == "gems" ) then
+				-- Build gems
+				if( not gemData.noData ) then
+					local percent = math.min(1, (gemData.total - gemData.totalBad) / gemData.total)
+					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 
-				self.frame.gemInfo:SetFormattedText(L["Gems [|cff%02x%02x00%d%%|r]"], r, g, percent * 100)
-				self.frame.gemInfo.tooltip = gemTooltip
-				self.frame.gemInfo.disableWrap = not gemData.noData
-			else
-				self.frame.gemInfo:SetText(L["Gems [|cffff20200%|r]"])
-				self.frame.gemInfo.tooltip = L["No gems found."]
-				self.frame.gemInfo.disableWrap = nil
-			end		
+					self.frame.gemInfo:SetFormattedText(L["Gems [|cff%02x%02x00%d%%|r]"], r, g, percent * 100)
+					self.frame.gemInfo.tooltip = gemTooltip
+					self.frame.gemInfo.disableWrap = not gemData.noData
+				else
+					self.frame.gemInfo:SetText(L["Gems [|cffff20200%|r]"])
+					self.frame.gemInfo.tooltip = L["No gems found."]
+					self.frame.gemInfo.disableWrap = nil
+				end		
+			end
 		end
 		
 		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
