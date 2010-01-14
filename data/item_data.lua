@@ -57,7 +57,7 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["druid"] = L["Caster (Druid)"]}
 
 	ElitistGroup.Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
@@ -68,12 +68,18 @@ local function loadData()
 		["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 		["feral-tank"] = {["pvp"] = true},
 		["dk-tank"] = false, -- Set below
-		["disc-healer"] = false, -- Set below
+		["disc-healer"] = false,
+		["resto-druid"] = false, 
+		["balance-druid"] = false,
 	}
 		
 	ElitistGroup.Items.talentToRole["dk-tank"] = ElitistGroup.Items.talentToRole.tank
 	ElitistGroup.Items.talentToRole["disc-healer"] = ElitistGroup.Items.talentToRole.healer
-	
+	ElitistGroup.Items.talentToRole["resto-druid"] = CopyTable(ElitistGroup.Items.talentToRole.healer)
+	ElitistGroup.Items.talentToRole["resto-druid"].druid = true
+	ElitistGroup.Items.talentToRole["balance-druid"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])	
+	ElitistGroup.Items.talentToRole["balance-druid"].druid = true
+
 	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
 	for type in pairs(ElitistGroup.Items.talentToRole["melee-dps"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
 	for type in pairs(ElitistGroup.Items.talentToRole["tank"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
@@ -210,6 +216,8 @@ local function loadData()
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	ElitistGroup.Items.itemOverrides = {
+		[35503] = "druid", -- Ember Skyfire Diamond
+		[41333] = "druid", -- Ember Skyflare Diamond
 		[50458] = "dps", -- Bizuri's Totem of Shattered Ice
 		[47666] = "dps", -- Totem of Electrifying Wind
 		[40707] = "tank", -- Libram of Obstruction
@@ -304,13 +312,15 @@ local function loadData()
 	-- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
 	ElitistGroup.Items.statTalents = {
 		{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
+		{type = "pvp",			gems = "STAMINA@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 		{type = "never",		gems = "RESIST@"},
 		{type = "never",		gems = "MANA@", exclusive = true},
+		{type = "never", 		gems = "MANA@", skipOn = "ITEM_MOD_INTELLECT_SHORT", skipOn2 = "ITEM_MOD_SPELL_POWER_SHORT"},
 		{type = "tank",			default = "DEFENSE_SKILL_RATING@", trinkets = "WHEN_HIT@"},
 		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
-		{type = "caster-dps",	default = "HIT_RATING@", require = "ITEM_MOD_SPELL_POWER_SHORT", require1 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
+		{type = "caster-dps",	default = "HIT_RATING@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "physical-all",	default = "AGILITY@"},
 		{type = "physical-dps", default = "ARMOR_PENETRATION_RATING@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
 		{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
