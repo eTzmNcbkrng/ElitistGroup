@@ -65,7 +65,6 @@ hooksecurefunc("NotifyInspect", function(unit)
 		pending.totalChecks = 0
 		pending.talents = true
 		pending.achievements = true
-		pending.gear = true
 		pending.unit = unit
 		pending.guid = UnitGUID(unit)
 		
