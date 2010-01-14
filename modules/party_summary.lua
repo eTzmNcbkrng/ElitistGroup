@@ -58,7 +58,7 @@ function Summary:Show()
 	end
 	
 	self:CreateUI()
-	self.frame:SetHeight(35 + (140 * math.ceil(GetNumPartyMembers() / 2)))
+	self.frame:SetHeight(35 + (142 * math.ceil(GetNumPartyMembers() / 2)))
 	self.frame:SetWidth(30 + (175 * math.ceil(GetNumPartyMembers() / 2)))
 	self.frame:Show()
 	
@@ -120,7 +120,9 @@ function Summary:UpdateSingle(row)
 		for _, key in pairs(buttonList) do
 			if( key ~= "playerInfo" ) then
 				row[key]:SetText(L["Loading"])
-				row[key].icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
+				if( row[key].icon ) then
+					row[key].icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
+				end
 			end
 		end
 	else
@@ -155,18 +157,20 @@ function Summary:UpdateSingle(row)
 		end
 		
 		-- Make sure they are talented enough
-		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
-		if( not userData.unspentPoints ) then
-			row.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-			row.talentInfo.icon:SetTexture(specIcon)
-			row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
-		else
-			row.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-			row.talentInfo.icon:SetTexture(specIcon)
-			row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+		if( not updateType or updateType == "talents" ) then
+			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+			if( not userData.unspentPoints ) then
+				row.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
+				row.talentInfo.icon:SetTexture(specIcon)
+				row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
+			else
+				row.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
+				row.talentInfo.icon:SetTexture(specIcon)
+				row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+			end
 		end
 		
-		-- Add trusted info of course
+		-- Add trusted information
 		if( userData.trusted ) then
 			row.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
 			row.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
@@ -176,14 +180,16 @@ function Summary:UpdateSingle(row)
 			row.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
 			row.trustedInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 		end
-		
+	
 		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
 		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
-		
+
 		-- People probably want us to build the gear info, I'd imagine
-		row.gearInfo:SetFormattedText(L["Equipment (%s%d|r)"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
+		local percent = math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped)
+		local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+		row.gearInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Equipment (%s%d|r)"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 		if( equipmentData.totalBad == 0 ) then
-			row.gearInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
 			row.gearInfo.tooltip = string.format(L["Equipment: |cffffffffAll good|r"], equipmentData.totalEquipped)
 		else
 			local gearTooltip = string.format(L["Equipment: |cffffffff%d bad items found|r"], equipmentData.totalBad)
@@ -194,34 +200,25 @@ function Summary:UpdateSingle(row)
 				end
 			end
 
-			row.gearInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 			row.gearInfo.tooltip = gearTooltip
 		end
-		
+	
 		-- Build enchants
-		if( not enchantData.noData ) then
-			row.enchantInfo:SetText(L["Enchants"])
-			row.enchantInfo.icon:SetTexture(enchantData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-			row.enchantInfo.tooltip = enchantTooltip
-			row.enchantInfo.disableWrap = not enchantData.noData
-		else
-			row.enchantInfo:SetText(L["Enchants"])
-			row.enchantInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
-			row.enchantInfo.tooltip = L["No enchants found."]
-			row.enchantInfo.disableWrap = nil
-		end
+		local percent = math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total)
+		local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+		row.enchantInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Enchants"], r, g, percent * 100)
+		row.enchantInfo.tooltip = enchantData.noData and L["No enchants found"] or enchantTooltip
+		row.enchantInfo.disableWrap = not enchantData.noData
 
 		-- Build gems
-		if( not gemData.noData ) then
-			row.gemInfo:SetText(L["Gems"])
-			row.gemInfo.icon:SetTexture(gemData.pass and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
-			row.gemInfo.tooltip = gemTooltip
+		if( not updateType or updateType == "gems" ) then
+			local percent = math.min(1, (gemData.total - gemData.totalBad) / gemData.total)
+			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+			row.gemInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Gems"], r, g, percent * 100)
+			row.gemInfo.tooltip = gemData.noData and L["No gems found. Possibly due to a data error, but most likely they do not have any."] or gemTooltip
 			row.gemInfo.disableWrap = not gemData.noData
-		else
-			row.gemInfo:SetText(L["Gems"])
-			row.gemInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
-			row.gemInfo.tooltip = L["No gems found. It is possible data failed to load, however it is more likely the player has no gems."]
-			row.gemInfo.disableWrap = nil
 		end
 
 		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
@@ -273,7 +270,7 @@ function Summary:CreateSingle(id)
 	row:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 	row:SetBackdropColor(0, 0, 0, 0)
 	row:SetWidth(175)
-	row:SetHeight(135)
+	row:SetHeight(137)
 	row:Hide()
 	row:SetScript("OnShow", OnShow)
 	row:SetScript("OnHide", OnHide)
@@ -286,14 +283,20 @@ function Summary:CreateSingle(id)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
 		button:SetPushedTextOffset(0, 0)	
-		button.icon = button:CreateTexture(nil, "ARTWORK")
-		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
-		button.icon:SetSize(16, 16)
-		button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
 		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
-		button:GetFontString():SetWidth(row:GetWidth() - 23)
 		button:GetFontString():SetHeight(15)
+
+		if( i <= 4 ) then
+			button.icon = button:CreateTexture(nil, "ARTWORK")
+			button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
+			button.icon:SetSize(16, 16)
+			button:GetFontString():SetWidth(row:GetWidth() - 23)
+			button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
+		else
+			button:GetFontString():SetPoint("LEFT", button, "LEFT", 2, 0)
+			button:GetFontString():SetWidth(row:GetWidth() - 7)
+		end
 		
 		if( i > 1 ) then
 			button:SetPoint("TOPLEFT", row[buttonList[i - 1]], "BOTTOMLEFT", 0, -4)
