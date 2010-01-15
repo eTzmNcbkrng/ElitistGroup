@@ -13,6 +13,10 @@ function ElitistGroup:OnInitialize()
 				databaseExpanded = true,
 				selectedTab = "notes",
 			},
+			mouseover = {
+				enabled = false,
+				unitframe = true,
+			},
 			inspect = {
 				window = false,
 				tooltips = true,
@@ -131,6 +135,7 @@ function ElitistGroup:OnInitialize()
 	end
 
 	self.modules.Sync:Setup()
+	self.modules.Mouseover:Setup()
 end
 
 function ElitistGroup:GetItemColor(itemLevel)
@@ -462,6 +467,65 @@ function ElitistGroup:GetGearSummary(userData)
 	
 	equipment.totalScore = equipment.totalEquipped > 0 and equipment.totalScore / equipment.totalEquipped or 0
 	return equipment, enchants, gems
+end
+
+-- While GetGearSummary works, for things like tooltips we really need an optimized form that is based on speed without extra data
+function ElitistGroup:GetOptimizedSummary(userData)
+	local spec = self:GetPlayerSpec(userData)
+	local validSpecTypes = self.Items.talentToRole[spec]
+	if( not validSpecTypes ) then return 0, 0, 0 end
+
+	local totalGear, totalBadGear, totalEnchants, totalBadEnchants, totalGems, totalBadGems = 0, 0, 0, 0, 0, 0
+	for inventoryID, itemLink in pairs(userData.equipment) do
+		local itemEquipType = select(9, GetItemInfo(itemLink))
+		if( itemEquipType ) then
+			totalGear = totalGear + 1	
+			
+			local itemTalent = self.ITEM_TALENTTYPE[string.match(itemLink, "item:%d+")]
+			local roleOverride = self.Items.roleOverrides[spec] and self.Items.roleOverrides[spec].type == self.Items.equipToType[itemEquipType] and self.Items.roleOverrides[spec]
+			if( itemTalent ~= "unknown" and not validSpecTypes[itemTalent] and ( not roleOverride or not roleOverride[itemTalent] ) ) then
+				totalBadGear = totalBadGear + 1
+			end
+
+			-- Either the item is not unenchantable period, or if it's unenchantable for everyone but a specific class
+			local unenchantable = ElitistGroup.Items.unenchantableTypes[itemEquipType]
+			if( not unenchantable or type(unenchantable) == "string" and unenchantable == userData.classToken ) then
+				totalEnchants = totalEnchants + 1
+				
+				local enchantTalent = ElitistGroup.ENCHANT_TALENTTYPE[string.match(itemLink, "item:%d+:(%d+)")]
+				if( enchantTalent == "none" or ( enchantTalent ~= "unknown" and not validSpecTypes[enchantTalent] ) ) then
+					totalBadEnchants = totalBadEnchants + 1
+				end
+			end
+
+			-- Last but not least, off to the gems
+			local itemUnsocketed = self.EMPTY_GEM_SLOTS[itemLink]
+			totalGems = totalGems + itemUnsocketed
+			
+			for socketID=1, MAX_NUM_SOCKETS do
+				local gemLink = select(2, GetItemGem(itemLink, socketID))
+				if( not gemLink ) then break end
+				itemUnsocketed = itemUnsocketed - 1
+				
+				local gemTalent = self.GEM_TALENTTYPE[string.match(gemLink, "item:%d+")]
+				if( gemTalent ~= "unknown" and not validSpecTypes[gemTalent]) then
+					totalBadGems = totalBadGems + 1
+				else
+					local gemQuality = select(3, GetItemInfo(gemLink))
+					if( self.Items.gemQualities[itemQuality] and gemQuality < self.Items.gemQualities[itemQuality] ) then
+						totalBadGems = totalBadGems + 1
+					end
+				end
+			end
+			
+			totalBadGems = totalBadGems + itemUnsocketed
+		end
+	end
+	
+	local percentGear = math.min(1, (totalGear - totalBadGear) / totalGear)
+	local percentEnchants = math.min(1, (totalEnchants - totalBadEnchants) / totalEnchants)
+	local percentGems = totalBadGems == 0 and totalGems == 0 and 1 or (totalGems - totalBadGems) / totalGems
+	return percentGear, percentEnchants, percentGems
 end
 
 -- Broker plugin
