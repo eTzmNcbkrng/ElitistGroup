@@ -317,7 +317,7 @@ local function loadData()
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 		{type = "never",		gems = "RESIST@"},
 		{type = "never",		gems = "MANA@", exclusive = true},
-		{type = "never", 		gems = "MANA@", skipOn = "ITEM_MOD_INTELLECT_SHORT", skipOn2 = "ITEM_MOD_SPELL_POWER_SHORT"},
+		{type = "healer", 		gems = "MANA@", skipOn = "ITEM_MOD_INTELLECT_SHORT", skipOn2 = "ITEM_MOD_SPELL_POWER_SHORT"},
 		{type = "tank",			default = "DEFENSE_SKILL_RATING@", trinkets = "WHEN_HIT@"},
 		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
