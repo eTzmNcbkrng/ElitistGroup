@@ -8,6 +8,8 @@ local function set(info, value)
 
 	if( info[#(info) - 1] == "comm" ) then
 		ElitistGroup.modules.Sync:Setup()
+	elseif( info[#(info) - 1] == "mouseover" ) then
+		ElitistGroup.modules.Mouseover:Setup()
 	elseif( info[#(info) - 1] == "inspect" ) then
 		ElitistGroup.modules.Inspect:OnInitialize()
 	end
@@ -45,8 +47,28 @@ local function loadOptions()
 					},
 				},
 			},
-			inspect = {
+			mouseover = {
 				order = 2,
+				type = "group",
+				inline = true,
+				name = L["Mouseover"],
+				args = {
+					enabled = {
+						order = 1,
+						type = "toggle",
+						name = L["Enable mouseover details"],
+						desc = L["Automatically adds gear, enchant and gem information to tooltips when mousing over people, if they are within inspect range or you have data.\nDisabled while in combat."],
+					},
+					unitframe = {
+						order = 2,
+						type = "toggle",
+						name = L["Enable on unit frames"],
+						desc = L["This will disable showing details on the tooltips if you mouseover somebody through a unit frame."]
+					}
+				}
+			},
+			inspect = {
+				order = 3,
 				type = "group",
 				inline = true,
 				name = L["Inspection"],
@@ -66,7 +88,7 @@ local function loadOptions()
 				},
 			},
 			database = {
-				order = 3,
+				order = 4,
 				type = "group",
 				inline = true,
 				name = L["Database"],
@@ -101,7 +123,7 @@ local function loadOptions()
 				},
 			},
 			comm = {
-				order = 4,
+				order = 5,
 				type = "group",
 				inline = true,
 				name = L["Addon communication"],
