@@ -42,7 +42,9 @@ modules\party_notes.lua
 modules\raid_notes.lua
 modules\inspect.lua
 modules\sync.lua
+modules\mouseover.lua
 modules\config.lua
+
 #@do-not-package@
 data\tests.lua
 #@end-do-not-package@
