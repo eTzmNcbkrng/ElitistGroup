@@ -8,14 +8,11 @@ function ElitistGroup:OnInitialize()
 			expExpanded = {},
 			positions = {},
 			general = {
+				mouseover = false,
 				autoPopup = false,
 				autoSummary = false,
 				databaseExpanded = true,
 				selectedTab = "notes",
-			},
-			mouseover = {
-				enabled = false,
-				unitframe = true,
 			},
 			inspect = {
 				window = false,
@@ -135,7 +132,7 @@ function ElitistGroup:OnInitialize()
 	end
 
 	self.modules.Sync:Setup()
-	--self.modules.Mouseover:Setup()
+	self.modules.Mouseover:Setup()
 end
 
 function ElitistGroup:GetItemColor(itemLevel)
@@ -524,7 +521,7 @@ function ElitistGroup:GetOptimizedSummary(userData)
 	
 	local percentGear = math.min(1, (totalGear - totalBadGear) / totalGear)
 	local percentEnchants = math.min(1, (totalEnchants - totalBadEnchants) / totalEnchants)
-	local percentGems = totalBadGems == 0 and totalGems == 0 and 1 or (totalGems - totalBadGems) / totalGems
+	local percentGems = totalBadGems == 0 and totalGems == 0 and 0 or (totalGems - totalBadGems) / totalGems
 	return percentGear, percentEnchants, percentGems
 end
 
@@ -618,7 +615,7 @@ function ElitistGroup:WriteTable(tbl, skipNotes)
 				data = string.format("%s%s=%s;", data, key, tostring(value))
 			-- foo = "bar"
 			else
-				data = string.format("%s%s=\"%s\";", data, key, tostring(value))
+				data = string.format("%s%s=\"%s\";", data, key, tostring(self:SafeEncode(value)))
 			end
 		end
 	end
