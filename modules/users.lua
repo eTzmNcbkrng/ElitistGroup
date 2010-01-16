@@ -482,7 +482,7 @@ function Users:UpdateNoteInfo()
 			roles = roles == "" and UNKNOWN or roles
 			
 			row.infoText:SetFormattedText("|cff%02x%02x00%d|r/|cff20ff20%s|r from %s", r, g, note.rating, ElitistGroup.MAX_RATING, string.match(from, "(.-)%-") or from)
-			row.commentText:SetText(note.comment or L["No comment"])
+			row.commentText:SetText(ElitistGroup:Decode(note.comment) or L["No comment"])
 			row.tooltip = string.format(L["Seen as %s - %s:\n|cffffffff%s|r"], string.trim(string.gsub(roles, "^, ", "")), date("%m/%d/%Y", note.time), note.comment or L["No comment"])
 			row:SetWidth(rowWidth)
 			row:Show()
