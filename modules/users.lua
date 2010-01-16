@@ -3,6 +3,7 @@ local Users = ElitistGroup:NewModule("Users", "AceEvent-3.0")
 local L = ElitistGroup.L
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips, achievementTooltips, tempList
+local userList = {}
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18
@@ -11,8 +12,14 @@ local DungeonData = ElitistGroup.Dungeons
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		local self = Users
-		if( self.activeUserID and self.activeUserID == user and self.frame:IsVisible() ) then
-			self:Show(ElitistGroup.userData[user])
+		if( self.frame and self.frame:IsVisible() ) then
+			if( self.activeUserID and self.activeUserID == user ) then
+				self:Show(ElitistGroup.userData[user])
+			end
+			
+			if( not userList[user] ) then
+				self:UpdateDatabasePage()
+			end
 		end
 	end)
 end
@@ -158,7 +165,7 @@ function Users:Show(userData)
 	end
 	
 	self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
-	if( not userData.pruned ) then
+	if( not userData.pruned and userData.talentTree1 and userData.talentTree2 and userData.talentTree3 ) then
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		if( not userData.unspentPoints ) then
 			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
@@ -290,7 +297,6 @@ function Users:Show(userData)
 	self:UpdateTabPage()
 end
 
-local userList = {}
 local function sortNames(a, b)
 	if( UnitExists(userList[a]) == UnitExists(userList[b]) ) then
 		return a < b
