@@ -158,7 +158,7 @@ function Inspect:SetupSummary(updateType)
 				self.frame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, specType)
 			else
 				self.frame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-				self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, specTyep)
+				self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, specType)
 			end
 		end
 		
