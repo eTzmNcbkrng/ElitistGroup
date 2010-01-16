@@ -217,6 +217,7 @@ local function loadData()
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	ElitistGroup.Items.itemOverrides = {
+		[41389] = "never", -- Beaming Earthsiege Diamond
 		[35503] = "manaless", -- Ember Skyfire Diamond
 		[41333] = "manaless", -- Ember Skyflare Diamond
 		[50458] = "dps", -- Bizuri's Totem of Shattered Ice
