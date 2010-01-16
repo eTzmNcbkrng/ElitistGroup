@@ -264,7 +264,7 @@ function Scan:UpdateUnitData(unit)
 				local enchantID, gem1, gem2, gem3 = string.match(itemLink, "item:%d+:(%d+):(%d+):(%d+):(%d+)")
 				-- Invalid gem data, queue it up, don't change the saved data
 				if( gem1 == "0" and gem2 == "0" and gem3 == "0" ) then
-					pendingGear[inventoryID] = itemLink
+					pendingGear[inventoryID] = GetInventoryItemLink(unit, inventoryID)
 					badGems = true
 					
 					-- Set it in case we don't have it already
