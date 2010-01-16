@@ -60,7 +60,7 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 			for _, itemLink in pairs(userData.equipment) do
 				local fullItemLink = select(2, GetItemInfo(itemLink))
 				if( fullItemLink and equipmentData[itemLink] ) then
-					summaryData.equipmentTooltip = summaryData.equipmentTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
+					summaryData.equipmentTooltip = summaryData.equipmentTooltip .. "\n" .. string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
 		end

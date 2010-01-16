@@ -196,7 +196,7 @@ function Summary:UpdateSingle(row)
 			for _, itemLink in pairs(userData.equipment) do
 				local fullItemLink = select(2, GetItemInfo(itemLink))
 				if( fullItemLink and equipmentData[itemLink] ) then
-					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - %s item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
+					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
 				end
 			end
 
