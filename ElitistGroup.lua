@@ -205,7 +205,8 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	
 	-- Compile all the gems into tooltips per item
 	local unusedTooltip = ""
-	local lastItemLink, totalBad
+	local lastItemLink
+	local totalBad = 0
 	for i=1, #(gemData), 3 do
 		local itemLink, gemLink, arg = gemData[gemData[i]], gemData[i + 1], gemData[i + 2]
 		
@@ -223,6 +224,8 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 				
 		if( arg == "missing" ) then
 			unusedTooltip = string.format(L[" (%d unused |4socket:sockets;)"], gemLink)
+		elseif( arg == "buckle" ) then
+			unusedTooltip = L[" (no belt buckle)"]
 		elseif( type(arg) == "string" ) then
 			gemTooltips[itemLink] = gemTooltips[itemLink] .. "\n" .. string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, ElitistGroup.Items.itemRoleText[arg] or arg)
 		else
@@ -276,7 +279,7 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			if( arg == "buckle" ) then
 				table.insert(tempList, string.format(L["%s - Missing belt buckle or gem"], fullItemLink))
 			elseif( arg == "missing" ) then
-				table.insert(tempList, string.format(L["%s - %d missing |4gem:gems;"], fullItemLink, gemData[i + 1]))
+				table.insert(tempList, string.format(L["%s - |cffffffff%d|r missing |4gem:gems;"], fullItemLink, gemData[i + 1]))
 			elseif( type(arg) == "string" ) then
 				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, ElitistGroup.Items.itemRoleText[arg] or arg))
 			else
@@ -432,22 +435,25 @@ function ElitistGroup:GetGearSummary(userData)
 	
 	-- Belt buckles are a special case, you cannot detect them through item links at all or tooltip scanning
 	-- what has to be done is scan the base item links sockets
-	--[[
 	local itemLink = userData.equipment[WAIST_SLOT]
 	if( itemLink and userData.level >= 70 ) then
 		local baseSocketCount = self.EMPTY_GEM_SLOTS[self:GetBaseItemLink(itemLink)]
 		local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
 		local totalSockets = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
 		
-		-- If the base empty socket count and the total active socket count is anything except -1, they are missing a belt buckle
-		if( totalSockets >= baseSocketCount and (baseSocketCount - totalSockets) ~= -1 ) then
-			table.insert(gems, (select(2, GetItemInfo(itemLink))))
+		-- The item by default has 1 sockets, and the player only has 1 gem socketed, missing buckle
+		-- if the player had 2 available sockets and only 1 socketed, nothing is shown since they are missing a socket at that point
+		if( baseSocketCount > 0 and totalSockets == baseSocketCount or baseSocketCount == 0 and totalSockets == 0 ) then
+			local fullItemLink = select(2, GetItemInfo(itemLink))
+			table.insert(gems, fullItemLink)
+			table.insert(gems, false)
 			table.insert(gems, "buckle")
+			
 			gems.pass = nil
 			gems.totalBad = gems.totalBad + 1
+			gems[fullItemLink] = itemLink
 		end
 	end
-	]]
 	
 	-- Try and account for the fact that the inspection can fail to find gems, so if we find 0 gems used will give a warning
 	if( gems.total > 0 and gems.totalUsed == 0 ) then
