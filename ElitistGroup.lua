@@ -135,7 +135,7 @@ function ElitistGroup:OnInitialize()
 	end
 
 	self.modules.Sync:Setup()
-	self.modules.Mouseover:Setup()
+	--self.modules.Mouseover:Setup()
 end
 
 function ElitistGroup:GetItemColor(itemLevel)
@@ -577,9 +577,19 @@ local map = {	["{"] = "\\" .. string.byte("{"), ["}"] = "\\" .. string.byte("}")
 				["%["] = "\\" .. string.byte("["), ["%]"] = "\\" .. string.byte("]"),
 				["@"] = "\\" .. string.byte("@")}
 function ElitistGroup:SafeEncode(text)
-	if( not text ) then return text end
+	if( not text ) then return nil end
 	
 	for find, replace in pairs(map) do
+		text = string.gsub(text, find, replace)
+	end
+	
+	return text
+end
+
+function ElitistGroup:Decode(text)
+	if( not text ) then return nil end
+
+	for replace, find in pairs(map) do
 		text = string.gsub(text, find, replace)
 	end
 	

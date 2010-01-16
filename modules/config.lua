@@ -47,6 +47,7 @@ local function loadOptions()
 					},
 				},
 			},
+			--[[
 			mouseover = {
 				order = 2,
 				type = "group",
@@ -67,6 +68,7 @@ local function loadOptions()
 					}
 				}
 			},
+			]]
 			inspect = {
 				order = 3,
 				type = "group",
