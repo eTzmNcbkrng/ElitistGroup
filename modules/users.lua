@@ -556,7 +556,7 @@ local function managePlayerNote()
 				self.lastText = text
 				
 				local playerNote = getNote()
-				playerNote.comment = ElitistGroup:SafeEncode(string.trim(text) ~= "" and text or nil)
+				playerNote.comment = string.trim(text) ~= "" and text or nil
 				Users:UpdateTabPage()
 			end
 		end

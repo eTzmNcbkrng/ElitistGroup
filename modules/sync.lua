@@ -257,7 +257,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 			
 			-- If the time drift is over a day, reset the time of the comment to right now
 			note.time = timeDrift > 86400 and time() or note.time + timeDrift
-			note.comment = ElitistGroup:SafeEncode(note.comment)
+			note.comment = note.comment
 			note.from = senderName
 			note.rating = math.max(math.min(5, note.rating), 0)
 			

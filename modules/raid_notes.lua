@@ -143,7 +143,7 @@ function History:CreateUI()
 			self.lastText = text
 			
 			local playerNote = getNote(self.parent.playerID, self.parent.defaultRole)
-			playerNote.comment = ElitistGroup:SafeEncode(string.trim(text) ~= "" and text or nil)
+			playerNote.comment = string.trim(text) ~= "" and text or nil
 		end
 	end
 	

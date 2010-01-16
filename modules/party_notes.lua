@@ -125,7 +125,7 @@ local function OnHide(self)
 		local note = ElitistGroup.userData[partyID].notes[ElitistGroup.playerName] or {}
 		note.role = note.role and bit.bor(note.role, data.role) or data.role
 		note.rating = data.rating
-		note.comment = ElitistGroup:SafeEncode(data.comment and data.comment ~= "" and data.comment)
+		note.comment = data.comment and data.comment ~= "" and data.comment
 		note.time = time()
 		
 		ElitistGroup.userData[partyID].notes[ElitistGroup.playerName] = note
