@@ -8,9 +8,7 @@ local MAX_SUMMARY_ROWS = 10
 
 function Summary:Show()
 	local inInstance, instanceType = IsInInstance()
-	if( instanceType == "pvp" or instanceType == "arena" ) then
-		ElitistGroup.modules.Sync:CommMessage("REQGEAR", "BATTLEGROUND")
-	elseif( GetNumRaidMembers() > 0 ) then
+	if( instanceType ~= "pvp" and instanceType ~= "arena" and GetNumRaidMembers() > 0 ) then
 		ElitistGroup.modules.Sync:CommMessage("REQGEAR", "RAID")
 	end
 	
