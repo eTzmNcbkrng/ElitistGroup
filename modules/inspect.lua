@@ -23,6 +23,7 @@ function Inspect:ADDON_LOADED(event, addon)
 		if( InspectFrame.unit and UnitIsFriend(InspectFrame.unit, "player") and CanInspect(InspectFrame.unit) ) then
 			self.inspectID = ElitistGroup:GetPlayerID(InspectFrame.unit)
 			self:RegisterMessage("SG_DATA_UPDATED")
+			ElitistGroup.modules.Sync:RequestMainData(InspectFrame.unit)
 			
 			-- Setup the summary window for the inspect if it's enabled and we can inspect them
 			if( ElitistGroup.db.profile.inspect.window ) then
