@@ -4,10 +4,8 @@ local ElitistGroup = select(2, ...)
 local Sync = ElitistGroup:NewModule("Sync", "AceEvent-3.0", "AceComm-3.0")
 local L = ElitistGroup.L
 local playerName = UnitName("player")
-local combatQueue, pendingComms, requestQueue, commThrottles = {}, {}, {}, {}
+local combatQueue, pendingComms, requestQueue, commThrottles, emptyEnv, mainThrottles = {}, {}, {}, {}, {}, {}
 local cachedPlayerData, expectingList
-local emptyEnv = {}
-
 local COMM_PREFIX = "ELITG"
 local MAX_QUEUE = 20
 local REQUEST_THROTTLE = 5
@@ -32,6 +30,22 @@ function Sync:ResetPlayerData()
 	cachedPlayerData = nil
 end
 
+-- For when we inspect somebody, we can say "GIMMIE MAIN DATA"
+function Sync:RequestMainData(unit)
+	if( not ElitistGroup.db.profile.comm.autoMain or InCombatLockdown() ) then return end
+	
+	local guid = UnitGUID(unit)
+	-- Only request main data once an hour, in reality I could probably make this once per session?
+	if( mainThrottles[guid] and mainThrottles[guid] > GetTime() ) then return end
+	mainThrottles[guid] = GetTime() + 3600
+	
+	local name, server = UnitName(unit)
+	server = server ~= "" and server or nil
+	name = server and string.format("%s-%s", name, server) or name
+	
+	self:CommMessage("REQMAIN", "WHISPER", name)
+end
+
 -- Handles the throttle management
 function Sync:CheckThrottles()
 	local time = GetTime()
@@ -48,6 +62,12 @@ function Sync:CheckThrottles()
 		if( allInvalid ) then
 			ElitistGroup:ReleaseTables(data)
 			commThrottles[name] = nil
+		end
+	end
+	
+	for guid, endTime in pairs(mainThrottles) do
+		if( endTime <= time ) then
+			mainThrottles[guid] = nil
 		end
 	end
 end
@@ -175,6 +195,7 @@ end
 function Sync:RequestGear(name)
 	local name = verifyInput(name)
 	if( name ) then
+		ElitistGroup:Print(string.format(L["Requested gear from %s, this might take a second."], name))
 		self:CommMessage("REQGEAR", "WHISPER", name)
 	end
 end
@@ -215,7 +236,12 @@ function Sync:SendPlayersGear(sender, override)
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
 		ElitistGroup.modules.Scan:UpdatePlayerData("player")
-		cachedPlayerData = string.format("GEAR@%s", ElitistGroup:WriteTable(ElitistGroup.userData[ElitistGroup.playerID], true))
+		
+		if( ElitistGroup.db.global.main.data and ElitistGroup.db.global.main.character ~= ElitistGroup.playerID ) then
+			cachedPlayerData = string.format("GEAR@%s@%s", ElitistGroup:WriteTable(ElitistGroup.userData[ElitistGroup.playerID], true), ElitistGroup.db.global.main.data)
+		else
+			cachedPlayerData = string.format("GEAR@%s", ElitistGroup:WriteTable(ElitistGroup.userData[ElitistGroup.playerID], true))
+		end
 	end
 	
 	self:CommMessage(cachedPlayerData, "WHISPER", sender)
@@ -260,7 +286,7 @@ function Sync:SpecificNotesRequested(sender, ...)
 					queuedData = string.format('%s["%s"]=%s;', queuedData, ElitistGroup:WriteTable(userData.notes[ElitistGroup.playerID]))
 				end
 			else
-				local userData = ElitistGroup.db.users.faction[name]
+				local userData = ElitistGroup.db.faction.users[name]
 				local note = userData and string.match(userData, NOTE_MATCH)
 				if( note ) then
 					queuedData = string.format('%s["%s"]={%s};', queuedData, name, string.match(note, "={(.+);$"))
@@ -307,7 +333,6 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 				userData.scanned = time()
 				userData.from = senderName
 				userData.level = -1
-				userData.pruned = true
 			end
 			
 			-- If the time drift is over a day, reset the time of the comment to right now
@@ -355,9 +380,16 @@ local function parseGear(senderName, playerID, playerName, playerServer, data, i
 	for key, value in pairs(sentData.achievements) do
 		if( type(key) ~= "number" or type(value) ~= "number" or not ElitistGroup.Dungeons.achievements[key] ) then
 			sentData.achievements[key] = nil
+		else
+			local flags = select(9, GetAchievementInfo(key))
+			if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == 0 ) then
+				sentData.achievements[key] = value >= 1 and 1 or nil
+			else
+				sentData.achievements[key] = math.max(sentData.achievements[key], 0)
+			end
 		end
 	end
-		
+			
 	-- Merge everything into the current table
 	local userData = ElitistGroup.userData[playerID] or {}
 	local notes = userData.notes or {}
@@ -382,7 +414,7 @@ local function parseGear(senderName, playerID, playerName, playerServer, data, i
 	end
 end
 
-function Sync:ParseSelfSentGear(sender, data)
+function Sync:ParseSelfSentGear(sender, data, mainExperience)
 	-- If the player already scanned data on this person from within 10 minutes, don't accept the comm
 	local playerID, playerName, playerServer = getFullName(sender)
 	local userData = ElitistGroup.userData[playerID]
@@ -391,6 +423,11 @@ function Sync:ParseSelfSentGear(sender, data)
 	end
 	
 	parseGear(playerID, playerID, playerName, playerServer, data, true)
+	
+	-- Loadup main experience too
+	if( mainExperience and mainExperience ~= "" ) then
+		self:ParseMainExperience(sender, string.split("@", mainExperience))
+	end
 end
 
 function Sync:SendDatabaseList(sender)
@@ -509,6 +546,51 @@ function Sync:ListReqErrored(sender, type)
 	end
 end
 
+-- Alt/main handling
+function Sync:ParseMainExperience(sender, ...)
+	local playerID, playerName, playerServer = getFullName(sender)
+	local userData = ElitistGroup.userData[playerID]
+	if( not userData ) then
+		userData = {notes = {}, achievements = {}, equipment = {}}
+		userData.name = playerName
+		userData.server = playerServer
+		userData.scanned = time()
+		userData.from = playerID
+		userData.level = -1
+		userData.pruned = nil
+
+		ElitistGroup.db.faction.users[playerID] = ""
+		ElitistGroup.userData[playerID] = userData
+	end
+	
+	userData.mainAchievements = userData.mainAchievements or {}
+	table.wipe(userData.mainAchievements)
+	for i=1, select("#", ...), 2 do
+		local achievementID, earned = select(i, ...)
+		achievementID = tonumber(achievementID)
+		earned = tonumber(earned)
+
+		if( achievementID and earned and ElitistGroup.Dungeons.achievements[achievementID] ) then
+			local flags = select(9, GetAchievementInfo(achievementID))
+			if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == 0 ) then
+				earned = earned >= 1 and 1 or nil
+			elseif( earned <= 0 ) then
+				earned = nil
+			end
+
+			userData.mainAchievements[achievementID] = earned
+		end
+	end
+	
+	ElitistGroup.writeQueue[playerID] = true
+	self:SendMessage("SG_DATA_UPDATED", "mainExp", playerID)
+end
+
+function Sync:SendMainExperience(sender)
+	if( ElitistGroup.db.global.main.data == "" or ElitistGroup.db.global.main.character == ElitistGroup.playerID ) then return end
+	self:CommMessage(string.format("MAIN@%s", ElitistGroup.db.global.main.data), "WHISPER", sender)
+end
+
 -- Handle the actual comm
 function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	if( prefix ~= COMM_PREFIX or sender == playerName or not ElitistGroup.db.profile.comm.areas[distribution] ) then return end
@@ -521,22 +603,33 @@ function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	end
 	
 	local cmd, args = string.split("@", message, 2)
-	
 	--[[
 		Throttling is currently:
 		
-		Responding to requests for our gear - 30 seconds
-		Responding to requests for our notes on specific people - 5 minutes
+		Responding to requests for our gear - 5 minutes
+		Responding to requests for our notes on specific people - 10 minutes
 		Requesting all notes - 30 minutes
 		Responding to requests for database - 60 minutes
 		Parsing/queuing database list requests - 58 minutes
 		Parsing somebodies gear or notes - 30 seconds
+		Requesting mains data - 60 minutes
+		Parsing main data - 60 seconds
 	]]
 	
 	-- REQGEAR - Requests your currently equipped data in case you are out of inspection range
 	if( cmd == "REQGEAR" and not self:IsThrottled(sender, "myGear") ) then
-		self:SetThrottle(sender, "myGear", 30)
+		self:SetThrottle(sender, "myGear", 300)
 		self:SendPlayersGear(sender)
+	
+	-- REQMAIN - Requests only the main experience data
+	elseif( cmd == "REQMAIN" and not self:IsThrottled(sender, "mainReq") ) then
+		self:SetThrottle(sender, "mainReq", 3600)
+		self:SendMainExperience(sender)
+		
+	-- MAIN@data - Gets the experience data of the players main
+	elseif( cmd == "MAIN" and args and not self:IsThrottled(sender, "main") ) then
+		self:SetThrottle(sender, "main", 60)
+		self:ParseMainExperience(sender, string.split("@", args))
 	
 	-- LISTERR@type - There was an error when requesting list data
 	elseif( cmd == "LISTERR" and args ) then
@@ -548,8 +641,8 @@ function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 		self:SendAllNotes(sender)
 	
 	-- REQNOTES@playerA@playerBplayerC@etc - Request notes on the given players
-	elseif( cmd == "REQNOTES" and arg and not self:IsThrottled(sender, "notes") ) then
-		self:SetThrottle(sender, "notes", 10)
+	elseif( cmd == "REQNOTES" and args and not self:IsThrottled(sender, "notes") ) then
+		self:SetThrottle(sender, "notes", 600)
 		self:SpecificNotesRequested(sender, string.split("@", args))
 
 	-- REQUSERS - Tells the person that you want their delicious and tasty database
@@ -573,7 +666,7 @@ function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	-- GEAR@<serialized table of the persons gear>
 	elseif( cmd == "GEAR" and args and not self:IsThrottled(sender, "gear") ) then
 		self:SetThrottle(sender, "gear", 30)
-		self:ParseSelfSentGear(sender, string.split("@", args))
+		self:ParseSelfSentGear(sender, string.split("@", args, 2))
 	
 	-- NOTES@:<serialized table of the notes on the people requested through REQNOTES
 	elseif( cmd == "NOTES" and args and ElitistGroup:IsTrusted(sender) and not self:IsThrottled(sender, "notes") ) then
