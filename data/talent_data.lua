@@ -13,7 +13,7 @@ local function loadData()
 	-- a good idea might be to force set their role based on the assignment they chose when possible, and use this as a fallback
 	Talents.specOverride = {
 		["DEATHKNIGHT"] = {
-			["required"] = 2,
+			["required"] = 3,
 			["role"] = "dk-tank",
 			
 			[GetSpellInfo(16271)] = 5, -- Anticipation
@@ -21,12 +21,13 @@ local function loadData()
 			[GetSpellInfo(55225)] = 5, -- Blade Barrier
 		},
 		["DRUID"] = {
-			["required"] = 2,
+			["required"] = 3,
 			["role"] = "feral-tank",
 			
 			[GetSpellInfo(57881)] = 2, -- Natural Reaction
 			[GetSpellInfo(16929)] = 3, -- Thick Hide
 			[GetSpellInfo(61336)] = 1, -- Survival Instincts
+			[GetSpellInfo(57877)] = 3, -- Protector of the Pack
 		},
 	}
 
