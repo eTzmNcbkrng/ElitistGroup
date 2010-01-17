@@ -2,7 +2,7 @@ local ElitistGroup = select(2, ...)
 local Users = ElitistGroup:NewModule("Users", "AceEvent-3.0")
 local L = ElitistGroup.L
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips, achievementTooltips, tempList
+local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips, achievementTooltips, tempList, managePlayerNote
 local userList = {}
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
@@ -293,6 +293,10 @@ function Users:Show(userData)
 	for _ in pairs(userData.notes) do 
 		self.activeDataNotes = self.activeDataNotes + 1
 	end
+	
+	if( self.frame.manageNote and self.frame.manageNote:IsVisible() ) then
+		managePlayerNote()
+	end
 
 	self:UpdateDatabasePage()
 	self:UpdateDungeonInfo()
@@ -542,9 +546,16 @@ function Users:UpdateDungeonInfo()
 	end
 end
 
-local function managePlayerNote()
+managePlayerNote = function()
 	local self = Users
 	local frame = self.frame
+	if( self.activeUserID == ElitistGroup.playerID ) then
+		if( frame.manageNote ) then
+			frame.manageNote:Hide()
+		end
+		frame.userFrame.manageNote:UnlockHighlight()
+		return
+	end
 	
 	local defaultRole = 0
 	if( not frame.manageNote ) then
@@ -593,7 +604,7 @@ local function managePlayerNote()
 		end
 		
 		frame.manageNote = CreateFrame("Frame", nil, frame)
-		frame.manageNote:SetFrameLevel(100)
+		frame.manageNote:SetFrameLevel(frame.dungeonFrame:GetFrameLevel() + 10)
 		frame.manageNote:SetFrameStrata("MEDIUM")
 		frame.manageNote:SetBackdrop(backdrop)
 		frame.manageNote:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
@@ -679,25 +690,15 @@ local function managePlayerNote()
 		frame.manageNote.delete:SetText(L["Delete your note"])
 		frame.manageNote.delete:SetPoint("BOTTOMLEFT", frame.manageNote, "BOTTOMLEFT", 0, 1)
 		frame.manageNote.delete:SetScript("OnClick", function(self)
-			ElitistGroup.userData[self.playerID].notes[ElitistGroup.playerID] = nil
-			ElitistGroup.writeQueue[self.playerID] = true
+			ElitistGroup.userData[Users.activeUserID].notes[ElitistGroup.playerID] = nil
+			ElitistGroup.writeQueue[Users.activeUserID] = true
 
 			Users.activeDataNotes = Users.activeDataNotes - 1
 			Users:UpdateTabPage()
 			self:Disable()
 		end)
 	end
-
-	if( frame.manageNote:IsVisible() ) then
-		frame.manageNote:Hide()
-		frame.userFrame.manageNote:UnlockHighlight()
-	else
-		frame.manageNote:Show()
-		frame.userFrame.manageNote:LockHighlight()
-	end
-	
-	frame.manageNote.delete.playerID = self.activeUserID
-	
+		
 	-- Now setup what we got
 	local note = self.activeData.notes[ElitistGroup.playerID]
 	if( note ) then
@@ -939,10 +940,6 @@ function Users:CreateUI()
 
 	local function viewUserData(self)
 		Users:Show(ElitistGroup.userData[self.userID])
-		
-		if( frame.manageNote and frame.manageNote:IsVisible() ) then
-			managePlayerNote(frame)
-		end
 	end
 
 	frame.databaseFrame.rows = {}
@@ -1096,7 +1093,17 @@ function Users:CreateUI()
 	button:SetWidth(100)
 	button:SetPoint("TOPLEFT", frame.userFrame.trustedInfo, "BOTTOMLEFT", 0, -3)
 	button:SetText(L["Edit Note"])
-	button:SetScript("OnClick", managePlayerNote)
+	button:SetScript("OnClick", function(self)
+		managePlayerNote()
+		
+		if( frame.manageNote:IsVisible() ) then
+			frame.manageNote:Hide()
+			frame.userFrame.manageNote:UnlockHighlight()
+		else
+			frame.manageNote:Show()
+			frame.userFrame.manageNote:LockHighlight()
+		end
+	end)
 	button:SetScript("OnEnter", OnEnter)
 	button:SetScript("OnLeave", OnLeave)
 	button:SetMotionScriptsWhileDisabled(true)
@@ -1110,6 +1117,12 @@ function Users:CreateUI()
 	frame.dungeonFrame:SetWidth(175)
 	frame.dungeonFrame:SetHeight(226)
 	frame.dungeonFrame:SetPoint("TOPLEFT", frame.userFrame, "BOTTOMLEFT", 0, -24)
+	frame.dungeonFrame:SetScript("OnShow", function(self)
+		local parent = self:GetParent()
+		if( parent.manageNote ) then
+			parent.manageNote:SetFrameLevel(self:GetFrameLevel() + 10)
+		end
+	end)
 
 	frame.dungeonFrame.headerText = frame.dungeonFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
 	frame.dungeonFrame.headerText:SetPoint("BOTTOMLEFT", frame.dungeonFrame, "TOPLEFT", 0, 5)
