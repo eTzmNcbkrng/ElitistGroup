@@ -194,7 +194,6 @@ local function loadOptions()
 						set = set,
 						get = get,
 						disabled = false,
-						width = "full",
 					},
 					gearRequests = {
 						order = 2,
