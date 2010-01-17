@@ -75,6 +75,45 @@ local function loadOptions()
 					},
 				},
 			},
+			main = {
+				order = 2,
+				type = "group",
+				inline = true,
+				name = L["Main/alt experience"],
+				args = {
+					help = {
+						order = 1,
+						type = "description",
+						name = function()
+							local text = L["Main/alt experience is a way of letting other Elitist Group users see that you have experience in dungeons on more than one character. By setting a main, when people inspect your alt they will see your experience on both your main and alt. Your main will remain anonymous, only the experience data is shown to other users."]
+							if( ElitistGroup.db.global.main.character ) then
+								return text .. "\n\n" .. string.format(L["Your main is currently: %s."], ElitistGroup.db.global.main.character)
+							end
+
+							return text .. "\n\n" .. L["You have not set a main yet."]
+						end,
+					},
+					sep = {order = 2, type = "header", name = ""},
+					setMain = {
+						order = 3,
+						type = "toggle",
+						name = string.format(L["Make %s my main"], ElitistGroup.playerID),
+						set = function(info, value)
+							if( ElitistGroup.db.global.main.character ~= ElitistGroup.playerID ) then
+								ElitistGroup.db.global.main.character = ElitistGroup.playerID
+								ElitistGroup:OnDatabaseShutdown()
+							else
+								ElitistGroup.db.global.main.character = nil
+								ElitistGroup.db.global.main.data = nil
+							end
+							
+							ElitistGroup.modules.Sync:ResetPlayerData()
+						end,
+						get = function(info) return ElitistGroup.db.global.main.character == ElitistGroup.playerID end,
+						width = "full",
+					},
+				},
+			},
 			inspect = {
 				order = 3,
 				type = "group",
@@ -157,6 +196,14 @@ local function loadOptions()
 						disabled = false,
 						width = "full",
 					},
+					gearRequests = {
+						order = 2,
+						type = "toggle",
+						name = L["Allow gear requests"],
+						desc = L["Unchecking this disables other Elitist Group users from requesting your gear without inspecting."],
+						set = set,
+						get = get,
+					},
 					autoNotes = {
 						order = 3,
 						type = "toggle",
@@ -165,11 +212,11 @@ local function loadOptions()
 						set = set,
 						get = get,
 					},
-					gearRequests = {
+					autoMain = {
 						order = 4,
 						type = "toggle",
-						name = L["Allow gear requests"],
-						desc = L["Unchecking this disables other Elitist Group users from requesting your gear without inspecting."],
+						name = L["Auto request main experience"],
+						desc = L["Automatically requests main experience (limited at once per an hour) when inspecting."],
 						set = set,
 						get = get,
 					},
@@ -422,6 +469,7 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 				playerID = ElitistGroup:GetPlayerID("target")
 				if( not ElitistGroup.modules.Scan:IsInspectPending() ) then
 					ElitistGroup.modules.Scan:InspectUnit("target")
+					ElitistGroup.modules.Sync:RequestMainData("target")
 				elseif( not ElitistGroup.userData[playerID] ) then
 					ElitistGroup:Print(L["An inspection is currently pending, please wait a second and try again."])
 				end
