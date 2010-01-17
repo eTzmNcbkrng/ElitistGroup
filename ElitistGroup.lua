@@ -149,11 +149,27 @@ function ElitistGroup:IsTrusted(name)
 	if( not name ) then return nil end
 	if( name == playerName or name == self.playerID ) then return true end
 
-	name = string.match(name, "(.-)%-") or name
-	name = string.lower(name)
+	local playerName, playerServer = string.split("-", name, 2)
+	if( playerServer and playerServer ~= GetRealmName() ) then return false end
 	
-	if( self.db.factionrealm.trusted[name] ) then
-		return true
+	name = string.lower(playerName or name)
+	if( self.db.factionrealm.trusted[name] ) then return true end
+	
+	-- Check guild if we're trusting them
+	if( self.db.profile.comm.trustGuild ) then
+		for i=1, GetNumGuildMembers() do
+			if( string.lower(GetGuildRosterInfo(i)) == name ) then
+				return true
+			end
+		end
+	end
+	
+	if( self.db.profile.comm.trustFriends ) then
+		for i=1, GetNumFriends() do
+			if( string.lower(GetFriendInfo(i)) == name ) then
+				return true
+			end
+		end
 	end
 	
 	return false
