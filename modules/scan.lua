@@ -3,7 +3,7 @@ local Scan = ElitistGroup:NewModule("Scan", "AceEvent-3.0")
 local L = ElitistGroup.L
 
 -- These are the fields that comm are allowed to send, this is used so people don't try and make super complex tables to send to the user and either crash or lag them.
-ElitistGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number"}
+ElitistGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number", ["mainAchievements"] = "table"}
 ElitistGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 ElitistGroup.MAX_LINK_LENGTH = 80
 ElitistGroup.MAX_NOTE_LENGTH = 256
@@ -143,9 +143,10 @@ function Scan:INSPECT_ACHIEVEMENT_READY()
 	
 	if( pending.playerID and pending.achievements and ElitistGroup.userData[pending.playerID] ) then
 		local userData = ElitistGroup.userData[pending.playerID]
+		table.wipe(userData.achievements)
 		for achievementID in pairs(ElitistGroup.Dungeons.achievements) do
 			local id, _, _, _, _, _, _, _, flags = GetAchievementInfo(achievementID)
-			if( flags == ACHIEVEMENT_FLAGS_STATISTIC ) then
+			if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
 				userData.achievements[achievementID] = tonumber(GetComparisonStatistic(id)) or nil
 			else
 				userData.achievements[achievementID] = GetAchievementComparisonInfo(id) and 1 or nil
