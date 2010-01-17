@@ -1,32 +1,48 @@
 local ElitistGroup = select(2, ...)
 local Config = ElitistGroup:NewModule("Config")
 local L = ElitistGroup.L
-local options
+local options, AceConfigRegistery, AceConfigDialog
 
 local function set(info, value)
-	ElitistGroup.db.profile[info[#(info) - 1]][info[#(info)]] = value
+	local parentKey = info.arg or info[#(info) - 1]
+	local key = info[#(info)]
+	ElitistGroup.db.profile[parentKey][key] = value
 
-	if( info[#(info) - 1] == "comm" ) then
+	if( parentKey == "comm" ) then
 		ElitistGroup.modules.Sync:Setup()
-	elseif( info[#(info)] == "mouseover" ) then
+	elseif( key == "mouseover" ) then
 		ElitistGroup.modules.Mouseover:Setup()
-	elseif( info[#(info) - 1] == "inspect" ) then
+	elseif( parentKey == "inspect" ) then
 		ElitistGroup.modules.Inspect:OnInitialize()
 	end
 end
 
 local function get(info, value)
-	return ElitistGroup.db.profile[info[#(info) - 1]][info[#(info)]]
+	return ElitistGroup.db.profile[info.arg or info[#(info) - 1]][info[#(info)]]
 end
 
 local function loadOptions()
-	options = {
+	options = {}
+	options.general = {
 		order = 1,
 		type = "group",
 		name = "Elitist Group",
 		set = set,
 		get = get,
 		args = {
+			help = {
+				order = 0,
+				type = "group",
+				inline = true,
+				name = L["Help"],
+				args = {
+					help = {
+						order = 1,
+						type = "description",
+						name = L["Trust list and addon communication options can be found in the menu to your left."],
+					}
+				},
+			},
 			general = {
 				order = 1,
 				type = "group",
@@ -38,7 +54,12 @@ local function loadOptions()
 						type = "toggle",
 						name = L["Enable mouseover details"],
 						desc = L["Automatically adds gear, enchant and gem information to tooltips when mousing over people, if they are within inspect range or you have data.\nDisabled while in combat."],
-						width = "full",
+					},
+					announceData = {
+						order = 2,
+						type = "toggle",
+						name = L["Announce synced data"],
+						desc = L["Alerts you in chat when you receive new notes or gear information from somebody."],
 					},
 					autoPopup = {
 						order = 1,
@@ -109,14 +130,22 @@ local function loadOptions()
 					},
 				},
 			},
+		},
+	}
+	
+	options.comm = {
+		order = 1,
+		type = "group",
+		name = L["Addon communication"],
+		disabled = function(info) return not ElitistGroup.db.profile.comm.enabled end,
+		set = function(info, value) ElitistGroup.db.profile.comm.areas[info[#(info)]] = value end,
+		get = function(info) return ElitistGroup.db.profile.comm.enabled and ElitistGroup.db.profile.comm.areas[info[#(info)]] end,
+		args = {
 			comm = {
-				order = 5,
+				order = 1,
 				type = "group",
 				inline = true,
-				name = L["Addon communication"],
-				disabled = function(info) return not ElitistGroup.db.profile.comm.enabled end,
-				set = function(info, value) ElitistGroup.db.profile.comm.areas[info[#(info)]] = value end,
-				get = function(info) return ElitistGroup.db.profile.comm.enabled and ElitistGroup.db.profile.comm.areas[info[#(info)]] end,
+				name = L["General"],
 				args = {
 					enabled = {
 						order = 1,
@@ -129,7 +158,7 @@ local function loadOptions()
 						width = "full",
 					},
 					autoNotes = {
-						order = 2,
+						order = 3,
 						type = "toggle",
 						name = L["Auto request notes"],
 						desc = L["Automatically requests notes on your group from other Elitist Group users. Only sends requests once per session, and you have to be in a guild."],
@@ -137,18 +166,47 @@ local function loadOptions()
 						get = get,
 					},
 					gearRequests = {
-						order = 3,
+						order = 4,
 						type = "toggle",
 						name = L["Allow gear requests"],
 						desc = L["Unchecking this disables other Elitist Group users from requesting your gear without inspecting."],
 						set = set,
 						get = get,
 					},
-					header = {
-						order = 10,
-						type = "header",
-						name = L["Enabled channels"],
+				},
+			},
+			database = {
+				order = 2,
+				type = "group",
+				inline = true,
+				name = L["Database"],
+				args = {
+					databaseSync = {
+						order = 1,
+						type = "toggle",
+						name = L["Allow database syncing"],
+						desc = L["Allows both you and other people on your trusted list to send and request your database of users."],
+						set = set,
+						get = get,
+						arg = "comm",
 					},
+					databaseThreshold = {
+						order = 1,
+						type = "range",
+						name = L["Ignore data over days old"],
+						desc = L["Any data older than the set number will not be synced."],
+						set = set,
+						get = get,
+						arg = "comm",
+					},
+				},
+			},
+			enabled = {
+				order = 3,
+				type = "group",
+				inline = true,
+				name = L["Enabled channels"],
+				args = {
 					description = {
 						order = 11,
 						type = "description",
@@ -178,6 +236,112 @@ local function loadOptions()
 			},
 		},
 	}
+	
+	local removeTrustList
+	local function rebuildManualTrust()
+		for key in pairs(options.trust.args.list.args) do
+			if( key ~= "add" and key ~= "sep" ) then
+				options.trust.args.list.args[key] = nil
+			end
+		end
+		
+		local order = 10
+		for idName, textName in pairs(ElitistGroup.db.factionrealm.trusted) do
+			options.trust.args.list.args[idName .. "label"] = {
+				order = order,
+				type = "description",
+				name = textName,
+				fontSize = "medium",
+				width = "half",
+			}
+			
+			options.trust.args.list.args[idName] = {
+				order = order + 5,
+				type = "execute",
+				name = L["Remove"],
+				func = removeTrustList,
+				width = "half",
+			}
+			
+			options.trust.args.list.args[idName .. "sep"] = {order = order + 7, type = "description", name = ""}
+			
+			order = order + 10
+		end
+		
+	end
+	
+	removeTrustList = function(info)
+		ElitistGroup.db.factionrealm.trusted[info[#(info)]] = nil
+		rebuildManualTrust()
+	end
+	
+	options.trust = {
+		order = 3,
+		type = "group",
+		name = L["Trust management"],
+		args = {
+			help = {
+				order = 0,
+				type = "group",
+				inline = true,
+				name = L["Help"],
+				args = {
+					help = {
+						order = 0,
+						type = "description",
+						name = L["Trust list is an easy way for you to see at a glance how much faith can be placed in data. It is also used for determining whether somebody can send or receive database and full note requests.\nBoth parties have to be on each others trust lists."],
+					},
+				},
+			},
+			comm = {
+				order = 1,
+				type = "group",
+				inline = true,
+				name = L["General"],
+				args = {
+					trustGuild = {
+						order = 1,
+						type = "toggle",
+						name = L["Trust guild members"],
+						desc = L["Automatically trust all guild members, if you are in a guild."],
+						set = set,
+						get = get,
+					},
+					trustFriends = {
+						order = 2,
+						type = "toggle",
+						name = L["Trust friends"],
+						desc = L["Automatically trusts all players on your friends list."],
+						set = set,
+						get = get,
+					},
+				},
+			},
+			list = {
+				order = 2,
+				type = "group",
+				inline = true,
+				name = L["Custom list"],
+				args = {
+					add = {
+						order = 1,
+						type = "input",
+						name = L["Add an user manually"],
+						desc = L["Should you want finer control over who is on the trusted list, you can manually add players here.\n\nStored by faction/realm"],
+						set = function(info, value)
+							if( value and string.trim(value) ~= "" ) then
+								ElitistGroup.db.factionrealm.trusted[string.lower(value)] = value
+								rebuildManualTrust()
+							end
+						end,
+					},
+					sep = {order = 2, type = "header", name = ""},
+				},
+			},
+		},
+	}
+	
+	rebuildManualTrust()
 end
 
 SLASH_ELITISTGROUPRATE1 = "/rate"
@@ -215,7 +379,10 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 	elseif( cmd == "gear" and arg ) then
 		ElitistGroup.modules.Sync:RequestGear(arg)
 		return
-	elseif( cmd == "notes" and arg ) then
+	elseif( cmd == "db" ) then
+		ElitistGroup.modules.Sync:RequestDatabase(arg)
+		return
+	elseif( cmd == "notes" ) then
 		ElitistGroup.modules.Sync:RequestNotes(arg)
 		return
 	elseif( cmd == "rate" ) then
@@ -239,7 +406,8 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup config - Opens the configuration"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup gear <name> - Requests gear from another Elitist Group user without inspecting"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup send <name> - Sends your gear to another Elitist Group user"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup notes <for> - Requests all notes that people have for the name entered"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup notes [name] - Requests all guild members notes on players, if [name] is passed requests notes FROM [name]"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup db [name] - Requests either everyones database or [name]s database if specified"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup summary - Displays the summary page for your party or raid"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/rate - Opens the rating panel for your group"])
@@ -260,7 +428,7 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 			end
 		else
 			ElitistGroup.modules.Scan:InspectUnit("player")
-			playerID = ElitistGroup.playerName
+			playerID = ElitistGroup.playerID
 		end
 
 		local userData = playerID and ElitistGroup.userData[playerID]
@@ -292,14 +460,20 @@ register:SetScript("OnShow", function(self)
 	self:SetScript("OnShow", nil)
  
 	local AceConfig = LibStub("AceConfig-3.0")
-	local AceConfigDialog = LibStub("AceConfigDialog-3.0")
-	local AceConfigRegistery = LibStub("AceConfigRegistry-3.0")
+	AceConfigDialog = LibStub("AceConfigDialog-3.0")
+	AceConfigRegistery = LibStub("AceConfigRegistry-3.0")
 	
 	loadOptions()
 
-	AceConfigRegistery:RegisterOptionsTable("ElitistGroup", options)
+	AceConfigRegistery:RegisterOptionsTable("ElitistGroup", options.general)
 	AceConfigDialog:AddToBlizOptions("ElitistGroup", "Elitist Group")
 	
+	AceConfigRegistery:RegisterOptionsTable("ElitistGroup-Sync", options.comm)
+	AceConfigDialog:AddToBlizOptions("ElitistGroup-Sync", options.comm.name, "Elitist Group")
+
+	AceConfigRegistery:RegisterOptionsTable("ElitistGroup-Trusted", options.trust)
+	AceConfigDialog:AddToBlizOptions("ElitistGroup-Trusted", options.trust.name, "Elitist Group")
+
 	local profile = LibStub("AceDBOptions-3.0"):GetOptionsTable(ElitistGroup.db, true)
 	AceConfigRegistery:RegisterOptionsTable("ElitistGroup-Profile", profile)
 	AceConfigDialog:AddToBlizOptions("ElitistGroup-Profile", profile.name, "Elitist Group")
