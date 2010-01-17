@@ -57,15 +57,15 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Disc Priest/Druid"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Disc Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"]}
 
 	ElitistGroup.Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["caster-dps"] = {["caster-spirit"] = true, ["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
 		["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
-		["range-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
-		["tank"] = {["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
+		["range-dps"] = {["all"] = true, ["tank/ranged"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
+		["tank"] = {["tank/ranged"] = true, ["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
 		["feral-tank"] = {["pvp"] = true},
 		["dk-tank"] = false, -- Set below
 		["disc-priest"] = false,
@@ -187,7 +187,7 @@ local function loadData()
 		[930] = "never", -- Riding Skill
 		[803] = "melee-dps", -- Fiery Weapon
 		[3731] = "tank/pvp", -- Titanium Weapon Chain
-		[3788] = "tank", -- Accuracy
+		[3788] = "tank/ranged", -- Accuracy
 		[3728] = "caster", -- Darkglow Embroidery
 		[3730] = "physical-dps", -- Swordguard Embroidery
 		[3722] = "caster", -- Lightweave Embroidery
