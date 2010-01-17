@@ -24,17 +24,21 @@ function ElitistGroup:OnInitialize()
 				pruneFull = 120,
 				saveForeign = true,
 				ignoreBelow = 80,
-				autoNotes = true,
 			},
 			comm = {
 				enabled = true,
 				gearRequests = true,
 				databaseSync = false,
 				databaseThreshold = 4,
+				autoNotes = true,
+				autoMain = true,
 				trustGuild = true,
 				trustFriends = true,
 				areas = {GUILD = true, WHISPER = true, RAID = true, PARTY = true, BATTLEGROUND = false},
 			},
+		},
+		global = {
+			main = {},
 		},
 		factionrealm = {
 			trusted = {},
@@ -109,6 +113,7 @@ function ElitistGroup:OnInitialize()
 					
 					table.wipe(userData.equipment)
 					table.wipe(userData.achievements)
+					userData.mainAchievements = nil
 					
 					userData.pruned = true
 
@@ -704,6 +709,26 @@ function ElitistGroup:OnDatabaseShutdown()
 			self.db.faction.lastModified[name] = nil
 			self.db.faction.users[name] = nil
 		end
+	end
+	
+	-- Save main data too
+	if( self.db.global.main.character == self.playerID ) then
+		local data = ""
+		
+		for achievementID in pairs(self.Dungeons.achievements) do
+			local id, _, _, completed, _, _, _, _, flags = GetAchievementInfo(achievementID)
+			if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
+				local statistic = tonumber(GetStatistic(id))
+				if( statistic ) then
+					data = data .. "@" .. id .. "@" .. statistic
+				end
+			elseif( completed ) then
+				data = data .. "@" .. id .. "@1"
+			end
+		end
+		
+		data = string.gsub(data, "^@", "")
+		self.db.global.main.data = data ~= "" and data or nil
 	end
 end
 
