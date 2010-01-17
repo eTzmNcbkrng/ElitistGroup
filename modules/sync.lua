@@ -4,35 +4,64 @@ local ElitistGroup = select(2, ...)
 local Sync = ElitistGroup:NewModule("Sync", "AceEvent-3.0", "AceComm-3.0")
 local L = ElitistGroup.L
 local playerName = UnitName("player")
-local combatQueue, requestThrottle, requestedInfo, cachedPlayerData, blockOfflineMessage = {}, {}, {}
+local combatQueue, pendingComms, requestQueue, commThrottles = {}, {}, {}, {}
+local cachedPlayerData, expectingList
+local emptyEnv = {}
+
 local COMM_PREFIX = "ELITG"
 local MAX_QUEUE = 20
-local REQUEST_TIMEOUT = 10
--- This should be raised most likely, but for now only allow a notes or gear request every 5 seconds from someoneone
 local REQUEST_THROTTLE = 5
+local COMM_TIMEOUT = 5
 
 function Sync:Setup()
 	if( ElitistGroup.db.profile.comm.enabled ) then
 		self:RegisterComm(COMM_PREFIX)
-		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetCacheData")
-		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetCacheData")
-		self:RegisterEvent("PLAYER_LEAVING_WORLD", "ResetThrottle")
+		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetPlayerData")
+		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetPlayerData")
+		self:RegisterEvent("PLAYER_LEAVING_WORLD", "CheckThrottles")
 	else
 		self:UnregisterComm(COMM_PREFIX)
 		self:UnregisterAllEvents()
 		
 		table.wipe(combatQueue)
-		cachedPlayerData = nil, nil
+		cachedPlayerData = nil
 	end
 end
 
-function Sync:ResetCacheData()
+function Sync:ResetPlayerData()
 	cachedPlayerData = nil
 end
 
-function Sync:ResetThrottle()
-	requestThrottle = {}
-	requestedInfo = {}
+-- Handles the throttle management
+function Sync:CheckThrottles()
+	local time = GetTime()
+	for name, data in pairs(commThrottles) do
+		local allInvalid = true
+		for _, endTime in pairs(data) do
+			if( endTime > time ) then
+				allInvalid = nil
+				break
+			end
+		end
+		
+		-- All the timers are done with, so we can kill the table
+		if( allInvalid ) then
+			ElitistGroup:ReleaseTables(data)
+			commThrottles[name] = nil
+		end
+	end
+end
+
+function Sync:SetThrottle(name, type, seconds)
+	if( not commThrottles[name] ) then
+		commThrottles[name] = ElitistGroup:GetTable()
+	end
+	
+	commThrottles[name][type] = GetTime() + seconds
+end
+
+function Sync:IsThrottled(name, type)
+	return commThrottles[name] and commThrottles[name][type] and commThrottles[name][type] >= GetTime()
 end
 
 local function getFullName(name)
@@ -54,40 +83,68 @@ function Sync:VerifyTable(tbl, checkTbl)
 	return tbl
 end
 
--- Not quite sure how this should get implemented, will add it later since it's of less importance
---[[
+-- Message filtering
 local function filterOffline(self, event, msg)
-	return blockOfflineMessage == msg
+	if( msg ) then
+		for target, data in pairs(pendingComms) do
+			if( data.msg == msg ) then
+				if( not data.announced ) then
+					data.announced = true
+					ElitistGroup:Print(string.format(L["User %s is or went offline during syncing."], target))
+				end
+				return true
+			end
+		end
+	end
 end
 
-function Sync:EnableOfflineBlock(target)
-	blockOfflineMessage = string.format(ERR_CHAT_PLAYER_NOT_FOUND_S, target)
+-- Sadly, we can't get who the message was sent to, so any whispers reset the timer
+function Sync:CHAT_MSG_ADDON(event, prefix, msg, distribution, sender)
+	if( sender == playerName and distribution == "WHISPER" ) then	
+		self.frame.timeElapsed = 0
+	end
+end
+	
+function Sync:EnableOfflineBlock(target, disableAnnounce)
+	if( pendingComms[target] ) then
+		pendingComms[target].announced = disableAnnounce
+		return
+	end
+
+	local data = ElitistGroup:GetTable()
+	data.msg = string.format(ERR_CHAT_PLAYER_NOT_FOUND_S, target)
+	data.disableAnnounce = disableAnnounce
+	pendingComms[target] = data
+	
+	-- Need a timer to see when we should kill the blocking
+	if( not self.frame ) then
+		self.frame = CreateFrame("Frame")
+		self.frame.timeElapsed = 0
+		self.frame:SetScript("OnUpdate", function(self, elapsed)
+			self.timeElapsed = self.timeElapsed - elapsed
+			if( self.timeElapsed >= COMM_TIMEOUT ) then
+				self.timeElapsed = self.timeElapsed - COMM_TIMEOUT
+				
+				for target, data in pairs(pendingComms) do ElitistGroup:ReleaseTables(data) end
+				table.wipe(pendingComms)
+				
+				Sync:UnregisterEvent("CHAT_MSG_ADDON")
+				ChatFrame_RemoveMessageEventFilter("CHAT_MSG_SYSTEM", filterOffline)
+				self:Hide()
+			end
+		end)
+	end
+
+	Sync:RegisterEvent("CHAT_MSG_ADDON")
 	ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", filterOffline)
 end
 
-function Sync:DisableOfflineBlock()
-	ChatFrame_RemoveMessageEventFilter("CHAT_MSG_SYSTEM", filterOffline)
-end
-]]
-
--- This will have to be changed, I'm not quite sure a good way of doing it yet
-function Sync:SG_DATA_UPDATED(event, type, name)
-	if( requestedInfo[name] ) then
-		requestedInfo[name] = nil
-		ElitistGroup:Print(string.format(L["Successfully got data on %s, type /elitistgroup %s to view!"], name, name))
-	end
-	
-	local hasData
-	for key in pairs(requestedInfo) do hasData = true break end
-	if( not hasData ) then
-		self:UnregisterMessage("SG_DATA_UPDATED")
-	end
-end
-
+-- COMMUNICATION REQUESTERS
 local function verifyInput(name, forceServer)
 	if( not name or name == "" ) then
 		ElitistGroup:Print(L["You have to enter a name for this to work."])
 		return nil
+	-- Check common units
 	elseif( name == "target" or name == "focus" or name == "mouseover" ) then
 		local unit = name
 		local server
@@ -98,6 +155,9 @@ local function verifyInput(name, forceServer)
 		end
 
 		return ( server and server ~= "" ) and string.format("%s-%s", name, server) or forceServer and string.format("%s-%s", name, GetRealmName()) or name
+	-- Since we don't want to force the server name, we want to strip it if they put their home server
+	elseif( not forceServer and string.match(name, GetRealmName()) ) then
+		name = string.match(name, "(.-)%-")
 	end
 	
 	return name
@@ -106,7 +166,7 @@ end
 function Sync:SendCmdGear(name)
 	local name = verifyInput(name)
 	if( name ) then
-		self:SendGearData(name, true)
+		self:SendPlayersGear(name, true)
 		ElitistGroup:Print(string.format(L["Sent your gear to %s! It will arrive in a few seconds"], name))
 	end
 end
@@ -115,56 +175,68 @@ end
 function Sync:RequestGear(name)
 	local name = verifyInput(name)
 	if( name ) then
-		requestedInfo[name] = true
 		self:CommMessage("REQGEAR", "WHISPER", name)
-		self:RegisterMessage("SG_DATA_UPDATED")
+	end
+end
+
+-- Request database
+function Sync:RequestDatabase(name)
+	local name = verifyInput(name)
+	if( name ) then
+		expectingList = true
+		ElitistGroup:Print(string.format(L["Requesting Elitist Group database from %s. Keep in mind this is hard throttled at once per hour."], name))
+		self:CommMessage("REQUSERS", "WHISPER", name)
+	elseif( not IsInGuild() ) then
+		ElitistGroup:Print(L["You cannot request the database of everyone in your guild without being a guild!"])
+	else
+		ElitistGroup:Print(L["Requesting Elitist Group databases from everyone in your guild, this could take a while. Keep in mind this is hard throttled at once per hour."])
+		self:CommMessage("REQUSERS", "GUILD")
 	end
 end
 
 -- Request the notes on a specific person
 function Sync:RequestNotes(name)
-	local name = verifyInput(name, true)
-	if( name and not IsInGuild() ) then
-		ElitistGroup:Print(L["You need to be in a guild to request notes on players."])
-		return
-	elseif( name ) then
-		requestedInfo[name] = true
-		self:CommMessage(string.format("REQNOTES@%s", name), "GUILD")
-		self:RegisterMessage("SG_DATA_UPDATED")
+	local name = verifyInput(name)
+	if( name ) then
+		ElitistGroup:Print(string.format(L["Requesting Elitist Group notes from %s. Keep in mind this is hard throttled at once every 30 minutes."], name))
+		self:CommMessage("REQALLNOTES", "WHISPER", name)
+	elseif( not IsInGuild() ) then
+		ElitistGroup:Print(L["You cannot request the notes of everyone in your guild without being a guild!"])
+	else
+		ElitistGroup:Print(L["Requesting Elitist Group notes from everyone in your guild, this could take a minute. Keep in mind this is hard throttled at onnce every 30 minutes."])
+		self:CommMessage("REQALLNOTES", "GUILD")
 	end
 end
 
 -- Send our gear to somebody else
-function Sync:SendGearData(sender, override)
+function Sync:SendPlayersGear(sender, override)
 	if( not override and not ElitistGroup.db.profile.comm.gearRequests ) then return end
 	
 	-- Players info should rarely change, so we can just cache it and that will be all we need most of the time
 	if( not cachedPlayerData ) then
 		ElitistGroup.modules.Scan:UpdatePlayerData("player")
-		cachedPlayerData = string.format("GEAR@%s", ElitistGroup:WriteTable(ElitistGroup.userData[ElitistGroup.playerName], true))
+		cachedPlayerData = string.format("GEAR@%s", ElitistGroup:WriteTable(ElitistGroup.userData[ElitistGroup.playerID], true))
 	end
 	
 	self:CommMessage(cachedPlayerData, "WHISPER", sender)
 end
 
--- Received a notes request, send off whatever we have
-function Sync:ParseNotesRequest(sender, ...)
-	-- To pull note data, we do have to unserialize stuff, so we probably shouldn't let people request more than 5 notes at a time
-	-- since it means we can delay it on the clients side too to prevent any lag
-	if( select("#", ...) == 0 or select("#", ...) > 5 ) then return end
-
-	local tempList = {}
+-- COMMUNICATION PARSERS
+function Sync:SendAllNotes(sender)
+	
 	local queuedData = ""
-	for i=1, select("#", ...) do
-		local name = select(i, ...)
-		if( not tempList[name] and name ~= ElitistGroup.playerName ) then
+	local NOTE_MATCH = string.format("[\"%s\"]={(.-)};", string.gsub(ElitistGroup.playerID, "%-", "%%-"))
+	for name, userData in pairs(ElitistGroup.db.faction.users) do
+		if( rawget(ElitistGroup.userData, name) ) then
 			local userData = ElitistGroup.userData[name]
-			local note = userData and userData.notes[ElitistGroup.playerName]
-			if( note ) then
-				queuedData = string.format('%s["%s"] = %s;', queuedData, name, ElitistGroup:WriteTable(note))
+			if( userData.notes[ElitistGroup.playerID] ) then
+				queuedData = string.format('%s["%s"]=%s;', queuedData, ElitistGroup.playerID, ElitistGroup:WriteTable(userData.notes[ElitistGroup.playerID]))
 			end
-			
-			tempList[name] = true
+		else
+			local note = userData and string.match(userData, NOTE_MATCH)
+			if( note and note ~= "" ) then
+				queuedData = string.format('%s["%s"]={%s};', queuedData, name, string.match(note, "={(.+);$"))
+			end
 		end
 	end
 	
@@ -173,10 +245,91 @@ function Sync:ParseNotesRequest(sender, ...)
 	end
 end
 
--- Parse the gear somebody sent
-function Sync:ParseSentGear(sender, data)
-	if( not data ) then return end
+-- Received a notes request, send off whatever we have
+function Sync:SpecificNotesRequested(sender, ...)
+	if( select("#", ...) == 0 or select("#", ...) > 25 ) then return end
+
+	local queuedData = ""
+	local NOTE_MATCH = string.format("[\\\"%s\\\"]={(.-)};", ElitistGroup.playerID)
+	for i=1, select("#", ...) do
+		local name = select(i, ...)
+		if( name ~= ElitistGroup.playerID ) then
+			if( rawget(ElitistGroup.userData, name) ) then
+				local userData = ElitistGroup.userData[name]
+				if( userData.notes[ElitistGroup.playerID] ) then
+					queuedData = string.format('%s["%s"]=%s;', queuedData, ElitistGroup:WriteTable(userData.notes[ElitistGroup.playerID]))
+				end
+			else
+				local userData = ElitistGroup.db.users.faction[name]
+				local note = userData and string.match(userData, NOTE_MATCH)
+				if( note ) then
+					queuedData = string.format('%s["%s"]={%s};', queuedData, name, string.match(note, "={(.+);$"))
+				end
+			end
+		end
+	end
 	
+	if( queuedData ~= "" ) then
+		self:CommMessage(string.format("NOTES@%d@{%s}", time(), queuedData), "WHISPER", sender)
+	end
+end
+
+-- Parse the notes somebody sent us
+function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
+	senderTime = tonumber(senderTime)
+	if( not senderTime or not data ) then return end
+
+	local sentNotes, msg = loadstring("return " .. data)
+	if( not sentNotes ) then
+		--@debug@
+		error(string.format("Failed to load sent notes: %s", msg), 3)
+		--@end-debug@
+		return
+	end
+	
+	local noteTable = setfenv(sentNotes, emptyEnv)() or false
+	if( not noteTable ) then return end
+	
+	-- time() can differ between players, will have the player send their time so it can be calibrated
+	-- this is still maybe 2-3 seconds off, but better 2-3 seconds off than hours
+	local timeDrift = senderTime - currentTime
+	local senderName, name, server = getFullName(sender)
+	
+	for noteFor, note in pairs(noteTable) do
+		note = self:VerifyTable(note, ElitistGroup.VALID_NOTE_FIELDS)
+		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= ElitistGroup.MAX_NOTE_LENGTH ) ) then
+			local name, server = string.split("-", noteFor, 2)
+			local userData = ElitistGroup.userData[noteFor]
+			if( not userData ) then
+				userData = {notes = {}, achievements = {}, equipment = {}}
+				userData.name = name
+				userData.server = name
+				userData.scanned = time()
+				userData.from = senderName
+				userData.level = -1
+				userData.pruned = true
+			end
+			
+			-- If the time drift is over a day, reset the time of the comment to right now
+			note.time = timeDrift > 86400 and time() or note.time + timeDrift
+			note.comment = note.comment
+			note.from = senderName
+			note.rating = math.max(math.min(5, note.rating), 1)
+			
+			userData.notes[senderName] = note
+			
+			ElitistGroup.userData[noteFor] = userData
+			ElitistGroup.db.faction.users[noteFor] = ElitistGroup.db.faction.users[noteFor] or ""
+			ElitistGroup.writeQueue[noteFor] = true
+
+			self:SendMessage("SG_DATA_UPDATED", "note", noteFor)
+		end
+	end
+end
+
+-- Parse the gear somebody sent
+local function parseGear(senderName, playerID, playerName, playerServer, data, isSelf)
+	-- Convert it into a table
 	local sentData, msg = loadstring("return " .. data)
 	if( not sentData ) then
 		--@debug@
@@ -185,7 +338,10 @@ function Sync:ParseSentGear(sender, data)
 		return
 	end
 	
-	sentData = self:VerifyTable(sentData(), ElitistGroup.VALID_DB_FIELDS)
+	local sentData = setfenv(sentData, emptyEnv)() or false
+	if( not sentData ) then return end
+
+	sentData = Sync:VerifyTable(sentData, ElitistGroup.VALID_DB_FIELDS)
 	if( not sentData or not sentData.achievements or not sentData.equipment ) then return end
 	
 	-- Verify gear
@@ -203,72 +359,153 @@ function Sync:ParseSentGear(sender, data)
 	end
 		
 	-- Merge everything into the current table
-	local senderName, name, server = getFullName(sender)
-	local userData = ElitistGroup.userData[senderName] or {}
+	local userData = ElitistGroup.userData[playerID] or {}
 	local notes = userData.notes or {}
-
-	-- If the player already has trusted data on this person from within 10 minutes, don't accept the comm
-	local threshold = time() - 600
-	if( userData.trusted and userData.scanned < threshold ) then
-		return
-	end
 
 	-- Finalize it all
 	table.wipe(userData)
 
 	for key, value in pairs(sentData) do userData[key] = value end
-	userData.name = name
-	userData.server = server
+	userData.name = playerName
+	userData.server = playerServer
 	userData.notes = notes
 	userData.scanned = time()
 	userData.from = senderName
-	userData.trusted = nil
 		
-	ElitistGroup.writeQueue[senderName] = true
-	ElitistGroup.userData[senderName] = userData
-	ElitistGroup.db.faction.users[senderName] = ElitistGroup.db.faction.users[senderName] or ""
+	ElitistGroup.writeQueue[playerID] = true
+	ElitistGroup.userData[playerID] = userData
+	ElitistGroup.db.faction.users[playerID] = ElitistGroup.db.faction.users[playerID] or ""
 
-	self:SendMessage("SG_DATA_UPDATED", "gear", senderName)
+	Sync:SendMessage("SG_DATA_UPDATED", "gear", playerID)
+	if( ElitistGroup.db.profile.general.announceData and isSelf ) then
+		ElitistGroup:Print(string.format(L["Gear received from %s."], playerID))
+	end
 end
 
--- Parse the notes somebody sent us
-function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
-	senderTime = tonumber(senderTime)
-	if( not senderTime or not data ) then return end
-
-	local sentNotes, msg = loadstring("return " .. data)
-	if( not sentNotes ) then
-		--@debug@
-		error(string.format("Failed to load sent notes: %s", msg), 3)
-		--@end-debug@
+function Sync:ParseSelfSentGear(sender, data)
+	-- If the player already scanned data on this person from within 10 minutes, don't accept the comm
+	local playerID, playerName, playerServer = getFullName(sender)
+	local userData = ElitistGroup.userData[playerID]
+	if( userData and userData.from ~= ElitistGroup.playerID and userData.scanned < (time() - 600) ) then
 		return
 	end
 	
-	-- time() can differ between players, will have the player send their time so it can be calibrated
-	-- this is still maybe 2-3 seconds off, but better 2-3 seconds off than hours
-	local timeDrift = senderTime - currentTime
-	local senderName, name, server = getFullName(sender)
-	
-	for noteFor, note in pairs(sentNotes()) do
-		note = self:VerifyTable(note, ElitistGroup.VALID_NOTE_FIELDS)
-		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= ElitistGroup.MAX_NOTE_LENGTH ) ) then
-			local name, server = string.split("-", noteFor, 2)
-			local userData = ElitistGroup.userData[noteFor] or {}
-			
-			-- If the time drift is over a day, reset the time of the comment to right now
-			note.time = timeDrift > 86400 and time() or note.time + timeDrift
-			note.comment = note.comment
-			note.from = senderName
-			note.rating = math.max(math.min(5, note.rating), 0)
-			
-			userData.notes[senderName] = note
-			
-			ElitistGroup.userData[noteFor] = userData
-			ElitistGroup.db.faction.users[noteFor] = ElitistGroup.db.faction.users[noteFor] or ""
-			ElitistGroup.writeQueue[noteFor] = true
+	parseGear(playerID, playerID, playerName, playerServer, data, true)
+end
 
-			self:SendMessage("SG_DATA_UPDATED", "note", noteFor)
+function Sync:SendDatabaseList(sender)
+	-- We're not accepting database requests, exit quickly
+	if( not ElitistGroup:IsTrusted(sender) or not ElitistGroup.db.profile.comm.databaseSync ) then
+		self:CommMessage("LISTERR@DISABLED", "WHISPER", sender)
+		return
+	end
+	
+	local userList = ""
+	local fromPlayer = string.format("from=\"%s\";", string.gsub(ElitistGroup.playerID, "%-", "%%-"))
+	for playerID, data in pairs(ElitistGroup.db.faction.users) do
+		if( rawget(ElitistGroup.userData, playerID) ) then
+			local userData = ElitistGroup.userData[playerID]
+			if( not userData.pruned and userData.from == ElitistGroup.playerID ) then
+				userList = string.format("%s@%s@%s", userList, playerID, time() - data.scanned)
+			end
+		elseif( not string.match(data, "pruned=true;") and string.match(data, fromPlayer) ) then
+			local scanned = tonumber(string.match(data, "scanned=(%d+);"))
+			if( scanned ) then
+				userList = string.format("%s@%s@%s", userList, playerID, time() - scanned)
+			end
 		end
+	end
+	
+	if( userList == "" ) then
+		self:CommMessage("LISTERR@NONE", "WHISPER", sender)
+	else
+		self:CommMessage(string.format("USERLIST%s", userList), "WHISPER", sender)
+	end
+end
+
+-- Parse their data and see what we want
+function Sync:QueueDatabaseRequests(sender, ...)
+	-- Reset the queue we had for this person, they should only really send one of these
+	for playerID, target in pairs(requestQueue) do
+		if( target == sender ) then
+			requestQueue[playerID] = nil
+		end
+	end
+		
+	-- Parse out the list
+	for i=1, select("#", ...), 2 do
+		local playerID, secondsOld = select(i, ...)
+		secondsOld = tonumber(secondsOld)
+		-- Do some basic checking to make sure nothing bad is going down
+		if( playerID and secondsOld > 0 and string.match(playerID, "%-") and secondsOld > 0 and playerID ~= ElitistGroup.playerID ) then
+			-- Now make sure it's not too old
+			local daysOld = math.floor(secondsOld / 86400)
+			if( daysOld < ElitistGroup.db.profile.comm.databaseThreshold ) then
+				-- Find out if we don't have data that takes priority
+				local userData = ElitistGroup.db.faction.users[playerID]
+				if( userData ) then
+					local scanned = not string.match(userData, "pruned=true;") and tonumber(string.match(userData, "scanned=(%d+);"))
+					local scanAge = scanned and math.floor((time() - scanned) / 86400)
+					if( scanAge < daysOld ) then
+						requestQueue[playerID] = sender
+					end
+				else
+					requestQueue[playerID] = sender
+				end
+			end
+		end
+	end
+	
+	-- Now request a user from the queue
+	for playerID, target in pairs(requestQueue) do
+		if( target == sender ) then
+			self:CommMessage(string.format("REQOTHGEAR@%s", playerID), "WHISPER", target)
+			requestQueue[playerID] = nil
+			break
+		end
+	end
+end
+
+function Sync:SendOthersGear(sender, playerID)
+	if( not playerID or not ElitistGroup.db.faction.users[playerID] ) then return end
+	local userData = ElitistGroup.db.faction.users[playerID]
+	-- Strip out notes before sending it
+	userData = string.gsub(userData, "notes={(.-);};};", "")
+	userData = string.gsub(userData, "notes={};", "")
+	
+	self:CommMessage(string.format("GEAROTH@%s@%s", playerID, userData), "WHISPER", sender)
+end
+
+function Sync:ParseOthersGear(sender, playerID, data)
+	local playerName, playerServer = string.match(playerID, "(.-)%-(.+)")
+	if( not playerName or not playerServer ) then return end
+	
+	parseGear(getFullName(sender), playerID, playerName, playerServer, data)
+	
+	requestQueue[playerID] = nil
+	
+	-- Now request a user from the queue
+	-- The reason I do a request user -> send user -> request user -> send user -> repeat is so if one of the users
+	-- goes offline during the transaction we don't have a large queue of 10KB+ that has to basically be spammed and sent
+	-- even if they were offline, it also means that if either one of them goes into combat it will pause and queue itself
+	-- instead of continuning to send and requiring more parsing or a larger queue
+	for playerID, target in pairs(requestQueue) do
+		if( target == sender ) then
+			self:CommMessage(string.format("REQOTHGEAR@%s", playerID), "WHISPER", target)
+			requestQueue[playerID] = nil
+			break
+		end
+	end
+end
+
+function Sync:ListReqErrored(sender, type)
+	if( not expectingList ) then return nil end
+	expectingList = nil
+	
+	if( type == "NONE" ) then
+		ElitistGroup:Print(string.format(L["%s does not have any users to send you."], sender))
+	elseif( type == "DISABLED" ) then
+		ElitistGroup:Print(string.format(L["%s either disabled database syncing, or you are not on their trusted list."], sender))
 	end
 end
 
@@ -284,19 +521,63 @@ function Sync:OnCommReceived(prefix, message, distribution, sender, currentTime)
 	end
 	
 	local cmd, args = string.split("@", message, 2)
+	
+	--[[
+		Throttling is currently:
+		
+		Responding to requests for our gear - 30 seconds
+		Responding to requests for our notes on specific people - 5 minutes
+		Requesting all notes - 30 minutes
+		Responding to requests for database - 60 minutes
+		Parsing/queuing database list requests - 58 minutes
+		Parsing somebodies gear or notes - 30 seconds
+	]]
+	
 	-- REQGEAR - Requests your currently equipped data in case you are out of inspection range
-	if( cmd == "REQGEAR" ) then
-		self:SendGearData(sender)
-	-- REQNOTES:playerA@playerBplayerC@etc - Request notes on the given players
-	elseif( cmd == "REQNOTES" and args ) then
-		self:ParseNotesRequest(sender, string.split("@", args))
-	-- GEAR:<serialized table of the persons gear>
-	elseif( cmd == "GEAR" and args and ( not requestThrottle[sender] or requestThrottle[sender] < GetTime() ) ) then
-		requestThrottle[sender] = GetTime() + REQUEST_THROTTLE
-		self:ParseSentGear(sender, string.split("@", args))
-	-- NOTES:<serialized table of the notes on the people requested through REQNOTES
-	elseif( cmd == "NOTES" and args and ( not requestThrottle[sender] or requestThrottle[sender] < GetTime() ) ) then
-		requestThrottle[sender] = GetTime() + REQUEST_THROTTLE
+	if( cmd == "REQGEAR" and not self:IsThrottled(sender, "myGear") ) then
+		self:SetThrottle(sender, "myGear", 30)
+		self:SendPlayersGear(sender)
+	
+	-- LISTERR@type - There was an error when requesting list data
+	elseif( cmd == "LISTERR" and args ) then
+		self:ListReqErrored(sender, args)
+	
+	-- REQALLNOTES - Requests all notes
+	elseif( cmd == "REQALLNOTES" and ElitistGroup:IsTrusted(sender) and not self:IsThrottled(sender, "fullNotes") ) then
+		self:SetThrottle(sender, "fullNotes", 1800)
+		self:SendAllNotes(sender)
+	
+	-- REQNOTES@playerA@playerBplayerC@etc - Request notes on the given players
+	elseif( cmd == "REQNOTES" and arg and not self:IsThrottled(sender, "notes") ) then
+		self:SetThrottle(sender, "notes", 10)
+		self:SpecificNotesRequested(sender, string.split("@", args))
+
+	-- REQUSERS - Tells the person that you want their delicious and tasty database
+	elseif( cmd == "REQUSERS" and not self:IsThrottled(sender, "fullReq") ) then
+		self:SetThrottle(sender, "fullReq", 3600)
+		self:SendDatabaseList(sender)
+
+	-- USERLIST@playerID@secondsOld... - Used in response to REQUSERS, let's us figure out what data will want
+	elseif( cmd == "USERLIST" and args and ElitistGroup:IsTrusted(sender) and ElitistGroup.db.profile.comm.databaseSync and not self:IsThrottled(sender, "reqList") ) then
+		self:SetThrottle(sender, "reqList", 3500)
+		self:QueueDatabaseRequests(sender, string.split("@", args))
+	
+	-- REQOTHGEAR@playerID - Used in response to a USERLIST indicating what user we want
+	elseif( cmd == "REQOTHGEAR" and args and ElitistGroup:IsTrusted(sender) and ElitistGroup.db.profile.comm.databaseSync ) then
+		self:SendOthersGear(sender, string.split("@", args))
+	
+	-- GEAROTH@<name>@<data> - Somebody is sending you somebody elses gear
+	elseif( cmd == "GEAROTH" and args and ElitistGroup:IsTrusted(sender) and ElitistGroup.db.profile.comm.databaseSync ) then
+		self:ParseOthersGear(sender, string.split("@", args))
+	
+	-- GEAR@<serialized table of the persons gear>
+	elseif( cmd == "GEAR" and args and not self:IsThrottled(sender, "gear") ) then
+		self:SetThrottle(sender, "gear", 30)
+		self:ParseSelfSentGear(sender, string.split("@", args))
+	
+	-- NOTES@:<serialized table of the notes on the people requested through REQNOTES
+	elseif( cmd == "NOTES" and args and ElitistGroup:IsTrusted(sender) and not self:IsThrottled(sender, "notes") ) then
+		self:SetThrottle(sender, "notes", 30)
 		self:ParseSentNotes(sender, currentTime or time(), string.split("@", args))
 	end
 end
@@ -313,6 +594,10 @@ end
 
 function Sync:CommMessage(message, channel, target)
 	if( ElitistGroup.db.profile.comm.enabled ) then
+		if( channel == "WHISPER" ) then
+			self:EnableOfflineBlock(target)
+		end
+		
 		self:SendCommMessage(COMM_PREFIX, message, channel, target)
 	end
 end
