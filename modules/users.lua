@@ -214,23 +214,31 @@ function Users:Show(userData)
 		tempList = ElitistGroup:GetTable()
 		achievementTooltips = {}
 		self.experienceData = {}
+		self.experienceDataMain = {}
 		for _, data in pairs(DungeonData.experience) do
 			self.experienceData[data.id] = self.experienceData[data.id] or 0
+			self.experienceDataMain[data.id] = self.experienceDataMain[data.id] or 0
 				
 			for id, points in pairs(data) do
-				if( type(id) == "number" and userData.achievements[id] ) then
-					self.experienceData[data.id] = self.experienceData[data.id] + (points * userData.achievements[id])
+				if( userData.achievements[id] ) then
+					self.experienceData[data.id] = self.experienceData[data.id] + (userData.achievements[id] * points)
+				end
+				
+				if( userData.mainAchievements and userData.mainAchievements[id] ) then
+					self.experienceDataMain[data.id] = self.experienceDataMain[data.id] + (userData.mainAchievements[id] * points)
 				end
 			end
 			
 			-- Add the childs score to the parents
 			if( not data.parent ) then
 				self.experienceData[data.childOf] = (self.experienceData[data.childOf] or 0) + self.experienceData[data.id]
+				self.experienceDataMain[data.childOf] = (self.experienceDataMain[data.childOf] or 0) + self.experienceDataMain[data.id]
 			end
 			
 			-- Cascade the scores from this one to whatever it's supposed to
 			if( data.cascade ) then
 				self.experienceData[data.cascade] = (self.experienceData[data.cascade] or 0) + self.experienceData[data.id]
+				self.experienceDataMain[data.cascade] = (self.experienceDataMain[data.cascade] or 0) + self.experienceDataMain[data.id]
 			end
 			
 			-- Build the tooltip, caching it because it really does not need to be recalcualted that often
@@ -250,10 +258,19 @@ function Users:Show(userData)
 				name = string.trim(string.gsub(name, "%((.-)%)$", ""))
 				
 				local earned = userData.achievements[achievementID]
-				if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) == ACHIEVEMENT_FLAGS_STATISTIC ) then
-					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d]|r %s", earned or 0, name)
+				local mainEarned = userData.mainAchievements and userData.mainAchievements[achievementID] or 0
+				if( mainEarned ) then
+					if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
+						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d | %d]|r %s", mainEarned or 0, earned or 0, name)
+					else
+						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s | %s]|r %s", mainEarned == 1 and YES or NO, earned == 1 and YES or NO, name)
+					end
 				else
-					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s]|r %s", earned == 1 and YES or NO, name)
+					if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
+						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d]|r %s", earned or 0, name)
+					else
+						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s]|r %s", earned == 1 and YES or NO, name)
+					end
 				end
 			end
 		end
@@ -397,7 +414,7 @@ end
 
 function Users:UpdateAchievementInfo()
 	local self = Users
-	local totalEntries = 0
+	local totalEntries = self.activeData.mainAchievements and 1 or 0
 	for id, data in pairs(DungeonData.experience) do
 		self.experienceData[data.id] = self.experienceData[data.id] or 0
 		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( not DungeonData.experienceParents[data.childOf] or ElitistGroup.db.profile.expExpanded[DungeonData.experienceParents[data.childOf]] ) ) ) then
@@ -414,8 +431,23 @@ function Users:UpdateAchievementInfo()
 
 	local rowID, rowOffset, id = 1, 0, 0
 	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
-	
 	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
+	
+	if( self.activeData.mainAchievements and offset == 0 ) then
+		local row = self.frame.achievementFrame.rows[rowID]
+		row.nameText:SetFormattedText(L["Mains experience on left, %s on right"], self.activeData.name)
+		row.tooltip = row.nameText:GetText()
+		row.expandedInfo = nil
+		row:SetWidth(rowWidth - 4)
+		row:ClearAllPoints()
+		row:SetPoint("TOPLEFT", self.frame.achievementFrame, "TOPLEFT", 2, -2)
+		row.toggle.id = nil
+		row.toggle:Hide()
+		row:Show()
+
+		rowID = rowID + 1
+	end
+	
 	for _, data in pairs(DungeonData.experience) do
 		if( data.isVisible ) then
 			id = id + 1
@@ -444,15 +476,38 @@ function Users:UpdateAchievementInfo()
 					row.nameText:SetFormattedText("%s%s%s", heroicIcon, data.name, players)
 				-- Anything with an experience requirement obviously should show it
 				elseif( data.experienced ) then
-					local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
-					local experienceText = percent >= 1 and L["Experienced"] or percent >= 0.8 and L["Nearly-experienced"] or percent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
-					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
-					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
-					
-					if( data.childOf and not row.toggle:IsShown() ) then
-						row.nameText:SetFormattedText("- [|cff%02x%02x00%d%%|r] %s%s", r, g, percent * 100, heroicIcon, data.name)
+					local experienceText
+					-- Not an alt, so do the simple display
+					if( not self.activeData.mainAchievements ) then
+						local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
+						local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+						local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+						experienceText = percent >= 1 and L["Experienced"] or percent >= 0.8 and L["Nearly-experienced"] or percent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
+						
+						if( data.childOf and not row.toggle:IsShown() ) then
+							row.nameText:SetFormattedText("- [|cff%02x%02x00%d%%|r] %s%s", r, g, percent * 100, heroicIcon, data.name)
+						else
+							row.nameText:SetFormattedText("[|cff%02x%02x00%d%%|r] %s%s%s", r, g, percent * 100, heroicIcon, data.name, players)
+						end
+					-- An alt, fun times
 					else
-						row.nameText:SetFormattedText("[|cff%02x%02x00%d%%|r] %s%s%s", r, g, percent * 100, heroicIcon, data.name, players)
+						-- Calculate the alts (the shown characters) experience
+						local percentAlt = math.min(self.experienceData[data.id] / data.experienced, 1)
+						local altR = (percentAlt > 0.5 and (1.0 - percentAlt) * 2 or 1.0) * 255
+						local altG = (percentAlt > 0.5 and 1.0 or percentAlt * 2) * 255
+						-- Now calculate the mains
+						local percentMain = math.min(self.experienceDataMain[data.id] / data.experienced, 1)
+						local mainR = (percentMain > 0.5 and (1.0 - percentMain) * 2 or 1.0) * 255
+						local mainG = (percentMain > 0.5 and 1.0 or percentMain * 2) * 255
+
+						local totalPercent = percentAlt + percentMain
+						experienceText = totalPercent >= 1 and L["Experienced"] or totalPercent >= 0.8 and L["Nearly-experienced"] or totalPercent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
+						
+						if( data.childOf and not row.toggle:IsShown() ) then
+							row.nameText:SetFormattedText("- [|cff%02x%02x00%d%%|r | |cff%02x%02x00%d%%|r] %s%s", mainR, mainG, percentMain * 100, altR, altG, percentAlt * 100, heroicIcon, data.name)
+						else
+							row.nameText:SetFormattedText("[|cff%02x%02x00%d%%|r | |cff%02x%02x00%d%%|r] %s%s%s", mainR, mainG, percentMain * 100, altR, altG, percentAlt * 100, heroicIcon, data.name, players)
+						end
 					end
 					
 					row.tooltip = string.format(L["%s - %d-man %s (%s)"], experienceText, data.players, data.name, data.heroic and L["Heroic"] or L["Normal"])
