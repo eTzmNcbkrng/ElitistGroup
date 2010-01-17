@@ -73,7 +73,7 @@ function History:Update()
 			end
 			
 			local defaultRole
-			local playerNote = ElitistGroup.userData[name].notes[ElitistGroup.playerName]
+			local playerNote = ElitistGroup.userData[name].notes[ElitistGroup.playerID]
 			if( playerNote ) then
 				row.playerID = name
 				row.defaultRole = nil
@@ -131,10 +131,10 @@ function History:CreateUI()
 	
 	local function getNote(playerID, defaultRole)
 		local userData = ElitistGroup.userData[playerID]
-		userData.notes[ElitistGroup.playerName] = userData.notes[ElitistGroup.playerName] or {rating = 3, role = defaultRole, time = time()}
+		userData.notes[ElitistGroup.playerID] = userData.notes[ElitistGroup.playerID] or {rating = 3, role = defaultRole, time = time()}
 		
 		ElitistGroup.writeQueue[playerID] = true
-		return userData.notes[ElitistGroup.playerName]
+		return userData.notes[ElitistGroup.playerID]
 	end
 	
 	local function UpdateComment(self)

@@ -131,7 +131,7 @@ function Summary:UpdateSingle(row)
 		for _, note in pairs(userData.notes) do totalNotes = totalNotes + 1 end
 		
 		-- Player personally left a note on the person
-		local playerNote = userData.notes[ElitistGroup.playerName]
+		local playerNote = userData.notes[ElitistGroup.playerID]
 		if( playerNote ) then
 			local noteAge = (time() - playerNote.time) / 60
 			if( noteAge < 60 ) then
@@ -171,7 +171,7 @@ function Summary:UpdateSingle(row)
 		end
 		
 		-- Add trusted information
-		if( userData.trusted ) then
+		if( ElitistGroup:IsTrusted(userData.from) ) then
 			row.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
 			row.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
 			row.trustedInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)

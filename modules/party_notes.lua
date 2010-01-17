@@ -35,7 +35,7 @@ function History:UpdateUnitData(unit)
 		totalGroupMembers = totalGroupMembers + 1
 		
 		local userData = ElitistGroup.userData[partyID]
-		local playerNote = userData.notes[ElitistGroup.playerName]
+		local playerNote = userData.notes[ElitistGroup.playerID]
 		groupData[partyID] = {name = userData.name, classToken = userData.classToken, rating = playerNote and playerNote.rating or 3, comment = playerNote and playerNote.comment}
 	end
 	
@@ -122,13 +122,13 @@ local function OnHide(self)
 			missing = missing + 1
 		end
 
-		local note = ElitistGroup.userData[partyID].notes[ElitistGroup.playerName] or {}
+		local note = ElitistGroup.userData[partyID].notes[ElitistGroup.playerID] or {}
 		note.role = note.role and bit.bor(note.role, data.role) or data.role
 		note.rating = data.rating
 		note.comment = data.comment and data.comment ~= "" and data.comment
 		note.time = time()
 		
-		ElitistGroup.userData[partyID].notes[ElitistGroup.playerName] = note
+		ElitistGroup.userData[partyID].notes[ElitistGroup.playerID] = note
 	end
 	
 	-- Remind people to rate their group if they have it on auto popup that they didn't rate everyone
