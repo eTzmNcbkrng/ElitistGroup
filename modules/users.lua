@@ -161,19 +161,21 @@ function Users:Show(userData)
 	else
 		frame.userFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
 		frame.userFrame.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+		frame.userFrame.playerInfo.icon:SetTexCoord(0, 1, 0, 1)
 		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
 	end
 	
 	self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
 	if( not userData.pruned and userData.talentTree1 and userData.talentTree2 and userData.talentTree3 ) then
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+		specType = ElitistGroup.Talents.talentText[specType] or specType
 		if( not userData.unspentPoints ) then
-			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
+			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, specType)
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		else
 			frame.userFrame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, specType)
 			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
 		end
 	else
@@ -197,7 +199,7 @@ function Users:Show(userData)
 		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_37")
 	end
 	
-	if( userData.trusted ) then
+	if( ElitistGroup:IsTrusted(userData.from) ) then
 		frame.userFrame.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
 		frame.userFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
 		frame.userFrame.trustedInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
@@ -278,8 +280,8 @@ function Users:Show(userData)
 	end
 	
 	-- Set the note label
-	frame.userFrame.manageNote:SetText(self.activeData.notes[ElitistGroup.playerName] and L["Edit Note"] or L["Add Note"])
-	if( ElitistGroup.playerName ~= self.activeUserID ) then
+	frame.userFrame.manageNote:SetText(self.activeData.notes[ElitistGroup.playerID] and L["Edit Note"] or L["Add Note"])
+	if( ElitistGroup.playerID ~= self.activeUserID ) then
 		frame.userFrame.manageNote.tooltip = L["You can edit or add a note on this player here."]
 		frame.userFrame.manageNote:Enable()
 	else
@@ -337,7 +339,7 @@ function Users:UpdateDatabasePage()
 			row:SetWidth(rowWidth)
 			row:Show()
 			
-			if( userList[id] ~= ElitistGroup.playerName and UnitExists(userList[row.userID]) ) then
+			if( userList[id] ~= ElitistGroup.playerID and UnitExists(userList[row.userID]) ) then
 				row:SetFormattedText("|cffffffff[%s]|r %s", GROUP, userList[id])
 			else
 				row:SetText(userList[id])
@@ -547,13 +549,14 @@ local function managePlayerNote()
 	local defaultRole = 0
 	if( not frame.manageNote ) then
 		local function getNote()
-			if( not Users.activeData.notes[ElitistGroup.playerName] ) then
+			if( not Users.activeData.notes[ElitistGroup.playerID] ) then
 				Users.activeDataNotes = Users.activeDataNotes + 1
-				Users.activeData.notes[ElitistGroup.playerName] = {rating = 3, role = defaultRole, time = time()}
+				Users.activeData.notes[ElitistGroup.playerID] = {rating = 3, role = defaultRole, time = time()}
 			end
 			
 			ElitistGroup.writeQueue[Users.activeUserID] = true
-			return Users.activeData.notes[ElitistGroup.playerName]
+			frame.manageNote.delete:Enable()
+			return Users.activeData.notes[ElitistGroup.playerID]
 		end
 		
 		local function UpdateComment(self)
@@ -595,7 +598,7 @@ local function managePlayerNote()
 		frame.manageNote:SetBackdrop(backdrop)
 		frame.manageNote:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 		frame.manageNote:SetBackdropColor(0, 0, 0)
-		frame.manageNote:SetHeight(251)
+		frame.manageNote:SetHeight(252)
 		frame.manageNote:SetWidth(175)
 		frame.manageNote:SetPoint("TOPLEFT", frame.userFrame.manageNote, "BOTTOMLEFT", -3, -1)
 		frame.manageNote:Hide()
@@ -669,6 +672,20 @@ local function managePlayerNote()
 		local text = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 		text:SetText(L["Comment"])
 		text:SetPoint("BOTTOMLEFT", frame.manageNote.comment, "TOPLEFT", -4, 4)
+		
+		frame.manageNote.delete = CreateFrame("Button", nil, frame.manageNote, "UIPanelButtonGrayTemplate")
+		frame.manageNote.delete:SetHeight(18)
+		frame.manageNote.delete:SetWidth(140)
+		frame.manageNote.delete:SetText(L["Delete your note"])
+		frame.manageNote.delete:SetPoint("BOTTOMLEFT", frame.manageNote, "BOTTOMLEFT", 0, 1)
+		frame.manageNote.delete:SetScript("OnClick", function(self)
+			ElitistGroup.userData[self.playerID].notes[ElitistGroup.playerID] = nil
+			ElitistGroup.writeQueue[self.playerID] = true
+
+			Users.activeDataNotes = Users.activeDataNotes - 1
+			Users:UpdateTabPage()
+			self:Disable()
+		end)
 	end
 
 	if( frame.manageNote:IsVisible() ) then
@@ -679,16 +696,20 @@ local function managePlayerNote()
 		frame.userFrame.manageNote:LockHighlight()
 	end
 	
+	frame.manageNote.delete.playerID = self.activeUserID
+	
 	-- Now setup what we got
-	local note = self.activeData.notes[ElitistGroup.playerName]
+	local note = self.activeData.notes[ElitistGroup.playerID]
 	if( note ) then
 		frame.manageNote.comment.lastText = note.comment or ""
 		frame.manageNote.comment:SetText(note.comment or "")
 		frame.manageNote.rating:SetValue(note.rating)
+		frame.manageNote.delete:Enable()
 	else
 		frame.manageNote.comment.lastText = ""
 		frame.manageNote.comment:SetText("")
 		frame.manageNote.rating:SetValue(3)
+		frame.manageNote.delete:Disable()
 		
 		if( not self.activeData.pruned ) then
 			local specType = ElitistGroup:GetPlayerSpec(self.activeData)
@@ -918,6 +939,10 @@ function Users:CreateUI()
 
 	local function viewUserData(self)
 		Users:Show(ElitistGroup.userData[self.userID])
+		
+		if( frame.manageNote and frame.manageNote:IsVisible() ) then
+			managePlayerNote(frame)
+		end
 	end
 
 	frame.databaseFrame.rows = {}
@@ -960,7 +985,7 @@ function Users:CreateUI()
 	frame.pruneInfo:SetPoint("BOTTOMRIGHT", frame.gearFrame, "BOTTOMRIGHT", -4, 4)
 	frame.pruneInfo:SetJustifyH("LEFT")
 	frame.pruneInfo:SetJustifyV("TOP")
-	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nIf you do not want data to be pruned or you want to increase the time before pruning, go to /ElitistGroup and change the value."])
+	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nPruning settings can be changed through /elitistgroup."])
 
 	local function OnItemClick(self)
 		if( self.fullItemLink ) then
