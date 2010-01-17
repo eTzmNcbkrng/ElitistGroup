@@ -258,8 +258,8 @@ function Users:Show(userData)
 				name = string.trim(string.gsub(name, "%((.-)%)$", ""))
 				
 				local earned = userData.achievements[achievementID]
-				local mainEarned = userData.mainAchievements and userData.mainAchievements[achievementID] or 0
-				if( mainEarned ) then
+				local mainEarned = userData.mainAchievements and userData.mainAchievements[achievementID]
+				if( mainEarned and userData.mainAchievements ) then
 					if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
 						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d | %d]|r %s", mainEarned or 0, earned or 0, name)
 					else
