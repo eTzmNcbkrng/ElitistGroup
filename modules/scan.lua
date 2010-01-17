@@ -47,7 +47,6 @@ end
 
 hooksecurefunc("NotifyInspect", function(unit)
 	if( InCombatLockdown() or not Scan.allowInspect ) then return end
-	--if( ( unit == "mouseover" or unit == "target" ) and pending.expirationTime and pending.expirationTime > GetTime() ) then return end
 	Scan.allowInspect = nil
 	
 	if( CanInspect(unit) ) then
@@ -56,7 +55,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 	end
 
 	-- Seems that we can inspect them
-	if( UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+	if( not UnitIsDeadOrGhost(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 		table.wipe(pending)
 		table.wipe(pendingGear)
 
@@ -100,7 +99,7 @@ local function checkPending(unit)
 end
 
 function Scan:CheckInspectGems()
-	if( not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
+	if( not pending.gems or not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
 		pending.gems = nil
 		
@@ -208,7 +207,7 @@ end
 
 function Scan:ManualCreateCore(playerID, level, classToken)
 	local name, server = string.split("-", playerID, 2)
-	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerID, scanned = time(), notes = {}, achievements = {}, equipment = {}}
 	userData.name = name
 	userData.server = server
 	userData.level = level
@@ -225,7 +224,7 @@ end
 function Scan:CreateCoreTable(unit)
 	local name, server = UnitName(unit)
 	local playerID = ElitistGroup:GetPlayerID(unit)
-	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerName, trusted = true, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerID, scanned = time(), notes = {}, achievements = {}, equipment = {}}
 	userData.name = name
 	userData.server = server and server ~= "" and server or GetRealmName()
 	userData.level = UnitLevel(unit)
@@ -299,7 +298,7 @@ end
 function Scan:UpdatePlayerData()
 	self:UpdateUnitData("player")
 	
-	local userData = ElitistGroup.userData[ElitistGroup.playerName]
+	local userData = ElitistGroup.userData[ElitistGroup.playerID]
 	local first, second, third, unspentPoints, specRole = self:GetTalentData(select(2, UnitClass("player")), nil)
 	userData.talentTree1 = first
 	userData.talentTree2 = second
@@ -319,8 +318,12 @@ function Scan:UpdatePlayerData()
 end
 
 function Scan:InspectUnit(unit)
-	self.allowInspect = true
-	NotifyInspect(unit)
+	if( UnitIsUnit(unit, "player") ) then
+		self:UpdatePlayerData()
+	else
+		self.allowInspect = true
+		NotifyInspect(unit)
+	end
 end
 
 -- Handle the queuing aspect of inspection
@@ -351,6 +354,8 @@ local function sortQueue(a, b)
 end
 
 function Scan:QueueGroup(unitType, total)
+	table.wipe(inspectQueue)
+	
 	for i=1, total do
 		local unit = unitType .. i
 		if( not inspectQueue[unit] and not UnitIsUnit(unit, "player") ) then
@@ -400,7 +405,7 @@ function Scan:ProcessQueue()
 	if( #(inspectQueue) == 0 and #(inspectBadGems) == 0 ) then
 		self:ResetQueue()
 		return
-	elseif( pending.activeInspect and ( pending.expirationTime and pending.expirationTime > GetTime() ) ) then
+	elseif( InCombatLockdown() or ( pending.activeInspect and pending.expirationTime and pending.expirationTime > GetTime() ) ) then
 		return
 	end
 	
@@ -408,7 +413,7 @@ function Scan:ProcessQueue()
 	if( not checkGemQueue ) then
 		for i=#(inspectBadGems), 1, -1 do
 			local unit = inspectBadGems[i]
-			if( UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+			if( not UnitIsDeadOrGhost(unit) and UnitExists(unit) and UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 				checkGemQueue = true
 				self:InspectUnit(unit)
 				break
@@ -430,7 +435,7 @@ function Scan:ProcessQueue()
 	-- Find the first unit we can inspect
 	for i=#(inspectQueue), 1, -1 do
 		local unit = inspectQueue[i]
-		if( UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+		if( not UnitIsDeadOrGhost(unit) and UnitExists(unit) and UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 			self:InspectUnit(unit)
 			
 			table.remove(inspectQueue, i)
