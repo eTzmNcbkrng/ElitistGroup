@@ -11,6 +11,7 @@ function ElitistGroup:OnInitialize()
 				mouseover = false,
 				autoPopup = false,
 				autoSummary = false,
+				announceData = false,
 				databaseExpanded = true,
 				selectedTab = "notes",
 			},
@@ -28,8 +29,15 @@ function ElitistGroup:OnInitialize()
 			comm = {
 				enabled = true,
 				gearRequests = true,
+				databaseSync = false,
+				databaseThreshold = 4,
+				trustGuild = true,
+				trustFriends = true,
 				areas = {GUILD = true, WHISPER = true, RAID = true, PARTY = true, BATTLEGROUND = false},
 			},
+		},
+		factionrealm = {
+			trusted = {},
 		},
 		faction = {
 			lastModified = {},
@@ -43,11 +51,11 @@ function ElitistGroup:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileShutdown", "OnProfileShutdown")
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 	
-	self.playerName = string.format("%s-%s", UnitName("player"), GetRealmName())
+	self.playerID = string.format("%s-%s", UnitName("player"), GetRealmName())
 	self.tooltip = CreateFrame("GameTooltip", "ElitistGroupTooltip", UIParent, "GameTooltipTemplate")
 	self.tooltip:Hide()
 	
-	-- God bless metatables
+	local emptyEnv = {}
 	self.writeQueue = {}
 	self.userData = setmetatable({}, {
 		__index = function(tbl, name)
@@ -58,7 +66,7 @@ function ElitistGroup:OnInitialize()
 			
 			local func, msg = loadstring("return " .. ElitistGroup.db.faction.users[name])
 			if( func ) then
-				func = func() or false
+				func = setfenv(func, emptyEnv)() or false
 			elseif( msg ) then
 				error(msg, 3)
 				rawset(tbl, name, false)
@@ -133,6 +141,22 @@ function ElitistGroup:OnInitialize()
 
 	self.modules.Sync:Setup()
 	self.modules.Mouseover:Setup()
+end
+
+-- Permissions, do we trust the person?
+local playerName = UnitName("player")
+function ElitistGroup:IsTrusted(name)
+	if( not name ) then return nil end
+	if( name == playerName or name == self.playerID ) then return true end
+
+	name = string.match(name, "(.-)%-") or name
+	name = string.lower(name)
+	
+	if( self.db.factionrealm.trusted[name] ) then
+		return true
+	end
+	
+	return false
 end
 
 function ElitistGroup:GetItemColor(itemLevel)
@@ -657,7 +681,7 @@ function ElitistGroup:OnDatabaseShutdown()
 			end
 		end
 		
-		if( hasData and userData.level and userData.level >= self.db.profile.database.ignoreBelow and ( self.db.profile.database.saveForeign or userData.server == GetRealmName() ) ) then
+		if( hasData and userData.level and ( userData.level == -1 or userData.level >= self.db.profile.database.ignoreBelow ) and ( self.db.profile.database.saveForeign or userData.server == GetRealmName() ) ) then
 			self.db.faction.lastModified[name] = time()
 			self.db.faction.users[name] = self:WriteTable(userData)
 		else
