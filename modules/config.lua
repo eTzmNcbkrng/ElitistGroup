@@ -61,14 +61,29 @@ local function loadOptions()
 						name = L["Announce synced data"],
 						desc = L["Alerts you in chat when you receive new notes or gear information from somebody."],
 					},
-					autoPopup = {
+				},
+			},
+			auto = {
+				order = 1.5,
+				type = "group",
+				inline = true,
+				name = L["Automatically"],
+				args = {
+					alertRating = {
 						order = 1,
+						type = "toggle",
+						name = L["Alert when grouped with low rated players"],
+						desc = L["If you leave a rating on somebody of 2 or less, the next time you group with them you will get a warning in chat."],
+						width = "full",
+					},
+					autoPopup = {
+						order = 2,
 						type = "toggle",
 						name = L["Show rating after dungeon"],
 						desc = L["After completing a dungeon through the Looking For Dungeon system, automatically popup the /rate frame so you can set notes and rating on your group members."],
 					},
 					autoSummary = {
-						order = 2,
+						order = 3,
 						type = "toggle",
 						name = L["Show summary on dungeon start"],
 						desc = L["Pops up the summary window when you first zone into an instance using the Looking for Dungeon system showing you info on your group."],
@@ -392,20 +407,13 @@ end
 
 SLASH_ELITISTGROUPRATE1 = "/rate"
 SlashCmdList["ELITISTGROUPRATE"] = function(msg)
-	local RaidHistory, PartyHistory = ElitistGroup.modules.RaidHistory, ElitistGroup.modules.PartyHistory
-	local History = RaidHistory.haveActiveGroup and RaidHistory or PartyHistory.haveActiveGroup and PartyHistory
-	if( GetNumRaidMembers() > 0 ) then
-		History = RaidHistory
-	elseif( GetNumPartyMembers() > 0 ) then
-		History = PartyHistory
-	end
-	
-	if( not History or not History.haveActiveGroup ) then
+	local Notes = ElitistGroup.modules.Notes
+	if( not Notes.haveActiveGroup ) then
 		ElitistGroup:Print(L["You need to currently be in a group, or have been in a group to use the rating tool."])
 		return
 	end
 	
-	History:Show()
+	Notes:Show()
 end	
 
 SLASH_ELITISTGROUP1 = "/elitistgroup"
