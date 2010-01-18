@@ -1,52 +1,140 @@
 local ElitistGroup = select(2, ...)
-local History = ElitistGroup:NewModule("RaidHistory", "AceEvent-3.0")
+local Notes = ElitistGroup:NewModule("Notes", "AceEvent-3.0")
 local L = ElitistGroup.L
 local MAX_RATING_ROWS = 8
-local playerNames, playerClasses, playerLevels = {}, {}, {}
-local raidUnits = {}
+local playerNames, playerClasses, playerLevels, playerRoles, queuedUnits = {}, {}, {}, {}, {}
+local raidUnits, partyUnits = {}, {}
 
 for i=1, MAX_RAID_MEMBERS do raidUnits[i] = "raid" .. i end
+for i=1, MAX_PARTY_MEMBERS do partyUnits[i] = "party" .. i end
 
-function History:OnInitialize()
-	self:RegisterEvent("RAID_ROSTER_UPDATE")
-	self:RegisterEvent("PLAYER_REGEN_DISABLED", function() self:UnregisterEvent("RAID_ROSTER_UPDATE") end)
-	self:RegisterEvent("PLAYER_REGEN_ENABLED", function() self:RegisterEvent("RAID_ROSTER_UPDATE") end)
+function Notes:OnInitialize()
+	self:RegisterEvent("RAID_ROSTER_UPDATE", "GroupUpdated")
+	self:RegisterEvent("PARTY_MEMBERS_CHANGED", "GroupUpdated")
+	self:RegisterEvent("LFG_COMPLETION_REWARD")
 end
 
-function History:Show()
-	self:RAID_ROSTER_UPDATE()
+function Notes:Show()
+	self:GroupUpdated()
 	self:CreateUI()
 	self:Update()
 end
 
+function Notes:PLAYER_REGEN_ENABLED()
+	if( self.groupUpdate ) then
+		self.groupUpdate = nil
+		self:GroupUpdated()
+	end
+
+	if( self.popupRating ) then
+		self.popupRating = nil
+		self:LFG_COMPETION_REWARD()
+	end
+end
+
+function Notes:PLAYER_LEAVING_WORLD()
+	self.resetGroup = true
+	self:UnregisterEvent("PLAYER_LEAVING_WORLD")
+end
+
+-- For LFD dungeons only
+function Notes:LFG_COMPLETION_REWARD()
+	self:RegisterEvent("PLAYER_LEAVING_WORLD")
+	
+	if( InCombatLockdown() ) then
+		self.popupRating = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED")
+		return
+	end
+	
+	if( ElitistGroup.db.profile.general.autoPopup ) then
+		self:Show()
+	else
+		local name, typeID = GetLFGCompletionReward()
+		instanceName = typeID == TYPEID_HEROIC_DIFFICULTY and string.format("%s (%s)", name, PLAYER_DIFFICULTY2) or name
+		
+		ElitistGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], instanceName))
+	end
+end
+
+local function addUnit(unit)
+	local guid = UnitGUID(unit)
+	if( not guid or playerNames[guid] ) then return end
+	local playerID = ElitistGroup:GetPlayerID(unit)
+	if( not playerID ) then
+		queuedUnits[unit] = true
+		Notes:RegisterEvent("UNIT_NAME_UPDATE")
+		return
+	end
+	
+	local isTank, isHealer, isDamage = UnitGroupRolesAssigned(unit)
+
+	playerNames[guid] = playerID
+	playerLevels[playerID] = UnitLevel(unit)
+	playerClasses[playerID] = select(2, UnitClass(unit))
+	playerRoles[playerID] = bit.bor(isTank and ElitistGroup.ROLE_TANK or 0, isHealer and ElitistGroup.ROLE_HEALER or 0, isDamage and ElitistGroup.ROLE_DAMAGE or 0)
+	
+	table.insert(playerNames, playerNames[guid])
+	
+	if( ElitistGroup.db.profile.auto.alertRating ) then
+		local userData = ElitistGroup.userData[playerID]
+		local note = userData and userData.notes[ElitistGroup.playerID]
+		if( note and note.rating <= 2 ) then
+			if( note.comment ) then
+				ElitistGroup:Print(string.format(L["|cffff2020Warning!|r %s is in your group, you rated them %d for: %s"], playerID, note.rating, note.comment))
+			else
+				ElitistGroup:Print(string.format(L["|cffff2020Warning!|r %s is in your group, you rated them %d"], playerID, note.rating, note.comment))
+			end
+		end
+	end
+end
+
+function Notes:UNIT_NAME_UPDATE(event, unit)
+	if( not queuedUnits[unit] ) then return end
+	queuedUnits[unit] = nil
+	addUnit(unit)
+	
+	local hasData
+	for unit in pairs(queuedUnits) do hasData = true break end
+	if( not hasData ) then
+		self:UnregisterEvent("UNIT_NAME_UPDATE")
+	end
+end
+
 -- This is only registered while the UI is open
-function History:RAID_ROSTER_UPDATE()
-	if( GetNumRaidMembers() == 0 ) then
+function Notes:GroupUpdated()
+	if( InCombatLockdown() ) then
+		self.groupUpdate = true
+		self:RegisterEvent("PLAYER_REGEN_ENABLED")
+		return
+	end
+	
+	if( GetNumRaidMembers() == 0 and GetNumPartyMembers() == 0 ) then
 		self.resetGroup = true
 	else
 		if( self.resetGroup ) then
 			self.resetGroup = nil
-			playerNames, playerClasses = {}, {}
+			playerNames, playerClasses, playerLevels, playerRoles = {}, {}, {}, {}
 		end
 		
 		self.haveActiveGroup = true
 		
 		for i=1, GetNumRaidMembers() do
-			local guid = not UnitIsUnit(raidUnits[i], "player") and UnitGUID(raidUnits[i])
-			if( guid and not playerNames[guid] ) then
-				playerNames[guid] = ElitistGroup:GetPlayerID(raidUnits[i])
-				playerLevels[playerNames[guid]] = UnitLevel(raidUnits[i])
-				playerClasses[playerNames[guid]] = select(2, UnitClass(raidUnits[i]))
-				table.insert(playerNames, playerNames[guid])
+			if( not UnitIsUnit(raidUnits[i], "player") ) then
+				addUnit(raidUnits[i])
 			end
+		end
+		
+		for i=1, GetNumPartyMembers() do
+			addUnit(partyUnits[i])
 		end
 	end
 end
 
 local function sortNames(a, b) return a < b end
 
-function History:Update()
-	self = History
+function Notes:Update()
+	self = Notes
 
 	if( not self.scrollUpdate ) then
 		table.sort(playerNames, sortNames)
@@ -72,18 +160,18 @@ function History:Update()
 				ElitistGroup.modules.Scan:ManualCreateCore(name, playerLevels[name], playerClasses[name])
 			end
 			
-			local defaultRole
+			local defaultRole = playerRoles[name]
 			local playerNote = ElitistGroup.userData[name].notes[ElitistGroup.playerID]
 			if( playerNote ) then
 				row.playerID = name
-				row.defaultRole = nil
-			
+				row.defaultRole = defaultRole
+				
 				row.rating:SetValue(playerNote.rating)
 				row.comment.lastText = playerNote.comment or ""
 				row.comment:SetText(row.comment.lastText)
 			else
 				local specType = ElitistGroup:GetPlayerSpec(ElitistGroup.userData[name])
-				defaultRole = specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
+				defaultRole = defaultRole > 0 and defaultRole or specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
 				row.playerID = name
 				row.defaultRole = defaultRole
 
@@ -91,8 +179,8 @@ function History:Update()
 				row.comment.lastText = ""
 				row.comment:SetText("")
 			end
-			
-			local role = defaultRole or playerNote.role
+
+			local role = defaultRole > 0 and defaultRole or playerNote.role
 			SetDesaturation(row.roleTank:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_TANK) == 0)
 			SetDesaturation(row.roleHealer:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_HEALER) == 0)
 			SetDesaturation(row.roleDamage:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_DAMAGE) == 0)
@@ -111,7 +199,7 @@ function History:Update()
 	end
 end
 
-function History:CreateUI()
+function Notes:CreateUI()
 	if( self.frame ) then
 		self.frame:Show()
 		return
@@ -168,7 +256,7 @@ function History:CreateUI()
 	end
 
 	-- Main container
-	local frame = CreateFrame("Frame", "ElitistGroupRaidRatingFrame", UIParent)
+	local frame = CreateFrame("Frame", "ElitistGroupGroupRatingFrame", UIParent)
 	frame:SetClampedToScreen(true)
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
@@ -180,7 +268,7 @@ function History:CreateUI()
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
 			frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-			ElitistGroup.db.profile.positions.raidrating = nil
+			ElitistGroup.db.profile.positions.notes = nil
 			return
 		end
 		
@@ -190,7 +278,7 @@ function History:CreateUI()
 		self:StopMovingOrSizing()
 		
 		local scale = self:GetEffectiveScale()
-		ElitistGroup.db.profile.positions.raidrating = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
+		ElitistGroup.db.profile.positions.notes = {x = self:GetLeft() * scale, y = self:GetTop() * scale}
 	end)
 	frame:SetBackdrop({
 		bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
@@ -200,11 +288,11 @@ function History:CreateUI()
 	})
 	frame:SetBackdropColor(0, 0, 0, 0.90)
 	
-	table.insert(UISpecialFrames, "ElitistGroupRaidRatingFrame")
+	table.insert(UISpecialFrames, "ElitistGroupGroupRatingFrame")
 	
-	if( ElitistGroup.db.profile.positions.raidrating ) then
+	if( ElitistGroup.db.profile.positions.notes ) then
 		local scale = frame:GetEffectiveScale()
-		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", ElitistGroup.db.profile.positions.raidrating.x / scale, ElitistGroup.db.profile.positions.raidrating.y / scale)
+		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", ElitistGroup.db.profile.positions.notes.x / scale, ElitistGroup.db.profile.positions.notes.y / scale)
 	else
 		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	end
@@ -255,11 +343,11 @@ function History:CreateUI()
 	frame.headers.comment:SetPoint("TOPLEFT", frame.headers.great, "TOPRIGHT", 15, 0)
 	frame.headers.comment:SetWidth(130)
 
-	frame.scroll = CreateFrame("ScrollFrame", "ElitistGroupRaidRatingScroll", frame, "FauxScrollFrameTemplate")
-	frame.scroll.bar = ElitistGroupRaidRatingScroll
+	frame.scroll = CreateFrame("ScrollFrame", "ElitistGroupnotesScroll", frame, "FauxScrollFrameTemplate")
+	frame.scroll.bar = ElitistGroupnotesScroll
 	frame.scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, -36)
 	frame.scroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -33, 10)
-	frame.scroll:SetScript("OnVerticalScroll", function(self, value) History.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 24, History.Update); History.scrollUpdate = nil end)
+	frame.scroll:SetScript("OnVerticalScroll", function(self, value) Notes.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 24, Notes.Update); Notes.scrollUpdate = nil end)
 	
 	local function viewDetailedInfo(self)
 		local userData = self.parent.playerID and ElitistGroup.userData[self.parent.playerID]
@@ -302,6 +390,9 @@ function History:CreateUI()
 		row.roleTank:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
 		row.roleTank:GetNormalTexture():SetTexCoord(0, 19/64, 22/64, 41/64)
 		row.roleTank:SetScript("OnClick", UpdateRole)
+		row.roleTank:SetScript("OnEnter", OnEnter)
+		row.roleTank:SetScript("OnLeave", OnLeave)
+		row.roleTank.tooltip = L["Set role as tank."]
 		row.roleTank.roleID = ElitistGroup.ROLE_TANK
 		row.roleTank.parent = row
 		
@@ -311,6 +402,9 @@ function History:CreateUI()
 		row.roleHealer:GetNormalTexture():SetTexCoord(20/64, 39/64, 1/64, 20/64)
 		row.roleHealer:SetPoint("LEFT", row.roleTank, "RIGHT", 6, 0)
 		row.roleHealer:SetScript("OnClick", UpdateRole)
+		row.roleHealer:SetScript("OnEnter", OnEnter)
+		row.roleHealer:SetScript("OnLeave", OnLeave)
+		row.roleHealer.tooltip = L["Set role as healer."]
 		row.roleHealer.roleID = ElitistGroup.ROLE_HEALER
 		row.roleHealer.parent = row
 
@@ -320,6 +414,9 @@ function History:CreateUI()
 		row.roleDamage:GetNormalTexture():SetTexCoord(20/64, 39/64, 22/64, 41/64)
 		row.roleDamage:SetPoint("LEFT", row.roleHealer, "RIGHT", 6, 0)
 		row.roleDamage:SetScript("OnClick", UpdateRole)
+		row.roleDamage:SetScript("OnEnter", OnEnter)
+		row.roleDamage:SetScript("OnLeave", OnLeave)
+		row.roleDamage.tooltip = L["Set role as damage."]
 		row.roleDamage.roleID = ElitistGroup.ROLE_DAMAGE
 		row.roleDamage.parent = row
 		
@@ -336,11 +433,12 @@ function History:CreateUI()
 		row.rating.parent = row
 		
 		-- Player comment
-		row.comment = CreateFrame("EditBox", "ElitistGroupRaidNote" .. i, frame, "InputBoxTemplate")
+		row.comment = CreateFrame("EditBox", "ElitistGroupGroupNote" .. i, frame, "InputBoxTemplate")
 		row.comment:SetHeight(18)
 		row.comment:SetWidth(166)
 		row.comment:SetAutoFocus(false)
 		row.comment:SetScript("OnTextChanged", UpdateComment)
+		row.comment:SetScript("OnEnterPressed", row.comment.ClearFocus)
 		row.comment:SetMaxLetters(256)
 		row.comment.parent = row
 		
