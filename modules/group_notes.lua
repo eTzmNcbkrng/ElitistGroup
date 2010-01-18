@@ -28,7 +28,7 @@ function Notes:PLAYER_REGEN_ENABLED()
 
 	if( self.popupRating ) then
 		self.popupRating = nil
-		self:LFG_COMPETION_REWARD()
+		self:LFG_COMPLETION_REWARD()
 	end
 end
 
