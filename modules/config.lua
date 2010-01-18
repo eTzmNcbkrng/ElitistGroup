@@ -254,11 +254,12 @@ local function loadOptions()
 					databaseThreshold = {
 						order = 1,
 						type = "range",
-						name = L["Ignore data over days old"],
+						name = L["Ignore data older than (days)"],
 						desc = L["Any data older than the set number will not be synced."],
 						set = set,
 						get = get,
 						arg = "comm",
+						min = 1, max = 365, step = 1,
 					},
 				},
 			},
