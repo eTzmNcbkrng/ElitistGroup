@@ -55,7 +55,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 	end
 
 	-- Seems that we can inspect them
-	if( not UnitIsDeadOrGhost(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+	if( not UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 		table.wipe(pending)
 		table.wipe(pendingGear)
 
@@ -98,6 +98,16 @@ local function checkPending(unit)
 	end
 end
 
+local function removeGemQueue(unit)
+	inspectBadGems[unit] = nil
+	for i=#(inspectBadGems), 1, -1 do
+		if( inspectBadGems[i] == unit ) then
+			table.remove(inspectBadGems, i)
+			break
+		end
+	end
+end
+
 function Scan:CheckInspectGems()
 	if( not pending.gems or not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
@@ -123,13 +133,7 @@ function Scan:CheckInspectGems()
 	end
 	
 	if( totalPending == 0 ) then
-		inspectBadGems[pending.unit] = nil
-		for i=#(inspectBadGems), 1, -1 do
-			if( inspectBadGems[i] == pending.unit ) then
-				table.remove(inspectBadGems, i)
-			end
-		end
-		
+		removeGemQueue(pending.unit)
 		pending.gems = nil
 		self.frame.gearTimer = nil
 		self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
@@ -261,7 +265,7 @@ function Scan:UpdateUnitData(unit)
 			-- The item has gems, so we need to make sure we have data for it (or don't)
 			local totalSockets = ElitistGroup.EMPTY_GEM_SLOTS[itemLink]
 			if( totalSockets > 0 ) then
-				local enchantID, gem1, gem2, gem3 = string.match(itemLink, "item:%d+:(%d+):(%d+):(%d+):(%d+)")
+				local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
 				-- Invalid gem data, queue it up, don't change the saved data
 				if( gem1 == "0" and gem2 == "0" and gem3 == "0" ) then
 					pendingGear[inventoryID] = GetInventoryItemLink(unit, inventoryID)
@@ -282,7 +286,7 @@ function Scan:UpdateUnitData(unit)
 	end
 	
 	if( badGems ) then
-		inspectQueue.gems = true
+		pending.gems = true
 		
 		if( inspectQueue[unit] and not inspectBadGems[unit] ) then
 			inspectBadGems[unit] = 0
@@ -292,6 +296,8 @@ function Scan:UpdateUnitData(unit)
 		Scan.frame.gearTimer = GEAR_CHECK_INTERVAL
 		Scan.frame:Show()
 	elseif( pending.unit == unit ) then
+		removeGemQueue(pending.unit)
+		
 		self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
 	end
 end
@@ -355,8 +361,6 @@ local function sortQueue(a, b)
 end
 
 function Scan:QueueGroup(unitType, total)
-	table.wipe(inspectQueue)
-	
 	for i=1, total do
 		local unit = unitType .. i
 		if( not inspectQueue[unit] and not UnitIsUnit(unit, "player") ) then
@@ -401,7 +405,7 @@ end
 
 --hooksecurefunc("NotifyInspect", function(...) print(...) end)
 
-local checkGemQueue
+local checkedGemQueue
 function Scan:ProcessQueue()
 	if( #(inspectQueue) == 0 and #(inspectBadGems) == 0 ) then
 		self:ResetQueue()
@@ -411,49 +415,54 @@ function Scan:ProcessQueue()
 	end
 	
 	-- First check the bad gem queue
-	if( not checkGemQueue ) then
+	if( not checkedGemQueue ) then
 		for i=#(inspectBadGems), 1, -1 do
 			local unit = inspectBadGems[i]
-			if( not UnitIsDeadOrGhost(unit) and UnitExists(unit) and UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
-				checkGemQueue = true
-				self:InspectUnit(unit)
-				break
-			-- Kill them, figuratively
-			elseif( inspectBadGems[unit] > MAX_GEM_RETRIES ) then
-				table.remove(inspectBadGems, i)
-			else
-				inspectBadGems[unit] = inspectBadGems[unit] + 1
+			if( not UnitIsDeadOrGhost(unit) ) then
+				if( UnitIsConnected(unit) and UnitExists(unit) and UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+					checkedGemQueue = true
+					self:InspectUnit(unit)
+					break
+				-- Kill them, figuratively
+				elseif( inspectBadGems[unit] > MAX_GEM_RETRIES ) then
+					table.remove(inspectBadGems, i)
+					inspectBadGems[unit] = nil
+				else
+					inspectBadGems[unit] = inspectBadGems[unit] + 1
+				end
 			end
 		end
 	
-		if( checkGemQueue or pending.activeInspect and ( pending.expirationTime and pending.expirationTime > GetTime() ) ) then
+		if( checkedGemQueue or pending.activeInspect and ( pending.expirationTime and pending.expirationTime > GetTime() ) ) then
 			return
 		end
 	end
 	
-	checkGemQueue = nil
+	checkedGemQueue = nil
 
 	-- Find the first unit we can inspect
 	for i=#(inspectQueue), 1, -1 do
 		local unit = inspectQueue[i]
-		if( not UnitIsDeadOrGhost(unit) and UnitExists(unit) and UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
-			self:InspectUnit(unit)
-			
-			table.remove(inspectQueue, i)
-			inspectQueue[unit] = nil
-			break
-		-- Kill them, figuratively
-		elseif( inspectQueue[unit] > MAX_QUEUE_RETRIES ) then
-			table.remove(inspectQueue, i)
-			inspectQueue[unit] = nil
-		else
-			inspectQueue[unit] = inspectQueue[unit] + 1
+		if( not UnitIsDeadOrGhost(unit) ) then
+			if( UnitIsConnected(unit) and UnitExists(unit) and UnitIsVisible(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+				self:InspectUnit(unit)
+
+				table.remove(inspectQueue, i)
+				inspectQueue[unit] = nil
+				break
+			-- Kill them, figuratively
+			elseif( inspectQueue[unit] > MAX_QUEUE_RETRIES ) then
+				table.remove(inspectQueue, i)
+				inspectQueue[unit] = nil
+			else
+				inspectQueue[unit] = inspectQueue[unit] + 1
+			end
 		end
 	end
 end
 
 function Scan:ResetQueue()
-	checkGemQueue = nil
+	checkedGemQueue = nil
 	self.frame.queueTimer = nil
 
 	self:UnregisterEvent("PLAYER_REGEN_DISABLED")
