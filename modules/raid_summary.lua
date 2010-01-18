@@ -1,8 +1,8 @@
 local ElitistGroup = select(2, ...)
 local Summary = ElitistGroup:NewModule("RaidSummary", "AceEvent-3.0")
 local L = ElitistGroup.L
-local headerKeys = {"name", "average", "rating", "equipment", "enchants", "gems"}
-local headerNames = {["name"] = L["Name"], ["average"] = L["Average"], ["rating"] = L["Rating"], ["equipment"] = L["Equipment"], ["enchants"] = L["Enchants"], ["gems"] = L["Gems"]}
+local headerKeys = {"name", "average", "rating", "equipmentPerct", "enchantPerct", "gemPerct"}
+local headerNames = {["name"] = L["Name"], ["average"] = L["Average"], ["rating"] = L["Rating"], ["equipmentPerct"] = L["Equipment"], ["enchantPerct"] = L["Enchants"], ["gemPerct"] = L["Gems"]}
 local userSummaryData, sortedData, queuedUnits = {}, {}, {}
 local MAX_SUMMARY_ROWS = 10
 
@@ -31,7 +31,7 @@ function Summary:CacheUnit(unit)
 	-- No data, cache gogogogo!
 	elseif( not userSummaryData[playerID] ) then
 		local name, server = UnitName(unit)
-		userSummaryData[playerID] = {name = name, totalRatings = 0, rating = -1, average = -1,  totalEquipment = 0, equipment = -1, enchants = -1, totalEnchants = 0, gems = -1, totalGems = 0, classToken = select(2, UnitClass(unit)), fullName = server and server ~= "" and string.format("%s-%s", name, server) or name}
+		userSummaryData[playerID] = {name = name, totalRatings = 0, rating = -1, average = -1,  equipmentPerct = 0, totalEquipment = 0, equipment = -1, enchants = -1, totalEnchants = 0, enchantPerct = 0, gems = -1, totalGems = 0, gemPerct = 0, classToken = select(2, UnitClass(unit)), fullName = server and server ~= "" and string.format("%s-%s", name, server) or name}
 		table.insert(sortedData, playerID)
 		
 		if( ElitistGroup.userData[playerID] ) then
@@ -67,13 +67,18 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 			summaryData.totalGems = gemData.total
 			summaryData.gems = gemData.totalBad
 			summaryData.gemTooltip = gemTooltip
+			summaryData.gemPerct = math.max(math.min((gemData.total - gemData.totalBad) / gemData.total, 1), 0)
 		end
 
 		summaryData.totalEquipment = equipmentData.totalEquipped
 		summaryData.equipment = equipmentData.totalBad
+		summaryData.equipmentPerct = math.max(math.min((equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped, 1), 0)
+
 		summaryData.totalEnchants = enchantData.total
 		summaryData.enchants = enchantData.totalBad
+		summaryData.enchantPerct = math.max(math.min((enchantData.total - enchantData.totalBad) / enchantData.total, 1), 0)
 		summaryData.enchantTooltip = enchantTooltip
+
 		summaryData.average = math.floor(equipmentData.totalScore)
 		summaryData.rating = 0
 		summaryData.totalRatings = 0
@@ -202,56 +207,56 @@ function Summary:Update()
 					row.rating.tooltip = L["No rating data on this player found."]
 				end
 				
-				row.equipment.disableWrap = nil
-				row.enchants.disableWrap = nil
-				row.gems.disableWrap = nil
+				row.equipmentPerct.disableWrap = nil
+				row.enchantPerct.disableWrap = nil
+				row.gemPerct.disableWrap = nil
 				
 				if( summaryData.equipment == -1 ) then
-					row.equipment:SetText("---")
-					row.equipment.tooltip = L["Loading data"]
+					row.equipmentPerct:SetText("---")
+					row.equipmentPerct.tooltip = L["Loading data"]
 				elseif( summaryData.equipment == 0 ) then
-					row.equipment:SetText("|cff20ff20100%|r")
-					row.equipment.tooltip = L["Nothing is wrong with this players equipment!"]
+					row.equipmentPerct:SetText("|cff20ff20100%|r")
+					row.equipmentPerct.tooltip = L["Nothing is wrong with this players equipment!"]
 				else
-					local percent = math.min(1, (summaryData.totalEquipment - summaryData.equipment) / summaryData.totalEquipment)
+					local percent = summaryData.equipmentPerct
 					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 
-					row.equipment:SetFormattedText("|cff%02x%02x00%d%%|r", r, g, percent * 100)
-					row.equipment.tooltip = summaryData.equipmentTooltip
-					row.equipment.disableWrap = true
+					row.equipmentPerct:SetFormattedText("|cff%02x%02x00%d%%|r", r, g, percent * 100)
+					row.equipmentPerct.tooltip = summaryData.equipmentTooltip
+					row.equipmentPerct.disableWrap = true
 				end
 
 				if( summaryData.enchants == -1 ) then
-					row.enchants:SetText("---")
-					row.enchants.tooltip = L["Loading data"]
+					row.enchantPerct:SetText("---")
+					row.enchantPerct.tooltip = L["Loading data"]
 				elseif( summaryData.enchants == 0 ) then
-					row.enchants:SetText("|cff20ff20100%|r")
-					row.enchants.tooltip = L["Nothing is wrong with this players enchants!"]
+					row.enchantPerct:SetText("|cff20ff20100%|r")
+					row.enchantPerct.tooltip = L["Nothing is wrong with this players enchants!"]
 				else
-					local percent = math.min(1, (summaryData.totalEnchants - summaryData.enchants) / summaryData.totalGems)
+					local percent = summaryData.enchantPerct
 					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 
-					row.enchants:SetFormattedText("|cff%02x%02x00%d%%|r", r, g, percent * 100)
-					row.enchants.tooltip = summaryData.enchantTooltip
-					row.enchants.disableWrap = true
+					row.enchantPerct:SetFormattedText("|cff%02x%02x00%d%%|r", r, g, percent * 100)
+					row.enchantPerct.tooltip = summaryData.enchantTooltip
+					row.enchantPerct.disableWrap = true
 				end
 
 				if( summaryData.gems == -1 ) then
-					row.gems:SetText("---")
-					row.gems.tooltip = L["Loading data"]
+					row.gemPerct:SetText("---")
+					row.gemPerct.tooltip = L["Loading data"]
 				elseif( summaryData.gems == 0 ) then
-					row.gems:SetText("|cff20ff20100%|r")
-					row.gems.tooltip = L["Nothing is wrong with this players gems!"]
+					row.gemPerct:SetText("|cff20ff20100%|r")
+					row.gemPerct.tooltip = L["Nothing is wrong with this players gems!"]
 				else
-					local percent = math.min(1, (summaryData.totalGems - summaryData.gems) / summaryData.totalGems)
+					local percent = summaryData.gemPerct
 					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 
-					row.gems:SetFormattedText("|cff%02x%02x00%d%%|r", r, g, percent * 100)
-					row.gems.tooltip = summaryData.gemTooltip
-					row.gems.disableWrap = true
+					row.gemPerct:SetFormattedText("|cff%02x%02x00%d%%|r", r, g, percent * 100)
+					row.gemPerct.tooltip = summaryData.gemTooltip
+					row.gemPerct.disableWrap = true
 				end
 			else
 				row.name.playerID = nil
@@ -261,12 +266,12 @@ function Summary:Update()
 				row.average.tooltip = L["Loading data"]
 				row.rating:SetText("---")
 				row.rating.tooltip = L["Loading data"]
-				row.equipment:SetText(L["---"])
-				row.equipment.tooltip = L["Loading data"]
-				row.enchants:SetText(L["--"])
-				row.enchants.tooltip = L["Loading data"]
-				row.gems:SetText(L["---"])
-				row.gems.tooltip = L["Loading data"]
+				row.equipmentPerct:SetText(L["---"])
+				row.equipmentPerct.tooltip = L["Loading data"]
+				row.enchantPerct:SetText(L["--"])
+				row.enchantPerct.tooltip = L["Loading data"]
+				row.gemPerct:SetText(L["---"])
+				row.gemPerct.tooltip = L["Loading data"]
 			end
 			
 			for _, button in pairs(row) do
@@ -389,7 +394,7 @@ function Summary:CreateUI()
 	   headerButton:SetNormalFontObject(GameFontNormal)
 	   headerButton:SetHighlightFontObject(GameFontHighlight)
 	   headerButton:SetDisabledFontObject(GameFontDisable)
-	   headerButton:SetText(headerNames[key])
+	   headerButton:SetText(headerNames[key] or key)
 	   headerButton:GetFontString():SetPoint("LEFT", 3, 0)
 	   headerButton:SetHeight(20)
 	   headerButton:SetScript("OnClick", sortRows)
@@ -404,12 +409,12 @@ function Summary:CreateUI()
 	frame.headers.average:SetWidth(60)
 	frame.headers.rating:SetPoint("TOPLEFT", frame.headers.average, "TOPRIGHT", 15, 0)
 	frame.headers.rating:SetWidth(45)
-	frame.headers.equipment:SetPoint("TOPLEFT", frame.headers.rating, "TOPRIGHT", 20, 0)
-	frame.headers.equipment:SetWidth(75)
-	frame.headers.enchants:SetPoint("TOPLEFT", frame.headers.equipment, "TOPRIGHT", 15, 0)
-	frame.headers.enchants:SetWidth(60)
-	frame.headers.gems:SetPoint("TOPLEFT", frame.headers.enchants, "TOPRIGHT", 15, 0)
-	frame.headers.gems:SetWidth(55)
+	frame.headers.equipmentPerct:SetPoint("TOPLEFT", frame.headers.rating, "TOPRIGHT", 20, 0)
+	frame.headers.equipmentPerct:SetWidth(75)
+	frame.headers.enchantPerct:SetPoint("TOPLEFT", frame.headers.equipmentPerct, "TOPRIGHT", 15, 0)
+	frame.headers.enchantPerct:SetWidth(60)
+	frame.headers.gemPerct:SetPoint("TOPLEFT", frame.headers.enchantPerct, "TOPRIGHT", 15, 0)
+	frame.headers.gemPerct:SetWidth(55)
 
 	frame.scroll = CreateFrame("ScrollFrame", "ElitistGroupRaidSummaryScroll", frame, "FauxScrollFrameTemplate")
 	frame.scroll.bar = ElitistGroupUserFrameScroll
@@ -465,7 +470,7 @@ function Summary:CreateUI()
 	frame.backdropFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 	frame.backdropFrame:SetBackdropColor(0, 0, 0, 0)
 	frame.backdropFrame:SetPoint("TOPLEFT", frame.headers.name, "TOPLEFT", 0, 0)
-	frame.backdropFrame:SetPoint("TOPRIGHT", frame.headers.gems, "TOPRIGHT", 26, 0)
+	frame.backdropFrame:SetPoint("TOPRIGHT", frame.headers.gemPerct, "TOPRIGHT", 26, 0)
 	frame.backdropFrame:SetHeight(261)
 
 	self.frame = frame
