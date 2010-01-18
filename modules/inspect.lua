@@ -180,7 +180,7 @@ function Inspect:SetupSummary(updateType)
 				end
 			end
 		
-			local percent = math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped)
+			local percent = math.max(math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped), 0)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear [|cff%02x%02x00%d%%|r]"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore, r, g, percent * 100)
@@ -191,7 +191,7 @@ function Inspect:SetupSummary(updateType)
 		if( hasData ) then
 			-- Build enchants
 			if( not enchantData.noData ) then
-				local percent = math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total)
+				local percent = math.max(math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total), 0)
 				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 
@@ -207,7 +207,7 @@ function Inspect:SetupSummary(updateType)
 			if( not updateType or updateType == "gems" ) then
 				-- Build gems
 				if( not gemData.noData ) then
-					local percent = math.min(1, (gemData.total - gemData.totalBad) / gemData.total)
+					local percent = math.max(math.min(1, (gemData.total - gemData.totalBad) / gemData.total), 0)
 					local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 					local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 
