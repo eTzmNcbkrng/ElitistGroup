@@ -185,7 +185,7 @@ function Summary:UpdateSingle(row)
 		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 
 		-- People probably want us to build the gear info, I'd imagine
-		local percent = math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped)
+		local percent = math.max(math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped), 0)
 		local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 		row.gearInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Equipment (%s%d|r)"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
@@ -204,7 +204,7 @@ function Summary:UpdateSingle(row)
 		end
 	
 		-- Build enchants
-		local percent = math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total)
+		local percent = math.max(math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total), 0)
 		local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 		row.enchantInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Enchants"], r, g, percent * 100)
@@ -213,7 +213,7 @@ function Summary:UpdateSingle(row)
 
 		-- Build gems
 		if( not updateType or updateType == "gems" ) then
-			local percent = math.min(1, (gemData.total - gemData.totalBad) / gemData.total)
+			local percent = math.max(math.min(1, (gemData.total - gemData.totalBad) / gemData.total), 0)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			row.gemInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Gems"], r, g, percent * 100)
