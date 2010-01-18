@@ -607,16 +607,11 @@ LibStub("LibDataBroker-1.1"):NewDataObject("Elitist Group", {
 		tooltip:SetText("Elitist Group")
 		tooltip:AddLine(L["Left Click - Open player/target information"], 1, 1, 1, nil, nil)
 		
-		local instanceType = select(2, IsInInstance())
-		if( instanceType == "raid" ) then
+		if( GetNumRaidMembers() > 0 ) then
 			tooltip:AddLine(L["Right Click - Open summary for your raid"], 1, 1, 1, nil, nil)
-		elseif( instanceType == "party" ) then
-			tooltip:AddLine(L["Right Click - Open summary for your party"], 1, 1, 1, nil, nil)
-		end
-		
-		if( ElitistGroup.modules.RaidHistory.haveActiveGroup ) then
 			tooltip:AddLine(L["ALT + Right Click - Open rating window for raid"], 1, 1, 1, nil, nil)
-		elseif( ElitistGroup.modules.PartyHistory.haveActiveGroup ) then
+		elseif( GetNumPartyMembers() > 0 ) then
+			tooltip:AddLine(L["Right Click - Open summary for your party"], 1, 1, 1, nil, nil)
 			tooltip:AddLine(L["ALT + Right Click - Open rating window for party"], 1, 1, 1, nil, nil)
 		end
 	end,
