@@ -51,7 +51,7 @@ function Notes:LFG_COMPLETION_REWARD()
 		self:Show()
 	else
 		local name, typeID = GetLFGCompletionReward()
-		instanceName = typeID == TYPEID_HEROIC_DIFFICULTY and string.format("%s (%s)", name, PLAYER_DIFFICULTY2) or name
+		local instanceName = typeID == TYPEID_HEROIC_DIFFICULTY and string.format("%s (%s)", name, PLAYER_DIFFICULTY2) or name
 		
 		ElitistGroup:Print(string.format(L["Completed %s! Type /rate to rate this group."], instanceName))
 	end
