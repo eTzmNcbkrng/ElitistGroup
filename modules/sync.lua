@@ -587,7 +587,7 @@ function Sync:ParseMainExperience(sender, ...)
 end
 
 function Sync:SendMainExperience(sender)
-	if( ElitistGroup.db.global.main.data == "" or ElitistGroup.db.global.main.character == ElitistGroup.playerID ) then return end
+	if( not ElitistGroup.db.global.main.data or ElitistGroup.db.global.main.character == ElitistGroup.playerID ) then return end
 	self:CommMessage(string.format("MAIN@%s", ElitistGroup.db.global.main.data), "WHISPER", sender)
 end
 
