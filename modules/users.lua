@@ -17,7 +17,7 @@ function Users:OnInitialize()
 				self:Show(ElitistGroup.userData[user])
 			end
 			
-			if( not userList[user] ) then
+			if( self.frame.databaseFrame:IsVisible() ) then
 				self:UpdateDatabasePage()
 			end
 		end
@@ -330,18 +330,101 @@ local function sortNames(a, b)
 	end
 end
 
+-- Query builder for searching
+local query
+local function buildQuery(search)
+	search = string.lower(search)
+	
+--local search = not self.frame.databaseFrame.search.searchText and string.gsub(string.lower(self.frame.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
+	local class = string.match(search, L["c%-\"(.-)\""])
+	local minRange, maxRange = string.match(search, "(%d+)%-(%d+)")
+	local level = string.match(search, "(%d+)")
+	local server = string.match(search, L["s%-\"(.-)\""])
+	local name = string.match(search, L["n%-\"(.-)\""])
+	
+	-- Figure out class
+	if( class and class ~= "" ) then
+		for classToken, classLocale in pairs(LOCALIZED_CLASS_NAMES_MALE) do
+			if( string.lower(classLocale) == class ) then
+				query.classToken = classToken
+				break
+			end
+		end
+
+		for classToken, classLocale in pairs(LOCALIZED_CLASS_NAMES_FEMALE) do
+			if( string.lower(classLocale) == class ) then
+				query.classToken = classToken
+				break
+			end
+		end
+	end
+	
+	-- Figure out level
+	query.minLevel = tonumber(minRange) or tonumber(level) or -1
+	query.maxLevel = tonumber(maxRange) or tonumber(level) or MAX_PLAYER_LEVEL
+	
+	-- Figure out server
+	if( server and server ~= "" ) then
+		query.server = server
+	end
+	
+	-- Figure out just name
+	if( name and name ~= "" ) then
+		query.name = name
+	end
+	
+	-- No name was set, strip everything else out and will use that as the name
+	if( not query.name ) then
+		search = string.gsub(search, ".%-\".-\"", "")
+		search = string.gsub(search, ".%-\"", "")
+		search = string.gsub(search, "%d+%-%d+", "")
+		search = string.gsub(search, "%d+", "")
+		search = string.trim(search)
+		if( search ~= "" ) then
+			local name, server = string.split("-", search, 2)
+			query.name = name
+			query.server = query.server or server ~= "" and server or nil
+		end
+	end
+end
+
 function Users:UpdateDatabasePage()
 	self = Users
 	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
 	
 	if( not self.scrollUpdate ) then
-		local search = not self.frame.databaseFrame.search.searchText and string.gsub(string.lower(self.frame.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
-	
+		query = query or {}
+		table.wipe(query)
+
+		local useSearch = not self.frame.databaseFrame.search.searchText and self.frame.databaseFrame.search:GetText()
+		useSearch = useSearch and useSearch ~= "" and useSearch or nil
+		if( useSearch ) then
+			buildQuery(useSearch)
+		end
+		
 		table.wipe(userList)
-		for name in pairs(ElitistGroup.db.faction.users) do
-			if( search == "" or string.match(string.lower(name), search) ) then
-				userList[name] = string.match(name, "(.-)%-")
-				table.insert(userList, name)
+		for playerID, data in pairs(ElitistGroup.db.faction.users) do
+			local classToken, level, server, name
+			-- Get the data first
+			if( rawget(ElitistGroup.userData, playerID) ) then
+				name, server, level, classToken = ElitistGroup.userData[playerID].name, ElitistGroup.userData[playerID].server, ElitistGroup.userData[playerID].level, ElitistGroup.userData[playerID].classToken
+			elseif( data ~= "" ) then
+				name, server, level, classToken = string.match(data, "name=\"(.-)\""), string.match(data, "server=\"(.-)\""), tonumber(string.match(data, "level=([0-9]+)")), string.match(data, "classToken=\"([A-Z]+)\"")
+			end
+				
+			-- Search name
+			if( not query.name or string.match(string.lower(name), query.name) ) then
+				-- Search server
+				if( not query.server or string.match(string.lower(server), query.server) ) then
+					-- Search level
+					if( not level or not query.minLevel or ( level >= query.minLevel and level <= query.maxLevel ) ) then
+						-- Search class token
+						if( not query.classToken or not classToken or classToken == query.classToken ) then
+							userList[playerID] = classToken
+							table.insert(userList, playerID)
+						end
+					end
+				end
 			end
 		end
 		
@@ -349,6 +432,8 @@ function Users:UpdateDatabasePage()
 	end
 	
 	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS, 16)
+	ElitistGroupDatabaseSearch:SetWidth(self.frame.databaseFrame.scroll:IsVisible() and 195 or 210)
+
 	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
 	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 24)
 	
@@ -357,19 +442,23 @@ function Users:UpdateDatabasePage()
 		if( id > offset ) then
 			local row = self.frame.databaseFrame.rows[rowID]
 			row.userID = userList[id]
+			row.tooltip = string.format(L["View info on %s."], row.userID)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
-			if( userList[id] ~= ElitistGroup.playerID and UnitExists(userList[row.userID]) ) then
-				row:SetFormattedText("|cffffffff[%s]|r %s", GROUP, userList[id])
-			else
-				row:SetText(userList[id])
+			local classHex, selected = "", ""
+			local classColor = userList[row.userID] and RAID_CLASS_COLORS[userList[row.userID]]
+			if( self.activeData and row.userID == self.activeUserID ) then
+				selected = "[*] "
+				classHex = "|cffffffff"
+			elseif( classColor ) then
+				classHex = string.format("|cff%02x%02x%02x", classColor.r * 255, classColor.g * 255, classColor.b * 255)
 			end
 			
-			if( self.activeData and row.userID == self.activeUserID ) then
-				row:LockHighlight()
+			if( userList[id] ~= ElitistGroup.playerID and UnitExists(userList[row.userID]) ) then
+				row:SetFormattedText("%s|cffffffff[%s]|r %s%s|r", selected, GROUP, classHex, userList[id])
 			else
-				row:UnlockHighlight()
+				row:SetFormattedText("%s%s%s|r", selected, classHex, userList[id])
 			end
 			
 			rowID = rowID + 1
@@ -968,7 +1057,7 @@ function Users:CreateUI()
 
 	frame.databaseFrame.search = CreateFrame("EditBox", "ElitistGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
 	frame.databaseFrame.search:SetHeight(18)
-	frame.databaseFrame.search:SetWidth(150)
+	frame.databaseFrame.search:SetWidth(195)
 	frame.databaseFrame.search:SetAutoFocus(false)
 	frame.databaseFrame.search:ClearAllPoints()
 	frame.databaseFrame.search:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -7)
@@ -1001,9 +1090,11 @@ function Users:CreateUI()
 	for i=1, MAX_DATABASE_ROWS do
 		local button = CreateFrame("Button", nil, frame.databaseFrame.fadeFrame)
 		button:SetScript("OnClick", viewUserData)
+		button:SetScript("OnEnter", OnEnter)
+		button:SetScript("OnLeave", OnLeave)
 		button:SetHeight(14)
 		button:SetNormalFontObject(GameFontNormal)
-		button:SetHighlightFontObject(GameFontHighlight)
+		--button:SetHighlightFontObject(GameFontHighlight)
 		button:SetText("*")
 		button:GetFontString():SetPoint("TOPLEFT", button, "TOPLEFT")
 		button:GetFontString():SetPoint("TOPRIGHT", button, "TOPRIGHT")
