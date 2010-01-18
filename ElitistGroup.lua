@@ -9,11 +9,14 @@ function ElitistGroup:OnInitialize()
 			positions = {},
 			general = {
 				mouseover = false,
-				autoPopup = false,
-				autoSummary = false,
 				announceData = false,
 				databaseExpanded = true,
 				selectedTab = "notes",
+			},
+			auto = {
+				autoPopup = false,
+				autoSummary = false,
+				alertRating = true,
 			},
 			inspect = {
 				window = false,
