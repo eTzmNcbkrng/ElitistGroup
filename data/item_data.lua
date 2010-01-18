@@ -196,12 +196,10 @@ local function loadData()
 		[2673] = "tank/dps", -- Mongoose
 		[3606] = "all", -- Nitro Boosts
 		[3860] = "tank", -- Reticulated Armor Webbing
-		[3599] = "never", -- Personal Elctromagnetic Pulse Generator
 		[3859] = "caster", -- Springy Archnoweave
 		[3878] = "tank", -- Mind Amplification Dish, it is higher STA than the other one, going for the safe flagging for now. Perhaps flag as never?
 		[3603] = "tank/dps", -- Hand-Mounted Pyro Rocket
 		[3604] = "healer/dps", -- Hyperspeed Accelerators
-		[3599] = "never", -- Personal Electromagnetic Pulse Generator
 		[3605] = "physical-all", -- Flexweave Underlay
 		[3883] = "tank", -- Rune of the Nerubian Carapace
 		[3847] = "tank", -- Rune of the Stoneskin Gargoyle
