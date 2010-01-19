@@ -4,7 +4,7 @@ local L = ElitistGroup.L
 local function loadData()
 	local Talents = ElitistGroup.Talents
 
-	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-priest"] = L["Healer"], ["dk-tank"] = L["Tank"], ["resto-druid"] = L["Healer"], ["balance-druid"] = L["Caster DPS"]}
+	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-priest"] = L["Healer"], ["dk-tank"] = L["Tank"], ["resto-druid"] = L["Healer"], ["balance-druid"] = L["Caster DPS"], ["elemental-shaman"] = L["Caster DPS"]}
 
 	-- required = How many of the talents the class needs
 	-- the number set for the talent is how many they need
@@ -34,7 +34,7 @@ local function loadData()
 	-- Tree names
 	Talents.treeData = {
 		["SHAMAN"] = {
-			"caster-dps", L["Elemental"], "Interface\\Icons\\Spell_Nature_Lightning",
+			"elemental-shaman", L["Elemental"], "Interface\\Icons\\Spell_Nature_Lightning",
 			"melee-dps", L["Enhancement"], "Interface\\Icons\\Spell_Nature_LightningShield",
 			"mp5-healer", L["Restoration"], "Interface\\Icons\\Spell_Nature_MagicImmunity",
 		},
