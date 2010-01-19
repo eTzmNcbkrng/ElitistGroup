@@ -61,7 +61,7 @@ emptyGemMetaTable = {
 local function matchStats(overrideType)
 	local totalStats = 0
 	for key in pairs(statCache) do totalStats = totalStats + 1 end
-		
+	
 	for i=1, #(ItemData.statTalents) do
 		local data = ItemData.statTalents[i]
 		-- Only use this if other stats are present
