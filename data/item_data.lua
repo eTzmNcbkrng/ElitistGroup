@@ -57,7 +57,7 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Disc Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Disc Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
 
 	ElitistGroup.Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
@@ -80,6 +80,8 @@ local function loadData()
 	ElitistGroup.Items.talentToRole["resto-druid"].manaless = true
 	ElitistGroup.Items.talentToRole["balance-druid"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])	
 	ElitistGroup.Items.talentToRole["balance-druid"].manaless = true
+	ElitistGroup.Items.talentToRole["elemental-shaman"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])
+	ElitistGroup.Items.talentToRole["elemental-shaman"]["elemental/pvp"] = true
 
 	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
 	for type in pairs(ElitistGroup.Items.talentToRole["melee-dps"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
@@ -312,7 +314,7 @@ local function loadData()
 	-- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
 	ElitistGroup.Items.statTalents = {
 		{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
-		{type = "pvp",			gems = "STAMINA@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
+		{type = "elemental/pvp",gems = "STAMINA@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
 		{type = "never",		gems = "RESIST@"},
 		{type = "never",		gems = "MANA@", exclusive = true},
