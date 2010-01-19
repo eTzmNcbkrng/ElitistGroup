@@ -41,7 +41,7 @@ modules\scan.lua
 modules\group_notes.lua
 modules\inspect.lua
 modules\sync.lua
-modules\mouseover.lua
+## modules\mouseover.lua
 modules\config.lua
 
 #@do-not-package@

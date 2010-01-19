@@ -148,7 +148,7 @@ function ElitistGroup:OnInitialize()
 	end
 
 	self.modules.Sync:Setup()
-	self.modules.Mouseover:Setup()
+	--self.modules.Mouseover:Setup()
 end
 
 -- Permissions, do we trust the person?

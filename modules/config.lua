@@ -54,6 +54,7 @@ local function loadOptions()
 						type = "toggle",
 						name = L["Enable mouseover details"],
 						desc = L["Automatically adds gear, enchant and gem information to tooltips when mousing over people, if they are within inspect range or you have data.\nDisabled while in combat."],
+						hidden = true,
 					},
 					announceData = {
 						order = 2,
