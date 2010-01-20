@@ -217,6 +217,7 @@ function Scan:ManualCreateCore(playerID, level, classToken)
 	userData.server = server
 	userData.level = level
 	userData.classToken = classToken
+	userData.scanned = time()
 	userData.pruned = nil
 	
 	ElitistGroup.userData[playerID] = userData
