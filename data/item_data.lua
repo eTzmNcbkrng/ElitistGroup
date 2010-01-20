@@ -57,7 +57,7 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Disc Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
+	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
 
 	ElitistGroup.Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
@@ -72,12 +72,14 @@ local function loadData()
 		["resto-druid"] = false, 
 		["balance-druid"] = false,
 	}
-		
+	
+	local manalessHealer = CopyTable(ElitistGroup.Items.talentToRole.healer)
+	manalessHealer.manaless = true
+	
 	ElitistGroup.Items.talentToRole["dk-tank"] = ElitistGroup.Items.talentToRole.tank
-	ElitistGroup.Items.talentToRole["disc-priest"] = CopyTable(ElitistGroup.Items.talentToRole.healer)
-	ElitistGroup.Items.talentToRole["disc-priest"].manaless = true
-	ElitistGroup.Items.talentToRole["resto-druid"] = CopyTable(ElitistGroup.Items.talentToRole.healer)
-	ElitistGroup.Items.talentToRole["resto-druid"].manaless = true
+	ElitistGroup.Items.talentToRole["disc-priest"] = manalessHealer
+	ElitistGroup.Items.talentToRole["holy-priest"] = manalesshealer
+	ElitistGroup.Items.talentToRole["resto-druid"] = manalessHealer
 	ElitistGroup.Items.talentToRole["balance-druid"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])	
 	ElitistGroup.Items.talentToRole["balance-druid"].manaless = true
 	ElitistGroup.Items.talentToRole["elemental-shaman"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])
@@ -198,7 +200,7 @@ local function loadData()
 		[2673] = "tank/dps", -- Mongoose
 		[3606] = "all", -- Nitro Boosts
 		[3860] = "tank", -- Reticulated Armor Webbing
-		[3859] = "caster", -- Springy Archnoweave
+		[3859] = "caster", -- Springy Arachnoweave
 		[3878] = "tank", -- Mind Amplification Dish, it is higher STA than the other one, going for the safe flagging for now. Perhaps flag as never?
 		[3603] = "tank/dps", -- Hand-Mounted Pyro Rocket
 		[3604] = "healer/dps", -- Hyperspeed Accelerators
