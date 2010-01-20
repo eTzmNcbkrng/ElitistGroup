@@ -418,7 +418,7 @@ function Sync:ParseSelfSentGear(sender, data, mainExperience)
 	-- If the player already scanned data on this person from within 10 minutes, don't accept the comm
 	local playerID, playerName, playerServer = getFullName(sender)
 	local userData = ElitistGroup.userData[playerID]
-	if( userData and userData.from ~= ElitistGroup.playerID and userData.scanned < (time() - 600) ) then
+	if( userData and userData.from ~= ElitistGroup.playerID and userData.scanned and userData.scanned < (time() - 600) ) then
 		return
 	end
 	
@@ -442,7 +442,7 @@ function Sync:SendDatabaseList(sender)
 	for playerID, data in pairs(ElitistGroup.db.faction.users) do
 		if( rawget(ElitistGroup.userData, playerID) ) then
 			local userData = ElitistGroup.userData[playerID]
-			if( not userData.pruned and userData.from == ElitistGroup.playerID ) then
+			if( not userData.pruned and userData.from == ElitistGroup.playerID and data.scanned ) then
 				userList = string.format("%s@%s@%s", userList, playerID, time() - data.scanned)
 			end
 		elseif( not string.match(data, "pruned=true;") and string.match(data, fromPlayer) ) then
