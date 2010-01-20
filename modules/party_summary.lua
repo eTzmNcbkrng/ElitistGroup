@@ -159,7 +159,10 @@ function Summary:UpdateSingle(row)
 		-- Make sure they are talented enough
 		if( not updateType or updateType == "talents" ) then
 			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
-			if( not userData.unspentPoints ) then
+			if( not specType or not specName or not specIcon ) then
+				row.talentInfo:SetFormattedText(L["Loading"])
+				row.talentInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
+			elseif( not userData.unspentPoints ) then
 				row.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
 				row.talentInfo.icon:SetTexture(specIcon)
 				row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
