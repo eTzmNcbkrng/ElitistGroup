@@ -283,7 +283,7 @@ function Sync:SpecificNotesRequested(sender, ...)
 			if( rawget(ElitistGroup.userData, name) ) then
 				local userData = ElitistGroup.userData[name]
 				if( userData.notes[ElitistGroup.playerID] ) then
-					queuedData = string.format('%s["%s"]=%s;', queuedData, ElitistGroup:WriteTable(userData.notes[ElitistGroup.playerID]))
+					queuedData = string.format('%s["%s"]=%s;', queuedData, name, ElitistGroup:WriteTable(userData.notes[ElitistGroup.playerID]))
 				end
 			else
 				local userData = ElitistGroup.db.faction.users[name]
