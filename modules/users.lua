@@ -3,7 +3,7 @@ local Users = ElitistGroup:NewModule("Users", "AceEvent-3.0")
 local L = ElitistGroup.L
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
 local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips, achievementTooltips, tempList, managePlayerNote
-local userList = {}
+local userList, achievementTooltips, experienceData, experienceDataMain = {}, {}, {}, {}
 local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18
@@ -11,15 +11,17 @@ local DungeonData = ElitistGroup.Dungeons
 
 function Users:OnInitialize()
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
+		if( not userList[user] ) then
+			self.rebuildDatabase = true
+		end
+		
 		local self = Users
 		if( self.frame and self.frame:IsVisible() ) then
 			if( self.activeUserID and self.activeUserID == user ) then
-				self:Show(ElitistGroup.userData[user])
+				self:BuildUI(ElitistGroup.userData[user], type)
 			end
 			
-			if( self.frame.databaseFrame:IsVisible() ) then
-				self:UpdateDatabasePage()
-			end
+			self:UpdateDatabasePage()
 		end
 	end)
 end
@@ -53,102 +55,110 @@ function Users:Toggle(userData)
 end
 
 function Users:Show(userData)
+	self.activeData = userData
+	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
+
+	self:BuildUI(userData)
+	self:UpdateDatabasePage()
+end
+
+function Users:BuildUI(userData, updateType)
 	if( not userData ) then return end
 	self:CreateUI()
 
 	local frame = self.frame
 
-	self.activeData = userData
-	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
-
 	-- Build score as well as figure out their score
-	ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
-
-	if( not userData.pruned ) then
-		equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
-		enchantTooltips, gemTooltips = ElitistGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
+	if( not updateType or updateType == "gear" or updateType == "gems" ) then
+		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
+		if( not userData.pruned ) then
+			equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
+			enchantTooltips, gemTooltips = ElitistGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
 		
-		frame.pruneInfo:Hide()
+			frame.pruneInfo:Hide()
 		
-		for _, slot in pairs(frame.gearFrame.equipSlots) do
-			if( slot.inventoryID and userData.equipment[slot.inventoryID] ) then
-				local itemLink = userData.equipment[slot.inventoryID]
-				local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
-				if( itemQuality and itemLevel ) then
-					local baseItemLink = ElitistGroup:GetBaseItemLink(itemLink)
+			for _, slot in pairs(frame.gearFrame.equipSlots) do
+				if( slot.inventoryID and userData.equipment[slot.inventoryID] ) then
+					local itemLink = userData.equipment[slot.inventoryID]
+					local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
+					if( itemQuality and itemLevel ) then
+						local baseItemLink = ElitistGroup:GetBaseItemLink(itemLink)
 					
-					-- Now sum it all up
-					slot.tooltip = nil
-					slot.equippedItem = itemLink
-					slot.gemTooltip = gemTooltips[itemLink]
-					slot.enchantTooltip = enchantTooltips[itemLink]
-					slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
-					slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
-					slot.fullItemLink = fullItemLink
-					slot.icon:SetTexture(itemIcon)
-					slot.typeText:SetText(slot.itemTalentType)
-					slot:Enable()
-					slot:Show()
+						-- Now sum it all up
+						slot.tooltip = nil
+						slot.equippedItem = itemLink
+						slot.gemTooltip = gemTooltips[itemLink]
+						slot.enchantTooltip = enchantTooltips[itemLink]
+						slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
+						slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
+						slot.fullItemLink = fullItemLink
+						slot.icon:SetTexture(itemIcon)
+						slot.typeText:SetText(slot.itemTalentType)
+						slot:Enable()
+						slot:Show()
 					
-					if( equipmentData[itemLink] ) then
-						slot.typeText:SetTextColor(1, 0.15, 0.15)
-					else
-						slot.typeText:SetTextColor(1, 1, 1)
-					end
+						if( equipmentData[itemLink] ) then
+							slot.typeText:SetTextColor(1, 0.15, 0.15)
+						else
+							slot.typeText:SetTextColor(1, 1, 1)
+						end
 
-					if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
-						slot.extraText:SetText(L["Enhancements"])
-						slot.extraText:SetTextColor(1, 0.15, 0.15)
+						if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
+							slot.extraText:SetText(L["Enhancements"])
+							slot.extraText:SetTextColor(1, 0.15, 0.15)
+						else
+							local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[-1]
+							slot.extraText:SetText(math.floor(ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)))
+							slot.extraText:SetTextColor(color.r, color.g, color.b)
+						end
 					else
-						local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[-1]
-						slot.extraText:SetText(math.floor(ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)))
-						slot.extraText:SetTextColor(color.r, color.g, color.b)
+						slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+						slot.extraText:SetText("")
+						slot.typeText:SetText("")
+						slot.fullItemLink = nil
+						slot.equippedItem = nil
+						slot.enchantTooltip = nil
+						slot.gemTooltip = nil
+						slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
+						slot:Disable()
+						slot:Show()
 					end
-				else
-					slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+				elseif( slot.inventoryID ) then
+					local texture = slot.emptyTexture
+					if( slot.checkRelic and ( userData.classToken == "PALADIN" or userData.classToken == "DRUID" or userData.classToken == "SHAMAN" ) ) then
+						texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
+					end
+				
+					slot.icon:SetTexture(texture)
 					slot.extraText:SetText("")
 					slot.typeText:SetText("")
+					slot.tooltip = L["No item equipped"]
 					slot.fullItemLink = nil
 					slot.equippedItem = nil
 					slot.enchantTooltip = nil
 					slot.gemTooltip = nil
-					slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
 					slot:Disable()
 					slot:Show()
 				end
-			elseif( slot.inventoryID ) then
-				local texture = slot.emptyTexture
-				if( slot.checkRelic and ( userData.classToken == "PALADIN" or userData.classToken == "DRUID" or userData.classToken == "SHAMAN" ) ) then
-					texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
-				end
-				
-				slot.icon:SetTexture(texture)
-				slot.extraText:SetText("")
-				slot.typeText:SetText("")
-				slot.tooltip = L["No item equipped"]
-				slot.fullItemLink = nil
-				slot.equippedItem = nil
-				slot.enchantTooltip = nil
-				slot.gemTooltip = nil
-				slot:Disable()
-				slot:Show()
 			end
-		end
 		
-		ElitistGroup:ReleaseTables(enchantTooltips, gemTooltips)
+			ElitistGroup:ReleaseTables(enchantTooltips, gemTooltips)
 				
-		-- Now combine these too, in the same way you combine to make a better and more powerful robot
-		local equipSlot = frame.gearFrame.equipSlots[18]
-		local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
-		equipSlot.text:SetFormattedText("%s%d|r", ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
-		equipSlot.icon:SetTexture("Interface\\Icons\\" .. scoreIcon)
-		equipSlot.tooltip = L["Average item level of all the players equipped items, with modifiers for blue or lower quality items."]
-		equipSlot:Show()
-	else
-		equipmentData, gemData, enchantData = nil, nil, nil
+			-- Now combine these too, in the same way you combine to make a better and more powerful robot
+			local equipSlot = frame.gearFrame.equipSlots[18]
+			local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
+			equipSlot.text:SetFormattedText("%s%d|r", ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
+			equipSlot.icon:SetTexture("Interface\\Icons\\" .. scoreIcon)
+			equipSlot.tooltip = L["Average item level of all the players equipped items, with modifiers for blue or lower quality items."]
+			equipSlot:Show()
+		else
+			equipmentData, gemData, enchantData = nil, nil, nil
 		
-		for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
-		frame.pruneInfo:Show()
+			for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
+			frame.pruneInfo:Show()
+		end
+
+		self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
 	end
 
 	-- Build the players info
@@ -165,7 +175,6 @@ function Users:Show(userData)
 		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
 	end
 	
-	self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
 	if( not userData.pruned and userData.talentTree1 and userData.talentTree2 and userData.talentTree3 ) then
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
 		specType = ElitistGroup.Talents.talentText[specType] or specType
@@ -210,35 +219,36 @@ function Users:Show(userData)
 	end
 	
 	-- Build the necessary experience data based on the players achievements, this is fun!
-	if( not userData.pruned ) then
+	if( not userData.pruned and ( not updateType or updateType == "achievements" ) ) then
 		tempList = ElitistGroup:GetTable()
-		achievementTooltips = {}
-		self.experienceData = {}
-		self.experienceDataMain = {}
+		table.wipe(achievementTooltips)
+		table.wipe(experienceData)
+		table.wipe(experienceDataMain)
+
 		for _, data in pairs(DungeonData.experience) do
-			self.experienceData[data.id] = self.experienceData[data.id] or 0
-			self.experienceDataMain[data.id] = self.experienceDataMain[data.id] or 0
+			experienceData[data.id] = experienceData[data.id] or 0
+			experienceDataMain[data.id] = experienceDataMain[data.id] or 0
 				
 			for id, points in pairs(data) do
 				if( userData.achievements[id] ) then
-					self.experienceData[data.id] = self.experienceData[data.id] + (userData.achievements[id] * points)
+					experienceData[data.id] = experienceData[data.id] + (userData.achievements[id] * points)
 				end
 				
 				if( userData.mainAchievements and userData.mainAchievements[id] ) then
-					self.experienceDataMain[data.id] = self.experienceDataMain[data.id] + (userData.mainAchievements[id] * points)
+					experienceDataMain[data.id] = experienceDataMain[data.id] + (userData.mainAchievements[id] * points)
 				end
 			end
 			
 			-- Add the childs score to the parents
 			if( not data.parent ) then
-				self.experienceData[data.childOf] = (self.experienceData[data.childOf] or 0) + self.experienceData[data.id]
-				self.experienceDataMain[data.childOf] = (self.experienceDataMain[data.childOf] or 0) + self.experienceDataMain[data.id]
+				experienceData[data.childOf] = (experienceData[data.childOf] or 0) + experienceData[data.id]
+				experienceDataMain[data.childOf] = (experienceDataMain[data.childOf] or 0) + experienceDataMain[data.id]
 			end
 			
 			-- Cascade the scores from this one to whatever it's supposed to
 			if( data.cascade ) then
-				self.experienceData[data.cascade] = (self.experienceData[data.cascade] or 0) + self.experienceData[data.id]
-				self.experienceDataMain[data.cascade] = (self.experienceDataMain[data.cascade] or 0) + self.experienceDataMain[data.id]
+				experienceData[data.cascade] = (experienceData[data.cascade] or 0) + experienceData[data.id]
+				experienceDataMain[data.cascade] = (experienceDataMain[data.cascade] or 0) + experienceDataMain[data.id]
 			end
 			
 			-- Build the tooltip, caching it because it really does not need to be recalcualted that often
@@ -287,7 +297,7 @@ function Users:Show(userData)
 			if( lockedScore and lockedScore ~= score ) then
 				self.forceOffset = math.ceil((i + 1) / 4)
 				break
-			elseif( equipmentData.totalScore >= score ) then
+			elseif( self.activePlayerScore >= score ) then
 				lockedScore = score
 				self.forceOffset = math.ceil((i + 1) / 4)
 			end
@@ -296,26 +306,28 @@ function Users:Show(userData)
 		self.forceOffset = 0
 	end
 	
-	-- Set the note label
-	frame.userFrame.manageNote:SetText(self.activeData.notes[ElitistGroup.playerID] and L["Edit Note"] or L["Add Note"])
-	if( ElitistGroup.playerID ~= self.activeUserID ) then
-		frame.userFrame.manageNote.tooltip = L["You can edit or add a note on this player here."]
-		frame.userFrame.manageNote:Enable()
-	else
-		frame.userFrame.manageNote.tooltip = L["You cannot set a note on yourself!"]
-		frame.userFrame.manageNote:Disable()
-	end
+	-- Build notes
+	if( not updateType or updateType == "notes" ) then
+		frame.userFrame.manageNote:SetText(self.activeData.notes[ElitistGroup.playerID] and L["Edit Note"] or L["Add Note"])
+		if( ElitistGroup.playerID ~= self.activeUserID ) then
+			frame.userFrame.manageNote.tooltip = L["You can edit or add a note on this player here."]
+			frame.userFrame.manageNote:Enable()
+		else
+			frame.userFrame.manageNote.tooltip = L["You cannot set a note on yourself!"]
+			frame.userFrame.manageNote:Disable()
+		end
 	
-	self.activeDataNotes = 0
-	for _ in pairs(userData.notes) do 
-		self.activeDataNotes = self.activeDataNotes + 1
-	end
+		self.activeDataNotes = 0
+		for _ in pairs(userData.notes) do 
+			self.activeDataNotes = self.activeDataNotes + 1
+		end
 	
-	if( self.frame.manageNote and self.frame.manageNote:IsVisible() ) then
-		managePlayerNote()
+		if( self.frame.manageNote and self.frame.manageNote:IsVisible() ) then
+			managePlayerNote()
+		end
 	end
 
-	self:UpdateDatabasePage()
+	-- General updates
 	self:UpdateDungeonInfo()
 	self:UpdateTabPage()
 end
@@ -388,10 +400,43 @@ local function buildQuery(search)
 	end
 end
 
+function Users:RebuildDatabaseTable()
+	if( not self.rebuildDatabase ) then return end
+	self.rebuildDatabase = nil
+	
+	for playerID, data in pairs(ElitistGroup.db.faction.users) do
+		local user = userList[playerID]
+		if( not user or not user.classToken or not user.level or not user.server or not user.name ) then
+			local classToken, level, server, name
+			-- Get the data first
+			if( rawget(ElitistGroup.userData, playerID) ) then
+				name, server, level, classToken = ElitistGroup.userData[playerID].name, ElitistGroup.userData[playerID].server, ElitistGroup.userData[playerID].level, ElitistGroup.userData[playerID].classToken
+			elseif( data ~= "" ) then
+				name, server, level, classToken = string.match(data, "name=\"(.-)\""), string.match(data, "server=\"(.-)\""), tonumber(string.match(data, "level=([0-9]+)")), string.match(data, "classToken=\"([A-Z]+)\"")
+			end
+			
+			user = user or {}
+			user.playerID = playerID
+			user.classToken = classToken
+			user.level = level
+			user.name = name
+			user.server = server
+			
+			if( not userList[playerID] ) then
+				userList[playerID] = user
+				table.insert(userList, playerID)
+			end
+		end
+	end
+end
+
 function Users:UpdateDatabasePage()
 	self = Users
+	if( not ElitistGroup.db.profile.general.databaseExpanded ) then return end
+	
 	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
 	
+	-- Don't need to recheck these during scroll
 	if( not self.scrollUpdate ) then
 		query = query or {}
 		table.wipe(query)
@@ -402,26 +447,22 @@ function Users:UpdateDatabasePage()
 			buildQuery(useSearch)
 		end
 		
-		table.wipe(userList)
-		for playerID, data in pairs(ElitistGroup.db.faction.users) do
-			local classToken, level, server, name
-			-- Get the data first
-			if( rawget(ElitistGroup.userData, playerID) ) then
-				name, server, level, classToken = ElitistGroup.userData[playerID].name, ElitistGroup.userData[playerID].server, ElitistGroup.userData[playerID].level, ElitistGroup.userData[playerID].classToken
-			elseif( data ~= "" ) then
-				name, server, level, classToken = string.match(data, "name=\"(.-)\""), string.match(data, "server=\"(.-)\""), tonumber(string.match(data, "level=([0-9]+)")), string.match(data, "classToken=\"([A-Z]+)\"")
-			end
-				
+		self:RebuildDatabaseTable()
+		self.frame.databaseFrame.visibleUsers = 0
+
+		for i=1, #(userList) do
+			local user = userList[userList[i]]
+			user.visible = nil
 			-- Search name
-			if( not query.name or string.match(string.lower(name), query.name) ) then
+			if( not query.name or string.match(string.lower(user.name), query.name) ) then
 				-- Search server
-				if( not query.server or string.match(string.lower(server), query.server) ) then
+				if( not query.server or string.match(string.lower(user.server), query.server) ) then
 					-- Search level
-					if( not level or not query.minLevel or ( level >= query.minLevel and level <= query.maxLevel ) ) then
+					if( not user.level or not query.minLevel or ( user.level >= query.minLevel and user.level <= query.maxLevel ) ) then
 						-- Search class token
-						if( not query.classToken or not classToken or classToken == query.classToken ) then
-							userList[playerID] = classToken
-							table.insert(userList, playerID)
+						if( not query.classToken or not user.classToken or user.classToken == query.classToken ) then
+							user.visible = true
+							self.frame.databaseFrame.visibleUsers = self.frame.databaseFrame.visibleUsers + 1
 						end
 					end
 				end
@@ -431,23 +472,24 @@ function Users:UpdateDatabasePage()
 		table.sort(userList, sortNames)
 	end
 	
-	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, #(userList), MAX_DATABASE_ROWS, 16)
+	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, self.frame.databaseFrame.visibleUsers, MAX_DATABASE_ROWS, 16)
 	ElitistGroupDatabaseSearch:SetWidth(self.frame.databaseFrame.scroll:IsVisible() and 195 or 210)
 
 	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
 	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 24)
 	
-	local rowID = 1
+	local rowID, userID = 1, 1
 	for id=1, #(userList) do
-		if( id > offset ) then
+		local user = userList[userList[id]]
+		if( userID > offset and user.visible ) then
 			local row = self.frame.databaseFrame.rows[rowID]
-			row.userID = userList[id]
-			row.tooltip = string.format(L["View info on %s."], row.userID)
+			row.userID = user.playerID
+			row.tooltip = string.format(L["View info on %s."], user.playerID)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
 			local classHex, selected = "", ""
-			local classColor = userList[row.userID] and RAID_CLASS_COLORS[userList[row.userID]]
+			local classColor = user.classToken and RAID_CLASS_COLORS[user.classToken]
 			if( self.activeData and row.userID == self.activeUserID ) then
 				selected = "[*] "
 				classHex = "|cffffffff"
@@ -455,14 +497,18 @@ function Users:UpdateDatabasePage()
 				classHex = string.format("|cff%02x%02x%02x", classColor.r * 255, classColor.g * 255, classColor.b * 255)
 			end
 			
-			if( userList[id] ~= ElitistGroup.playerID and UnitExists(userList[row.userID]) ) then
-				row:SetFormattedText("%s|cffffffff[%s]|r %s%s|r", selected, GROUP, classHex, userList[id])
+			if( user.playerID ~= ElitistGroup.playerID and UnitExists(user.name) ) then
+				row:SetFormattedText("%s|cffffffff[%s]|r %s%s|r", selected, GROUP, classHex, user.playerID)
 			else
-				row:SetFormattedText("%s%s%s|r", selected, classHex, userList[id])
+				row:SetFormattedText("%s%s%s|r", selected, classHex, user.playerID)
 			end
 			
 			rowID = rowID + 1
 			if( rowID > MAX_DATABASE_ROWS ) then break end
+		end
+		
+		if( user.visible ) then
+			userID = userID + 1
 		end
 	end
 end
@@ -505,7 +551,7 @@ function Users:UpdateAchievementInfo()
 	local self = Users
 	local totalEntries = self.activeData.mainAchievements and 1 or 0
 	for id, data in pairs(DungeonData.experience) do
-		self.experienceData[data.id] = self.experienceData[data.id] or 0
+		experienceData[data.id] = experienceData[data.id] or 0
 		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( not DungeonData.experienceParents[data.childOf] or ElitistGroup.db.profile.expExpanded[DungeonData.experienceParents[data.childOf]] ) ) ) then
 			totalEntries = totalEntries + 1
 			data.isVisible = true
@@ -568,7 +614,7 @@ function Users:UpdateAchievementInfo()
 					local experienceText
 					-- Not an alt, so do the simple display
 					if( not self.activeData.mainAchievements ) then
-						local percent = math.min(self.experienceData[data.id] / data.experienced, 1)
+						local percent = math.min(experienceData[data.id] / data.experienced, 1)
 						local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 						local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 						experienceText = percent >= 1 and L["Experienced"] or percent >= 0.8 and L["Nearly-experienced"] or percent >= 0.5 and L["Semi-experienced"] or L["Inexperienced"]
@@ -581,11 +627,11 @@ function Users:UpdateAchievementInfo()
 					-- An alt, fun times
 					else
 						-- Calculate the alts (the shown characters) experience
-						local percentAlt = math.min(self.experienceData[data.id] / data.experienced, 1)
+						local percentAlt = math.min(experienceData[data.id] / data.experienced, 1)
 						local altR = (percentAlt > 0.5 and (1.0 - percentAlt) * 2 or 1.0) * 255
 						local altG = (percentAlt > 0.5 and 1.0 or percentAlt * 2) * 255
 						-- Now calculate the mains
-						local percentMain = math.min(self.experienceDataMain[data.id] / data.experienced, 1)
+						local percentMain = math.min(experienceDataMain[data.id] / data.experienced, 1)
 						local mainR = (percentMain > 0.5 and (1.0 - percentMain) * 2 or 1.0) * 255
 						local mainG = (percentMain > 0.5 and 1.0 or percentMain * 2) * 255
 
@@ -874,6 +920,10 @@ function Users:CreateUI()
 		Users.frame:Show()
 		return
 	end
+	
+	-- Initial database has to be built still
+	self.rebuildDatabase = true
+	
 
 	local function OnAchievementEnter(self)
 		if( self.tooltip ) then
@@ -1052,6 +1102,7 @@ function Users:CreateUI()
 		end
 		
 		ElitistGroup.db.profile.general.databaseExpanded = not ElitistGroup.db.profile.general.databaseExpanded
+		Users:UpdateDatabasePage()
 		frame.databaseFrame:SetScript("OnUpdate", frameAnimator)
 	end)
 
