@@ -880,6 +880,18 @@ managePlayerNote = function()
 		frame.manageNote.delete:SetText(L["Delete your note"])
 		frame.manageNote.delete:SetPoint("BOTTOMLEFT", frame.manageNote, "BOTTOMLEFT", 0, 1)
 		frame.manageNote.delete:SetScript("OnClick", function(self)
+			frame.userFrame.manageNote:UnlockHighlight()
+
+			local parent = self:GetParent()
+			parent.lastText = ""
+			parent.comment:SetText("")
+			parent.rating:SetValue(3)
+			parent:Hide()
+
+			SetDesaturation(parent.roleTank:GetNormalTexture(), true)
+			SetDesaturation(parent.roleHealer:GetNormalTexture(), true)
+			SetDesaturation(parent.roleDamage:GetNormalTexture(), true)
+
 			ElitistGroup.userData[Users.activeUserID].notes[ElitistGroup.playerID] = nil
 			ElitistGroup.writeQueue[Users.activeUserID] = true
 
