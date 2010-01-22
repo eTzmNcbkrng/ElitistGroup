@@ -10,6 +10,8 @@ local MAX_DATABASE_ROWS = 18
 local DungeonData = ElitistGroup.Dungeons
 
 function Users:OnInitialize()
+	self.userList = userList
+	
 	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
 		if( not userList[user] ) then
 			self.rebuildDatabase = true
@@ -24,6 +26,12 @@ function Users:OnInitialize()
 			self:UpdateDatabasePage()
 		end
 	end)
+end
+
+function Users:ResetUserList()
+	userList = {}
+	self.rebuildDatabase = true
+	self:UpdateDatabasePage()
 end
 
 local function sortAchievements(a, b)
@@ -434,8 +442,6 @@ function Users:UpdateDatabasePage()
 	self = Users
 	if( not ElitistGroup.db.profile.general.databaseExpanded ) then return end
 	
-	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
-	
 	-- Don't need to recheck these during scroll
 	if( not self.scrollUpdate ) then
 		query = query or {}
@@ -474,6 +480,8 @@ function Users:UpdateDatabasePage()
 	
 	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, self.frame.databaseFrame.visibleUsers, MAX_DATABASE_ROWS, 16)
 	ElitistGroupDatabaseSearch:SetWidth(self.frame.databaseFrame.scroll:IsVisible() and 195 or 210)
+
+	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
 
 	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
 	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 24)

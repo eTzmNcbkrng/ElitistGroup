@@ -444,6 +444,31 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 	elseif( cmd == "rate" ) then
 		SlashCmdList["ELITISTGROUPRATE"]("")
 		return
+	elseif( cmd == "reset" ) then
+		if( not StaticPopupDialogs["ELITISTGROUP_CONFIRM_RESET"] ) then
+			StaticPopupDialogs["ELITISTGROUP_CONFIRM_RESET"] = {
+				text = L["Are you sure you want to reset ALL user data recorded, including notes?"],
+				button1 = L["Yes"],
+				button2 = L["No"],
+				OnAccept = function()
+					table.wipe(ElitistGroup.userData)
+
+					ElitistGroup.db.faction.users = {}
+					ElitistGroup.db.faction.lastModified = {}
+					ElitistGroup.writeQueue = {}
+					ElitistGroup.modules.Scan:InspectUnit("player")
+					ElitistGroup.modules.Users:ResetUserList()
+					
+					ElitistGroup:Print(L["Reset all user data."])
+				end,
+				timeout = 30,
+				whileDead = 1,
+				hideOnEscape = 1,
+			}
+		end
+		
+		StaticPopup_Show("ELITISTGROUP_CONFIRM_RESET")
+		return
 	elseif( cmd == "summary" ) then
 		local instanceType = select(2, IsInInstance())
 		if( GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 ) then
@@ -458,15 +483,15 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		end
 		return
 	elseif( cmd == "help" or cmd == "notes" or cmd == "gear" or cmd == "send" ) then
-		ElitistGroup:Print(L["Slash commands"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup config - Opens the configuration"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup gear <name> - Requests gear from another Elitist Group user without inspecting"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup send <name> - Sends your gear to another Elitist Group user"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup notes [name] - Requests all guild members notes on players, if [name] is passed requests notes FROM [name]"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup db [name] - Requests either everyones database or [name]s database if specified"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup summary - Displays the summary page for your party or raid"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/elitistgroup <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
-		DEFAULT_CHAT_FRAME:AddMessage(L["/rate - Opens the rating panel for your group"])
+		ElitistGroup:Print(L["Slash commands (/eg, /elitistgroup)"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg config - Opens the configuration"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg gear <name> - Requests gear from another Elitist Group user without inspecting"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg send <name> - Sends your gear to another Elitist Group user"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg notes [name] - Requests all guild members notes on players, if [name] is passed requests notes FROM [name]"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg db [name] - Requests either everyones database or [name]s database if specified"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg summary - Displays the summary page for your party or raid"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg rate - Opens the rating panel for your group"])
+		DEFAULT_CHAT_FRAME:AddMessage(L["/eg <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])
 		return
 	end
 	
