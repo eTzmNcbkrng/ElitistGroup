@@ -346,7 +346,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 			ElitistGroup.db.faction.users[noteFor] = ElitistGroup.db.faction.users[noteFor] or ""
 			ElitistGroup.writeQueue[noteFor] = true
 
-			self:SendMessage("SG_DATA_UPDATED", "note", noteFor)
+			self:SendMessage("EG_DATA_UPDATED", "note", noteFor)
 		end
 	end
 end
@@ -422,7 +422,7 @@ local function parseGear(senderName, playerID, playerName, playerServer, data, i
 	ElitistGroup.userData[playerID] = userData
 	ElitistGroup.db.faction.users[playerID] = ElitistGroup.db.faction.users[playerID] or ""
 
-	Sync:SendMessage("SG_DATA_UPDATED", "gear", playerID)
+	Sync:SendMessage("EG_DATA_UPDATED", "gear", playerID)
 	if( ElitistGroup.db.profile.general.announceData and isSelf ) then
 		ElitistGroup:Print(string.format(L["Gear received from %s."], playerID))
 	end
@@ -597,7 +597,7 @@ function Sync:ParseMainExperience(sender, ...)
 	end
 	
 	ElitistGroup.writeQueue[playerID] = true
-	self:SendMessage("SG_DATA_UPDATED", "mainExp", playerID)
+	self:SendMessage("EG_DATA_UPDATED", "mainExp", playerID)
 end
 
 function Sync:SendMainExperience(sender)
