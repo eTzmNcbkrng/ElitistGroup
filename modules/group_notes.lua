@@ -171,7 +171,7 @@ function Notes:Update()
 				row.comment.lastText = playerNote.comment or ""
 				row.comment:SetText(row.comment.lastText)
 			else
-				local specType = ElitistGroup:GetPlayerSpec(userData.classToken, userData[name])
+				local specType = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
 				defaultRole = defaultRole > 0 and defaultRole or specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
 				row.playerID = name
 				row.defaultRole = defaultRole
