@@ -193,7 +193,7 @@ function Summary:UpdateSingle(row)
 		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 		row.gearInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Equipment (%s%d|r)"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 		row.gearInfo.tooltip = equipmentTooltip
-		row.gearinfo.disableWrap = true
+		row.gearInfo.disableWrap = true
 	
 		-- Build enchants
 		local percent = math.max(math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total), 0)
