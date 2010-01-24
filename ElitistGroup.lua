@@ -10,7 +10,7 @@ function ElitistGroup:OnInitialize()
 			general = {
 				announceData = false,
 				databaseExpanded = true,
-				selectedTab = "notes",
+				selectedTab = "achievements",
 			},
 			auto = {
 				autoPopup = false,
@@ -214,23 +214,23 @@ function ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)
 	return itemLevel * (self.Items.qualityModifiers[itemQuality] or 1)
 end
 
-function ElitistGroup:GetPlayerSpec(playerData)
-	if( not playerData.talentTree1 or not playerData.talentTree2 or not playerData.talentTree3 ) then
+function ElitistGroup:GetPlayerSpec(classToken, talentData)
+	if( not talentData.talentTree1 or not talentData.talentTree2 or not talentData.talentTree3 ) then
 		return "unknown", L["Unknown"], "Interface\\Icons\\INV_Misc_QuestionMark"
 	end
 	
 	local treeOffset
-	if( playerData.talentTree1 > playerData.talentTree2 and playerData.talentTree1 > playerData.talentTree3 ) then
+	if( talentData.talentTree1 > talentData.talentTree2 and talentData.talentTree1 > talentData.talentTree3 ) then
 		treeOffset = 1
-	elseif( playerData.talentTree2 > playerData.talentTree1 and playerData.talentTree2 > playerData.talentTree3 ) then
+	elseif( talentData.talentTree2 > talentData.talentTree1 and talentData.talentTree2 > talentData.talentTree3 ) then
 		treeOffset = 4
-	elseif( playerData.talentTree3 > playerData.talentTree1 and playerData.talentTree3 > playerData.talentTree2 ) then
+	elseif( talentData.talentTree3 > talentData.talentTree1 and talentData.talentTree3 > talentData.talentTree2 ) then
 		treeOffset = 7
 	else
 		return "unknown", L["Unknown"], "Interface\\Icons\\INV_Misc_QuestionMark"
 	end
 	
-	return playerData.specRole or self.Talents.treeData[playerData.classToken][treeOffset], self.Talents.treeData[playerData.classToken][treeOffset + 1], self.Talents.treeData[playerData.classToken][treeOffset + 2] 
+	return talentData.specRole or self.Talents.treeData[classToken][treeOffset], self.Talents.treeData[classToken][treeOffset + 1], self.Talents.treeData[classToken][treeOffset + 2] 
 end
 
 local tableCache = setmetatable({}, {__mode = "k"})
@@ -311,16 +311,31 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	return enchantTooltips, gemTooltips
 end
 
-function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
+function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantData)
 	local tempList = self:GetTable()
-	local gemTooltip, enchantTooltip
-	local totalLines = 0
+	local equipmentTooltip, gemTooltip, enchantTooltip
+	
+	-- Equipment
+	if( equipmentData.totalBad > 0 ) then
+		table.insert(tempList, string.format(L["Equipment: |cffffffff%d bad items found|r"], equipmentData.totalBad))
+		
+		for i=1, #(equipmentData) do
+			local itemLink = equipmentData[i]
+			local fullItemLink = select(2, GetItemInfo(itemLink))
+			if( fullItemLink ) then
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink]))
+			end
+		end
+		
+		equipmentTooltip = table.concat(tempList, "\n")
+	end
 	
 	-- Gems
 	if( gemData.noData ) then
 		gemTooltip = L["Gems: |cffffffffFailed to find any gems|r"]
 	elseif( gemData.totalBad > 0 ) then
-		gemTooltip = string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad)
+		table.wipe(tempList)
+		table.insert(tempList, string.format(L["Gems: |cffffffff%d bad|r"], gemData.totalBad))
 		
 		for i=1, #(gemData), 3 do
 			local fullItemLink, arg = gemData[i], gemData[i + 2]
@@ -335,18 +350,16 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			end
 		end
 		
-		table.sort(tempList, sortTable)
-		gemTooltip = gemTooltip .. "\n" .. table.concat(tempList, "\n")
-		totalLines = totalLines + #(tempList)
+		gemTooltip = table.concat(tempList, "\n")
 	end
 	
 	-- Enchants
-	table.wipe(tempList)
 
 	if( enchantData.noData ) then
 		enchantTooltip = L["Enchants: |cffffffffThe player does not have any enchants|r"]
 	elseif( enchantData.totalBad > 0 ) then
-		enchantTooltip = string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad)
+		table.wipe(tempList)
+		table.insert(tempList, string.format(L["Enchants: |cffffffff%d bad|r"], enchantData.totalBad))
 		
 		for i=1, #(enchantData), 2 do
 			local fullItemLink, enchantTalent = enchantData[i], enchantData[i + 1]
@@ -357,19 +370,17 @@ function ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
 			end
 		end
 		
-		table.sort(tempList, sortTable)
-		enchantTooltip = enchantTooltip .. "\n" .. table.concat(tempList, "\n")
-		totalLines = totalLines + #(tempList)
+		enchantTooltip = table.concat(tempList, "\n")
 	end
 	
 	self:ReleaseTables(tempList)
 	
-	return gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"], totalLines
+	return equipmentTooltip or L["Equipment: |cffffffffPass|r"], gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"]
 end
 
 local MAINHAND_SLOT, OFFHAND_SLOT, WAIST_SLOT = GetInventorySlotInfo("MainHandSlot"), GetInventorySlotInfo("SecondaryHandSlot"), GetInventorySlotInfo("WaistSlot")
 function ElitistGroup:GetGearSummary(userData)
-	local spec = self:GetPlayerSpec(userData)
+	local spec = self:GetPlayerSpec(userData.classToken, userData)
 	local validSpecTypes = self.Items.talentToRole[spec]
 	local equipment, gems, enchants = self:GetTable(), self:GetTable(), self:GetTable()
 	
@@ -403,6 +414,7 @@ function ElitistGroup:GetGearSummary(userData)
 			if( itemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[itemTalent] and ( not roleOverride or not roleOverride[itemTalent] ) ) then
 				equipment.pass = nil
 				equipment[itemLink] = itemTalent
+				table.insert(equipment, itemLink)
 				equipment.totalBad = equipment.totalBad + 1
 			end
 
