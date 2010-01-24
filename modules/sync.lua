@@ -14,8 +14,9 @@ local COMM_TIMEOUT = 5
 function Sync:Setup()
 	if( ElitistGroup.db.profile.comm.enabled ) then
 		self:RegisterComm(COMM_PREFIX)
-		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetPlayerData")
-		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetPlayerData")
+		self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "ResetPlayerCache")
+		self:RegisterEvent("ACHIEVEMENT_EARNED", "ResetPlayerCache")
+		self:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED", "ResetPlayerCache")
 		self:RegisterEvent("PLAYER_LEAVING_WORLD", "CheckThrottles")
 	else
 		self:UnregisterComm(COMM_PREFIX)
@@ -26,7 +27,7 @@ function Sync:Setup()
 	end
 end
 
-function Sync:ResetPlayerData()
+function Sync:ResetPlayerCache()
 	cachedPlayerData = nil
 end
 
@@ -95,12 +96,10 @@ function Sync:VerifyTable(tbl, checkTbl)
 	if( type(tbl) ~= "table" ) then return nil end
 	
 	for key, value in pairs(tbl) do
-		if( not checkTbl[key] or type(value) ~= checkTbl[key] ) then
+		if( not checkTbl[key] or type(value) ~= checkTbl[key] or ( ( type(value) == "string" or type(value) == "number" ) and string.len(value) >= 300 ) ) then
 			tbl[key] = nil
 		end
 	end
-	
-	return tbl
 end
 
 -- Message filtering
@@ -322,7 +321,7 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 	local senderName, name, server = getFullName(sender)
 	
 	for noteFor, note in pairs(noteTable) do
-		note = self:VerifyTable(note, ElitistGroup.VALID_NOTE_FIELDS)
+		self:VerifyTable(note, ElitistGroup.VALID_NOTE_FIELDS)
 		if( type(note) == "table" and type(noteFor) == "string" and note.time and note.role and note.rating and string.match(noteFor, "%-") and senderName ~= noteFor and ( not note.comment or string.len(note.comment) <= ElitistGroup.MAX_NOTE_LENGTH ) ) then
 			local name, server = string.split("-", noteFor, 2)
 			local userData = ElitistGroup.userData[noteFor]
@@ -366,7 +365,7 @@ local function parseGear(senderName, playerID, playerName, playerServer, data, i
 	local sentData = setfenv(sentData, emptyEnv)() or false
 	if( not sentData ) then return end
 
-	sentData = Sync:VerifyTable(sentData, ElitistGroup.VALID_DB_FIELDS)
+	Sync:VerifyTable(sentData, ElitistGroup.VALID_DB_FIELDS)
 	if( not sentData or not sentData.achievements or not sentData.equipment ) then return end
 	
 	-- Verify gear
@@ -387,6 +386,21 @@ local function parseGear(senderName, playerID, playerName, playerServer, data, i
 			else
 				sentData.achievements[key] = math.max(sentData.achievements[key], 0)
 			end
+		end
+	end
+	
+	-- Verify talent data
+	if( sentData.secondarySpec ) then
+		Sync:VerifyTable(sentData.secondarySpec, ElitistGroup.VALID_TALENT_FIELDS)
+		
+		local hasData
+		for key in pairs(sentData.secondarySpec) do
+			hasData = true
+			break
+		end
+		
+		if( not hasData ) then
+			sentData.secondarySpec = nil
 		end
 	end
 			
