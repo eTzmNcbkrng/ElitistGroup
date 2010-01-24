@@ -8,7 +8,7 @@ local activeGroupID
 function Summary:OnInitialize()
 	self:RegisterEvent("PLAYER_ROLES_ASSIGNED")
 	self:RegisterEvent("UNIT_NAME_UPDATE")
-	self:RegisterMessage("SG_DATA_UPDATED")
+	self:RegisterMessage("EG_DATA_UPDATED")
 end
 
 -- My theory with this event, and from looking is it seems to only fire when you are using the LFD system
@@ -76,7 +76,7 @@ function Summary:UNIT_NAME_UPDATE(event, unit)
 	end
 end
 
-function Summary:SG_DATA_UPDATED(event, type, name)
+function Summary:EG_DATA_UPDATED(event, type, name)
 	for unit, row in pairs(unitToRow) do
 		if( row:IsVisible() and ElitistGroup:GetPlayerID(unit) == name ) then
 			self:UpdateSingle(row)
@@ -158,7 +158,7 @@ function Summary:UpdateSingle(row)
 		
 		-- Make sure they are talented enough
 		if( not updateType or updateType == "talents" ) then
-			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
 			if( not specType or not specName or not specIcon ) then
 				row.talentInfo:SetFormattedText(L["Loading"])
 				row.talentInfo.icon:SetTexture(READY_CHECK_WAITING_TEXTURE)
@@ -185,26 +185,15 @@ function Summary:UpdateSingle(row)
 		end
 	
 		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
-		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
+		local equipmentTooltip, gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantData)
 
 		-- People probably want us to build the gear info, I'd imagine
 		local percent = math.max(math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped), 0)
 		local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 		row.gearInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Equipment (%s%d|r)"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
-		if( equipmentData.totalBad == 0 ) then
-			row.gearInfo.tooltip = string.format(L["Equipment: |cffffffffAll good|r"], equipmentData.totalEquipped)
-		else
-			local gearTooltip = string.format(L["Equipment: |cffffffff%d bad items found|r"], equipmentData.totalBad)
-			for _, itemLink in pairs(userData.equipment) do
-				local fullItemLink = select(2, GetItemInfo(itemLink))
-				if( fullItemLink and equipmentData[itemLink] ) then
-					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
-				end
-			end
-
-			row.gearInfo.tooltip = gearTooltip
-		end
+		row.gearInfo.tooltip = equipmentTooltip
+		row.gearinfo.disableWrap = true
 	
 		-- Build enchants
 		local percent = math.max(math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total), 0)

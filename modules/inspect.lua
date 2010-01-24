@@ -22,7 +22,7 @@ function Inspect:ADDON_LOADED(event, addon)
 		
 		if( InspectFrame.unit and UnitIsFriend(InspectFrame.unit, "player") and CanInspect(InspectFrame.unit) ) then
 			self.inspectID = ElitistGroup:GetPlayerID(InspectFrame.unit)
-			self:RegisterMessage("SG_DATA_UPDATED")
+			self:RegisterMessage("EG_DATA_UPDATED")
 			ElitistGroup.modules.Sync:RequestMainData(InspectFrame.unit)
 			
 			-- Setup the summary window for the inspect if it's enabled and we can inspect them
@@ -56,11 +56,11 @@ function Inspect:ADDON_LOADED(event, addon)
 	end
 	
 	InspectFrame:HookScript("OnShow", OnShow)
-	InspectFrame:HookScript("OnHide", function() Inspect:UnregisterMessage("SG_DATA_UPDATED") end)
+	InspectFrame:HookScript("OnHide", function() Inspect:UnregisterMessage("EG_DATA_UPDATED") end)
 	if( InspectFrame:IsVisible() ) then OnShow() end
 end
 
-function Inspect:SG_DATA_UPDATED(event, type, playerID)
+function Inspect:EG_DATA_UPDATED(event, type, playerID)
 	if( self.inspectID == playerID and type ~= "note" ) then
 		if( ElitistGroup.db.profile.inspect.window ) then
 			self:SetupSummary(type)
@@ -152,7 +152,7 @@ function Inspect:SetupSummary(updateType)
 	if( userData ) then
 		if( not updateType or updateType == "talents" ) then
 			-- Make sure they are talented enough
-			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
 			specType = ElitistGroup.Talents.talentText[specType] or specType
 			if( not userData.unspentPoints ) then
 				self.frame.talentInfo:SetFormattedText("%d/%d/%d [%s]", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
@@ -164,29 +164,15 @@ function Inspect:SetupSummary(updateType)
 		end
 		
 		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
-		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
+		local equipmentTooltip, gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantData)
 		
-		-- People probably want us to build the gear info, I'd imagine
-		if( equipmentData.totalBad == 0 ) then
-			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear [|cff20ff20100%%|r]"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
-			self.frame.gearInfo.tooltip = L["Equipment: |cffffffffAll good|r"]
-			self.frame.gearInfo.disableWrap = true
-		else
-			local gearTooltip = string.format(L["Equipment: |cffffffff%d bad items found|r"], equipmentData.totalBad)
-			for _, itemLink in pairs(userData.equipment) do
-				local fullItemLink = select(2, GetItemInfo(itemLink))
-				if( fullItemLink and equipmentData[itemLink] ) then
-					gearTooltip = gearTooltip .. "\n" .. string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
-				end
-			end
-		
-			local percent = math.max(math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped), 0)
-			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
-			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
-			self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear [|cff%02x%02x00%d%%|r]"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore, r, g, percent * 100)
-			self.frame.gearInfo.tooltip = gearTooltip
-			self.frame.gearInfo.disableWrap = true
-		end
+		-- Build equipment
+		local percent = math.max(math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped), 0)
+		local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+		local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+		self.frame.gearInfo:SetFormattedText(L["(%s%d|r) Gear [|cff%02x%02x00%d%%|r]"], ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore, r, g, percent * 100)
+		self.frame.gearInfo.tooltip = equipmentTooltip
+		self.frame.gearInfo.disableWrap = true
 		
 		if( hasData ) then
 			-- Build enchants

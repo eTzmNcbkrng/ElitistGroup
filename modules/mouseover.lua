@@ -13,18 +13,18 @@ function Mouseover:Setup()
 		end
 		
 		self:RegisterEvent("PLAYER_LEAVING_WORLD")
-		self:RegisterMessage("SG_DATA_UPDATED")
+		self:RegisterMessage("EG_DATA_UPDATED")
 		MOUSEOVER_DISABLED = nil
 	else
 		self:UnregisterEvent("PLAYER_LEAVING_WORLD")
-		self:UnregisterMessage("SG_DATA_UPDATED")
+		self:UnregisterMessage("EG_DATA_UPDATED")
 		MOUSEOVER_DISABLED = true
 	end
 end
 
 local blockNext
 function Mouseover:PLAYER_LEAVING_WORLD() cachedPlayerIDs = {} end
-function Mouseover:SG_DATA_UPDATED(event, type, playerID)
+function Mouseover:EG_DATA_UPDATED(event, type, playerID)
 	if( GameTooltip:IsUnit("mouseover") and playerID == activePlayerID and not blockNext ) then
 		updateType = type
 		GameTooltip:ClearLines()

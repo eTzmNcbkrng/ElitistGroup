@@ -156,12 +156,13 @@ function Notes:Update()
 				row.name.tooltip = string.format(L["%s, unknown class"], name)
 			end
 			
-			if( not ElitistGroup.userData[name] ) then
+			local userData = ElitistGroup.userData[name]
+			if( not userData[name] ) then
 				ElitistGroup.modules.Scan:ManualCreateCore(name, playerLevels[name], playerClasses[name])
 			end
 			
 			local defaultRole = playerRoles[name]
-			local playerNote = ElitistGroup.userData[name].notes[ElitistGroup.playerID]
+			local playerNote = userData.notes[ElitistGroup.playerID]
 			if( playerNote ) then
 				row.playerID = name
 				row.defaultRole = defaultRole
@@ -170,7 +171,7 @@ function Notes:Update()
 				row.comment.lastText = playerNote.comment or ""
 				row.comment:SetText(row.comment.lastText)
 			else
-				local specType = ElitistGroup:GetPlayerSpec(ElitistGroup.userData[name])
+				local specType = ElitistGroup:GetPlayerSpec(userData.classToken, userData[name])
 				defaultRole = defaultRole > 0 and defaultRole or specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
 				row.playerID = name
 				row.defaultRole = defaultRole

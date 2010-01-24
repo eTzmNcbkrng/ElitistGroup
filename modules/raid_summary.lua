@@ -35,7 +35,7 @@ function Summary:CacheUnit(unit)
 		table.insert(sortedData, playerID)
 		
 		if( ElitistGroup.userData[playerID] ) then
-			self:SG_DATA_UPDATED(nil, nil, playerID)
+			self:EG_DATA_UPDATED(nil, nil, playerID)
 		elseif( not ElitistGroup.modules.Scan:UnitIsQueued(unit) ) then
 			ElitistGroup.modules.Scan:QueueUnit(unit)
 			ElitistGroup.modules.Scan:ProcessQueue()
@@ -46,22 +46,12 @@ function Summary:CacheUnit(unit)
 end
 
 -- This is only registered while the UI is open
-function Summary:SG_DATA_UPDATED(event, type, name)
+function Summary:EG_DATA_UPDATED(event, type, name)
 	local summaryData = userSummaryData[name]
 	local userData = ElitistGroup.userData[name]
 	if( summaryData and userData ) then
 		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
-		local gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(gemData, enchantData)
-	
-		if( equipmentData.totalBad ) then
-			summaryData.equipmentTooltip = string.format(L["|cffffffff%d bad items found|r"], equipmentData.totalBad)
-			for _, itemLink in pairs(userData.equipment) do
-				local fullItemLink = select(2, GetItemInfo(itemLink))
-				if( fullItemLink and equipmentData[itemLink] ) then
-					summaryData.equipmentTooltip = summaryData.equipmentTooltip .. "\n" .. string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink])
-				end
-			end
-		end
+		local equipmentTooltip, gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantData)
 		
 		if( type == "gems" or gemData.total > 0 ) then
 			summaryData.totalGems = gemData.total
@@ -73,7 +63,8 @@ function Summary:SG_DATA_UPDATED(event, type, name)
 		summaryData.totalEquipment = equipmentData.totalEquipped
 		summaryData.equipment = equipmentData.totalBad
 		summaryData.equipmentPerct = math.max(math.min((equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped, 1), 0)
-
+		summaryData.equipmentTooltip = equipmentTooltip
+		
 		summaryData.totalEnchants = enchantData.total
 		summaryData.enchants = enchantData.totalBad
 		summaryData.enchantPerct = math.max(math.min((enchantData.total - enchantData.totalBad) / enchantData.total, 1), 0)
@@ -317,11 +308,11 @@ function Summary:CreateUI()
 	frame:SetWidth(545)
 	frame:Hide()
 	frame:SetScript("OnShow", function(self)
-		Summary:RegisterMessage("SG_DATA_UPDATED")
+		Summary:RegisterMessage("EG_DATA_UPDATED")
 		Summary:RegisterEvent("RAID_ROSTER_UPDATE")
 	end)
 	frame:SetScript("OnHide", function()
-		Summary:UnregisterMessage("SG_DATA_UPDATED")
+		Summary:UnregisterMessage("EG_DATA_UPDATED")
 		Summary:UnregisterEvent("RAID_ROSTER_UPDATE")
 	end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
