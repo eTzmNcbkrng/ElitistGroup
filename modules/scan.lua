@@ -3,7 +3,8 @@ local Scan = ElitistGroup:NewModule("Scan", "AceEvent-3.0")
 local L = ElitistGroup.L
 
 -- These are the fields that comm are allowed to send, this is used so people don't try and make super complex tables to send to the user and either crash or lag them.
-ElitistGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number", ["mainAchievements"] = "table"}
+ElitistGroup.VALID_DB_FIELDS = {["name"] = "string", ["server"] = "string", ["level"] = "number", ["classToken"] = "string", ["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["achievements"] = "table", ["equipment"] = "table", ["specRole"] = "string", ["unspentPoints"] = "number", ["mainAchievements"] = "table", ["secondarySpec"] = "table"}
+ElitistGroup.VALID_TALENT_FIELDS = {["talentTree1"] = "number", ["talentTree2"] = "number", ["talentTree3"] = "number", ["specRole"] = "string", ["unspentPoints"] = "number"}
 ElitistGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["rating"] = "number", ["comment"] = "string"}
 ElitistGroup.MAX_LINK_LENGTH = 80
 ElitistGroup.MAX_NOTE_LENGTH = 256
@@ -171,22 +172,15 @@ function Scan:INSPECT_TALENT_READY()
 		pending.talents = nil
 		
 		local userData = ElitistGroup.userData[pending.playerID]
-		local first, second, third, unspentPoints, specRole = self:GetTalentData(pending.classToken, true)
-		userData.talentTree1 = first
-		userData.talentTree2 = second
-		userData.talentTree3 = third
-		userData.unspentPoints = unspentPoints
-		userData.specRole = specRole
-		
+		self:SetTalentData(userData, true)
 		self:SendMessage("SG_DATA_UPDATED", "talents", pending.playerID)
 		checkPending(pending.unit)
 	end
 end
 
-function Scan:GetTalentData(classToken, inspect)
+local function getTalentData(classToken, inspect, activeTalentGroup)
 	local specRole
 	local forceData = ElitistGroup.Talents.specOverride[classToken]
-	local activeTalentGroup = GetActiveTalentGroup(inspect)
 	if( forceData ) then
 		local talentMatches = 0
 		for tabIndex=1, GetNumTalentTabs(inspect) do
@@ -198,7 +192,7 @@ function Scan:GetTalentData(classToken, inspect)
 			end
 		end
 		
-		specRole = talentMatches >= forceData.required and forceData.role
+		specRole = talentMatches >= forceData.required and forceData.role or nil
 	end
 	
 	local first = select(3, GetTalentTabInfo(1, inspect, nil, activeTalentGroup))
@@ -208,6 +202,29 @@ function Scan:GetTalentData(classToken, inspect)
 	unspentPoints = unspentPoints > 0 and unspentPoints or nil
 	
 	return first or 0, second or 0, third or 0, unspentPoints, specRole
+end
+
+function Scan:SetTalentData(userData, inspect)
+	local activeTalentGroup = GetActiveTalentGroup()
+	local first, second, third, unspentPoints, specRole = getTalentData(userData.classToken, inspect, activeTalentGroup)
+	userData.talentTree1 = first
+	userData.talentTree2 = second
+	userData.talentTree3 = third
+	userData.unspentPoints = unspentPoints
+	userData.specRole = specRole
+	
+	-- We have a second spec
+	if( GetNumTalentGroups(inspect) > 1 ) then
+		userData.secondarySpec = userData.secondarySpec or {}
+		table.wipe(userData.secondarySpec)
+		
+		local first, second, third, unspentPoints, specRole = getTalentData(userData.classToken, inspect, activeTalentGroup == 2 and 1 or 2)
+		userData.secondarySpec.talentTree1 = first
+		userData.secondarySpec.talentTree2 = second
+		userData.secondarySpec.talentTree3 = third
+		userData.secondarySpec.unspentPoints = unspentPoints
+		userData.secondarySpec.specRole = specRole
+	end
 end
 
 function Scan:ManualCreateCore(playerID, level, classToken)
@@ -307,12 +324,7 @@ function Scan:UpdatePlayerData()
 	self:UpdateUnitData("player")
 	
 	local userData = ElitistGroup.userData[ElitistGroup.playerID]
-	local first, second, third, unspentPoints, specRole = self:GetTalentData(select(2, UnitClass("player")), nil)
-	userData.talentTree1 = first
-	userData.talentTree2 = second
-	userData.talentTree3 = third
-	userData.unspentPoints = unspentPoints
-	userData.specRole = specRole
+	self:SetTalentData(userData)
 
 	table.wipe(userData.achievements)
 	for achievementID in pairs(ElitistGroup.Dungeons.achievements) do
@@ -364,7 +376,9 @@ end
 function Scan:QueueGroup(unitType, total)
 	for i=1, total do
 		local unit = unitType .. i
-		if( not inspectQueue[unit] and not UnitIsUnit(unit, "player") ) then
+		if( UnitIsUnit(unit, "player") ) then
+			self:UpdatePlayerData()
+		elseif( not inspectQueue[unit] ) then
 			inspectQueue[unit] = 0
 			table.insert(inspectQueue, unit)
 		end

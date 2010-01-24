@@ -8,7 +8,6 @@ function ElitistGroup:OnInitialize()
 			expExpanded = {},
 			positions = {},
 			general = {
-				mouseover = false,
 				announceData = false,
 				databaseExpanded = true,
 				selectedTab = "notes",
@@ -23,9 +22,9 @@ function ElitistGroup:OnInitialize()
 				tooltips = true,
 			},
 			database = {
+				saveForeign = true,
 				pruneBasic = 30,
 				pruneFull = 120,
-				saveForeign = true,
 				ignoreBelow = 80,
 			},
 			comm = {
@@ -116,6 +115,7 @@ function ElitistGroup:OnInitialize()
 					
 					table.wipe(userData.equipment)
 					table.wipe(userData.achievements)
+					userData.secondarySpec = nil
 					userData.mainAchievements = nil
 					
 					userData.pruned = true
@@ -482,16 +482,15 @@ function ElitistGroup:GetGearSummary(userData)
 	end
 	
 	-- Belt buckles are a special case, you cannot detect them through item links at all or tooltip scanning
-	-- what has to be done is scan the base item links sockets
 	local itemLink = userData.equipment[WAIST_SLOT]
 	if( itemLink and userData.level >= 70 ) then
 		local baseSocketCount = self.EMPTY_GEM_SLOTS[self:GetBaseItemLink(itemLink)]
 		local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
 		local totalSockets = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
 		
-		-- The item by default has 1 sockets, and the player only has 1 gem socketed, missing buckle
+		-- The item by default has 1 socket, and the player only has 1 gem socketed, missing buckle
 		-- if the player had 2 available sockets and only 1 socketed, nothing is shown since they are missing a socket at that point
-		if( baseSocketCount > 0 and totalSockets == baseSocketCount or baseSocketCount == 0 and totalSockets == 0 ) then
+		if( ( baseSocketCount > 0 and totalSockets == baseSocketCount ) or ( baseSocketCount == 0 and totalSockets == 0 ) ) then
 			local fullItemLink = select(2, GetItemInfo(itemLink))
 			table.insert(gems, fullItemLink)
 			table.insert(gems, false)
