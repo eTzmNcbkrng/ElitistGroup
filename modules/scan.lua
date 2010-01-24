@@ -205,7 +205,7 @@ local function getTalentData(classToken, inspect, activeTalentGroup)
 end
 
 function Scan:SetTalentData(userData, inspect)
-	local activeTalentGroup = GetActiveTalentGroup()
+	local activeTalentGroup = GetActiveTalentGroup(inspect)
 	local first, second, third, unspentPoints, specRole = getTalentData(userData.classToken, inspect, activeTalentGroup)
 	userData.talentTree1 = first
 	userData.talentTree2 = second
