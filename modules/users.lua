@@ -2,9 +2,9 @@ local ElitistGroup = select(2, ...)
 local Users = ElitistGroup:NewModule("Users", "AceEvent-3.0")
 local L = ElitistGroup.L
 local backdrop = {bgFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeFile = "Interface\\ChatFrame\\ChatFrameBackground", edgeSize = 1}
-local gemData, enchantData, equipmentData, gemTooltips, enchantTooltips, achievementTooltips, tempList, managePlayerNote
+local gemData, enchantData, equipmentData, achievementTooltips, tempList, managePlayerNote, userData, OnEnter, OnLeave
 local userList, achievementTooltips, experienceData, experienceDataMain = {}, {}, {}, {}
-local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 7, 7
+local MAX_DUNGEON_ROWS, MAX_NOTE_ROWS = 5, 7
 local MAX_ACHIEVEMENT_ROWS = 20
 local MAX_DATABASE_ROWS = 18
 local DungeonData = ElitistGroup.Dungeons
@@ -12,7 +12,7 @@ local DungeonData = ElitistGroup.Dungeons
 function Users:OnInitialize()
 	self.userList = userList
 	
-	self:RegisterMessage("SG_DATA_UPDATED", function(event, type, user)
+	self:RegisterMessage("EG_DATA_UPDATED", function(event, type, user)
 		if( not userList[user] ) then
 			self.rebuildDatabase = true
 		end
@@ -23,7 +23,7 @@ function Users:OnInitialize()
 				self:BuildUI(ElitistGroup.userData[user], type)
 			end
 			
-			self:UpdateDatabasePage()
+			self:BuildDatabasePage()
 		end
 	end)
 end
@@ -31,14 +31,14 @@ end
 function Users:ResetUserList()
 	userList = {}
 	self.rebuildDatabase = true
-	self:UpdateDatabasePage()
+	self:BuildDatabasePage()
 end
 
 local function sortAchievements(a, b)
 	local aName, _, _, _, _, _, _, aFlags = select(2, GetAchievementInfo(a))
 	local bName, _, _, _, _, _, _, bFlags = select(2, GetAchievementInfo(b))
-	local aEarned = Users.activeData.achievements[a] or 0
-	local bEarned = Users.activeData.achievements[b] or 0
+	local aEarned = userData.achievements[a] or 0
+	local bEarned = userData.achievements[b] or 0
 	local aStatistic = bit.band(aFlags, ACHIEVEMENT_FLAGS_STATISTIC) > 0
 	local bStatistic = bit.band(bFlags, ACHIEVEMENT_FLAGS_STATISTIC) > 0
 	
@@ -62,12 +62,12 @@ function Users:Toggle(userData)
 	end
 end
 
-function Users:Show(userData)
-	self.activeData = userData
+function Users:Show(data)
+	userData = data
 	self.activeUserID = string.format("%s-%s", userData.name, userData.server)
 
 	self:BuildUI(userData)
-	self:UpdateDatabasePage()
+	self:BuildDatabasePage()
 end
 
 function Users:BuildUI(userData, updateType)
@@ -79,224 +79,152 @@ function Users:BuildUI(userData, updateType)
 	-- Build score as well as figure out their score
 	if( not updateType or updateType == "gear" or updateType == "gems" ) then
 		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
-		if( not userData.pruned ) then
-			equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
-			enchantTooltips, gemTooltips = ElitistGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
-		
-			frame.pruneInfo:Hide()
-		
-			for _, slot in pairs(frame.gearFrame.equipSlots) do
-				if( slot.inventoryID and userData.equipment[slot.inventoryID] ) then
-					local itemLink = userData.equipment[slot.inventoryID]
-					local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
-					if( itemQuality and itemLevel ) then
-						local baseItemLink = ElitistGroup:GetBaseItemLink(itemLink)
-					
-						-- Now sum it all up
-						slot.tooltip = nil
-						slot.equippedItem = itemLink
-						slot.gemTooltip = gemTooltips[itemLink]
-						slot.enchantTooltip = enchantTooltips[itemLink]
-						slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
-						slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
-						slot.fullItemLink = fullItemLink
-						slot.icon:SetTexture(itemIcon)
-						slot.typeText:SetText(slot.itemTalentType)
-						slot:Enable()
-						slot:Show()
-					
-						if( equipmentData[itemLink] ) then
-							slot.typeText:SetTextColor(1, 0.15, 0.15)
-						else
-							slot.typeText:SetTextColor(1, 1, 1)
-						end
-
-						if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
-							slot.extraText:SetText(L["Enhancements"])
-							slot.extraText:SetTextColor(1, 0.15, 0.15)
-						else
-							local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[-1]
-							slot.extraText:SetText(math.floor(ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)))
-							slot.extraText:SetTextColor(color.r, color.g, color.b)
-						end
-					else
-						slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-						slot.extraText:SetText("")
-						slot.typeText:SetText("")
-						slot.fullItemLink = nil
-						slot.equippedItem = nil
-						slot.enchantTooltip = nil
-						slot.gemTooltip = nil
-						slot.tooltip = string.format(L["Cannot find item data for item id %s."], string.match(itemLink, "item:(%d+)"))
-						slot:Disable()
-						slot:Show()
-					end
-				elseif( slot.inventoryID ) then
-					local texture = slot.emptyTexture
-					if( slot.checkRelic and ( userData.classToken == "PALADIN" or userData.classToken == "DRUID" or userData.classToken == "SHAMAN" ) ) then
-						texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
-					end
-				
-					slot.icon:SetTexture(texture)
-					slot.extraText:SetText("")
-					slot.typeText:SetText("")
-					slot.tooltip = L["No item equipped"]
-					slot.fullItemLink = nil
-					slot.equippedItem = nil
-					slot.enchantTooltip = nil
-					slot.gemTooltip = nil
-					slot:Disable()
-					slot:Show()
-				end
-			end
-		
-			ElitistGroup:ReleaseTables(enchantTooltips, gemTooltips)
-				
-			-- Now combine these too, in the same way you combine to make a better and more powerful robot
-			local equipSlot = frame.gearFrame.equipSlots[18]
-			local scoreIcon = equipmentData.totalScore >= 240 and "INV_Shield_72" or equipmentData.totalScore >= 220 and "INV_Shield_61" or equipmentData.totalScore >= 200 and "INV_Shield_26" or "INV_Shield_36"
-			equipSlot.text:SetFormattedText("%s%d|r", ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
-			equipSlot.icon:SetTexture("Interface\\Icons\\" .. scoreIcon)
-			equipSlot.tooltip = L["Average item level of all the players equipped items, with modifiers for blue or lower quality items."]
-			equipSlot:Show()
-		else
-			equipmentData, gemData, enchantData = nil, nil, nil
-		
-			for _, slot in pairs(frame.gearFrame.equipSlots) do slot:Hide() end
-			frame.pruneInfo:Show()
-		end
-
-		self.activePlayerScore = equipmentData and equipmentData.totalScore or 0
+		equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)
 	end
 
 	-- Build the players info
+	local infoFrame = self.infoFrame
+	-- CLASS
 	local coords = CLASS_BUTTONS[userData.classToken]
 	if( coords ) then
-		frame.userFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
-		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], userData.name, userData.server, userData.level, LOCALIZED_CLASS_NAMES_MALE[userData.classToken])
-		frame.userFrame.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
-		frame.userFrame.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+		infoFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
+		infoFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s %s."], userData.name, userData.server, userData.level, LOCALIZED_CLASS_NAMES_MALE[userData.classToken])
+		infoFrame.playerInfo.icon:SetTexture("Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes")
+		infoFrame.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
+		infoFrame.playerInfo.disableWrap = true
 	else
-		frame.userFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
-		frame.userFrame.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-		frame.userFrame.playerInfo.icon:SetTexCoord(0, 1, 0, 1)
-		frame.userFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
+		infoFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
+		infoFrame.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+		infoFrame.playerInfo.icon:SetTexCoord(0, 1, 0, 1)
+		infoFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
+		infoFrame.playerInfo.disableWrap = true
 	end
 	
+	-- TALENTS
 	if( not userData.pruned and userData.talentTree1 and userData.talentTree2 and userData.talentTree3 ) then
-		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData)
+		-- PRIMARY
+		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
 		specType = ElitistGroup.Talents.talentText[specType] or specType
 		if( not userData.unspentPoints ) then
-			frame.userFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, specType)
-			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
+			infoFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
+			infoFrame.talentInfo.tooltip = string.format(L["|cffffffffActive:|r %s, %s role."], specName, specType)
+			infoFrame.talentInfo.icon:SetTexture(specIcon)
 		else
-			frame.userFrame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-			frame.userFrame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, specType)
-			frame.userFrame.talentInfo.icon:SetTexture(specIcon)
+			infoFrame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
+			infoFrame.talentInfo.tooltip = string.format(L["|cffffffffActive:|r %s, %s role.\n\nThe player has not spent all their talent points!"], specName, specType)
+			infoFrame.talentInfo.icon:SetTexture(specIcon)
+		end
+		
+		-- SECONDARY
+		if( userData.secondarySpec ) then
+			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData.secondarySpec)
+			specType = ElitistGroup.Talents.talentText[specType] or specType
+			if( not userData.unspentPoints ) then
+				infoFrame.secondTalentInfo:SetFormattedText("%d/%d/%d (%s)", userData.secondarySpec.talentTree1, userData.secondarySpec.talentTree2, userData.secondarySpec.talentTree3, L["Secondary"])
+				infoFrame.secondTalentInfo.tooltip = string.format(L["|cffffffffSecondary:|r %s, %s role."], specName, specType)
+				infoFrame.secondTalentInfo.icon:SetTexture(specIcon)
+			else
+				infoFrame.secondTalentInfo:SetFormattedText(L["%d unspent (Secondary)"], userData.unspentPoints)
+				infoFrame.secondTalentInfo.tooltip = string.format(L["|cffffffffSecondary:|r %s, %s role.\n\nThe player has not spent all their talent points!"], specName, specType)
+				infoFrame.secondTalentInfo.icon:SetTexture(specIcon)
+			end
+		else
+			infoFrame.secondTalentInfo:SetText(L["No secondary spec"])
+			infoFrame.secondTalentInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+			infoFrame.secondTalentInfo.tooltip = L["The player has not purchased dual specialization yet."]
 		end
 	else
-		frame.userFrame.talentInfo:SetText(L["Talents unavailable"])
-		frame.userFrame.talentInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-	end
-		
-	local scanAge = (time() - userData.scanned) / 60
-	
-	if( scanAge <= 2 ) then
-		frame.userFrame.scannedInfo:SetText(L["<1 minute old"])
-		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_41")
-	elseif( scanAge < 60 ) then
-		frame.userFrame.scannedInfo:SetFormattedText(L["%d |4minute:minutes; old"], scanAge)
-		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_" .. (scanAge < 30 and 41 or 38))
-	elseif( scanAge <= 1440 ) then
-		frame.userFrame.scannedInfo:SetFormattedText(L["%d |4hour:hours; old"], scanAge / 60)
-		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_39")
-	else
-		frame.userFrame.scannedInfo:SetFormattedText(L["%d |4day:days; old"], scanAge / 1440)
-		frame.userFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_37")
-	end
-	
-	if( ElitistGroup:IsTrusted(userData.from) ) then
-		frame.userFrame.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
-		frame.userFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
-		frame.userFrame.trustedInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
-	else
-		frame.userFrame.trustedInfo:SetFormattedText(L["%s (Untrusted)"], string.match(userData.from, "(.-)%-"))
-		frame.userFrame.trustedInfo.tooltip = L["While the player data should be accurate, it is not guaranteed as the source is unverified."]
-		frame.userFrame.trustedInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
-	end
-	
-	-- Build the necessary experience data based on the players achievements, this is fun!
-	if( not userData.pruned and ( not updateType or updateType == "achievements" ) ) then
-		tempList = ElitistGroup:GetTable()
-		table.wipe(achievementTooltips)
-		table.wipe(experienceData)
-		table.wipe(experienceDataMain)
+		infoFrame.talentInfo:SetText(L["Talents unavailable"])
+		infoFrame.talentInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 
-		for _, data in pairs(DungeonData.experience) do
-			experienceData[data.id] = experienceData[data.id] or 0
-			experienceDataMain[data.id] = experienceDataMain[data.id] or 0
-				
-			for id, points in pairs(data) do
-				if( userData.achievements[id] ) then
-					experienceData[data.id] = experienceData[data.id] + (userData.achievements[id] * points)
-				end
-				
-				if( userData.mainAchievements and userData.mainAchievements[id] ) then
-					experienceDataMain[data.id] = experienceDataMain[data.id] + (userData.mainAchievements[id] * points)
-				end
-			end
-			
-			-- Add the childs score to the parents
-			if( not data.parent ) then
-				experienceData[data.childOf] = (experienceData[data.childOf] or 0) + experienceData[data.id]
-				experienceDataMain[data.childOf] = (experienceDataMain[data.childOf] or 0) + experienceDataMain[data.id]
-			end
-			
-			-- Cascade the scores from this one to whatever it's supposed to
-			if( data.cascade ) then
-				experienceData[data.cascade] = (experienceData[data.cascade] or 0) + experienceData[data.id]
-				experienceDataMain[data.cascade] = (experienceDataMain[data.cascade] or 0) + experienceDataMain[data.id]
-			end
-			
-			-- Build the tooltip, caching it because it really does not need to be recalcualted that often
-			table.wipe(tempList)
-			for achievementID, points in pairs(data) do
-				if( type(achievementID) == "number" and type(points) == "number" ) then
-					table.insert(tempList, achievementID)
-				end
-			end
-			
-			table.sort(tempList, sortAchievements)
-			
-			achievementTooltips[data.id] = ""
-			for i=1, #(tempList) do
-				local achievementID = tempList[i]
-				local name, _, _, _, _, _, _, flags = select(2, GetAchievementInfo(achievementID))
-				name = string.trim(string.gsub(name, "%((.-)%)$", ""))
-				
-				local earned = userData.achievements[achievementID]
-				local mainEarned = userData.mainAchievements and userData.mainAchievements[achievementID]
-				if( mainEarned and userData.mainAchievements ) then
-					if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
-						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d | %d]|r %s", mainEarned or 0, earned or 0, name)
-					else
-						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s | %s]|r %s", mainEarned == 1 and YES or NO, earned == 1 and YES or NO, name)
-					end
-				else
-					if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
-						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d]|r %s", earned or 0, name)
-					else
-						achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s]|r %s", earned == 1 and YES or NO, name)
-					end
-				end
+		infoFrame.secondTalentInfo:SetText(L["Talents unavailable"])
+		infoFrame.secondTalentInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+	end
+	
+	if( not userData.pruned ) then
+		local equipmentTooltip, gemTooltip, enchantTooltip = ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantData)
+
+		if( not updateType or updateType == "gear" ) then
+			-- EQUIPMENT
+			local percent = math.max(math.min(1, (equipmentData.totalEquipped - equipmentData.totalBad) / equipmentData.totalEquipped), 0)
+			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+			infoFrame.equipmentInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] [%s%d|r] Equipment"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
+			infoFrame.equipmentInfo.tooltip = equipmentTooltip
+			infoFrame.equipmentInfo.disableWrap = true
+		
+			-- ENCHANTS
+			if( not enchantData.noData ) then
+				local percent = math.max(math.min(1, (enchantData.total - enchantData.totalBad) / enchantData.total), 0)
+				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+
+				infoFrame.enchantInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Enchants"], r, g, percent * 100)
+				infoFrame.enchantInfo.tooltip = enchantTooltip
+				infoFrame.enchantInfo.disableWrap = not enchantData.noData
+			else
+				infoFrame.enchantInfo:SetText(L["[|cffff20200%|r] Enchants"])
+				infoFrame.enchantInfo.tooltip = L["No enchants found."]
+				infoFrame.enchantInfo.disableWrap = nil
 			end
 		end
 		
-		ElitistGroup:ReleaseTables(tempList)
+		-- GEMS
+		if( not updateType or updateType == "gems" ) then
+			-- Build gems
+			if( not gemData.noData ) then
+				local percent = math.max(math.min(1, (gemData.total - gemData.totalBad) / gemData.total), 0)
+				local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
+				local g = (percent > 0.5 and 1.0 or percent * 2) * 255
+
+				infoFrame.gemInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Gems"], r, g, percent * 100)
+				infoFrame.gemInfo.tooltip = gemTooltip
+				infoFrame.gemInfo.disableWrap = not gemData.noData
+			else
+				infoFrame.gemInfo:SetText(L["[|cffff20200%|r] Gems"])
+				infoFrame.gemInfo.tooltip = L["No gems found."]
+				infoFrame.gemInfo.disableWrap = nil
+			end		
+		end
+
+		infoFrame.enchantInfo:Show()
+		infoFrame.gemInfo:Show()
+	else
+		infoFrame.equipmentInfo:SetText(L["User data pruned"])
+		infoFrame.equipmentInfo.tooltip = L["Data has been pruned to save database space.\n\nPerhaps you want to change prune settings in /eg config?"]
+		infoFrame.equipmentInfo.disableWrap = nil
+		infoFrame.enchantInfo:Hide()
+		infoFrame.gemInfo:Hide()
 	end
 		
-	-- Setup dungeon info
+	-- SCAN AGE
+	local scanAge = (time() - userData.scanned) / 60
+	if( scanAge <= 2 ) then
+		infoFrame.scannedInfo:SetText(L["<1 minute old"])
+		infoFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_41")
+	elseif( scanAge < 60 ) then
+		infoFrame.scannedInfo:SetFormattedText(L["%d |4minute:minutes; old"], scanAge)
+		infoFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_" .. (scanAge < 30 and 41 or 38))
+	elseif( scanAge <= 1440 ) then
+		infoFrame.scannedInfo:SetFormattedText(L["%d |4hour:hours; old"], scanAge / 60)
+		infoFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_39")
+	else
+		infoFrame.scannedInfo:SetFormattedText(L["%d |4day:days; old"], scanAge / 1440)
+		infoFrame.scannedInfo.icon:SetTexture("Interface\\Icons\\INV_JewelCrafting_Gem_37")
+	end
+	
+	-- TRUSTED
+	if( ElitistGroup:IsTrusted(userData.from) ) then
+		infoFrame.trustedInfo:SetFormattedText(L["%s (Trusted)"], string.match(userData.from, "(.-)%-"))
+		infoFrame.trustedInfo.tooltip = L["Data for this player is from a verified source and can be trusted."]
+		infoFrame.trustedInfo.icon:SetTexture(READY_CHECK_READY_TEXTURE)
+	else
+		infoFrame.trustedInfo:SetFormattedText(L["%s (Untrusted)"], string.match(userData.from, "(.-)%-"))
+		infoFrame.trustedInfo.tooltip = L["The data you see should be accurate. However, it is not guaranteed as it is from an unverified source."]
+		infoFrame.trustedInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
+	end
+	
+	-- DUNGEON INFO
 	-- Find where the players score lets them into at least
 	local lockedScore
 	if( not userData.pruned ) then
@@ -305,7 +233,7 @@ function Users:BuildUI(userData, updateType)
 			if( lockedScore and lockedScore ~= score ) then
 				self.forceOffset = math.ceil((i + 1) / 4)
 				break
-			elseif( self.activePlayerScore >= score ) then
+			elseif( equipmentData.totalScore >= score ) then
 				lockedScore = score
 				self.forceOffset = math.ceil((i + 1) / 4)
 			end
@@ -314,20 +242,46 @@ function Users:BuildUI(userData, updateType)
 		self.forceOffset = 0
 	end
 	
-	-- Build notes
+	-- NOTE MANAGEMENT
 	if( not updateType or updateType == "notes" ) then
-		frame.userFrame.manageNote:SetText(self.activeData.notes[ElitistGroup.playerID] and L["Edit Note"] or L["Add Note"])
 		if( ElitistGroup.playerID ~= self.activeUserID ) then
-			frame.userFrame.manageNote.tooltip = L["You can edit or add a note on this player here."]
-			frame.userFrame.manageNote:Enable()
+			infoFrame.manageNote:SetText(userData.notes[ElitistGroup.playerID] and L["Edit"] or L["Add"])
+			infoFrame.manageNote.tooltip = L["You can edit or add a note on this player here."]
+			infoFrame.manageNote:Show()
 		else
-			frame.userFrame.manageNote.tooltip = L["You cannot set a note on yourself!"]
-			frame.userFrame.manageNote:Disable()
+			infoFrame.manageNote:Hide()
 		end
 	
 		self.activeDataNotes = 0
-		for _ in pairs(userData.notes) do 
+		local average = 0
+		local playerNote = userData.notes[ElitistGroup.playerID]
+		for _, data in pairs(userData.notes) do 
 			self.activeDataNotes = self.activeDataNotes + 1
+			average = average + data.rating
+		end
+		
+		if( average > 0 ) then
+			infoFrame.averageInfo:SetFormattedText(L["%d average rating"], average / self.activeDataNotes)
+			infoFrame.averageInfo.icon:SetTexture(average > 2 and READY_CHECK_READY_TEXTURE or READY_CHECK_NOT_READY_TEXTURE)
+			
+			if( playerNote ) then
+				local noteAge = (time() - playerNote.time) / 60
+				if( noteAge < 60 ) then
+					noteAge = string.format(L["%d |4minute:minutes;"], noteAge)
+				elseif( noteAge < 1440 ) then
+					noteAge = string.format(L["%d |4hour:hours;"], noteAge / 60)
+				else
+					noteAge = string.format(L["%d |4day:days;"], noteAge / 1440)
+				end
+				
+				infoFrame.averageInfo.tooltip = string.format(L["You wrote %s ago:\n|cffffffff%s|r"], noteAge, playerNote.comment or L["No comment"])
+			else
+				infoFrame.averageInfo.tooltip = nil
+			end
+		else
+			infoFrame.averageInfo:SetFormattedText(L["No ratings found"])
+			infoFrame.averageInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
+			infoFrame.averageInfo.tooltip = nil
 		end
 	
 		if( self.frame.manageNote and self.frame.manageNote:IsVisible() ) then
@@ -335,11 +289,16 @@ function Users:BuildUI(userData, updateType)
 		end
 	end
 
-	-- General updates
-	self:UpdateDungeonInfo()
-	self:UpdateTabPage()
+	-- Flag that we need achievement data updated
+	if( not updateType or updateType == "achievements" ) then
+		self.updateAchievements = true
+	end
+	
+	self:BuildDungeonSuggestPage()
+	self:UpdateTabs()
 end
 
+-- DATABASE BROWSER
 local function sortNames(a, b)
 	if( UnitExists(userList[a]) == UnitExists(userList[b]) ) then
 		return a < b
@@ -351,11 +310,41 @@ local function sortNames(a, b)
 end
 
 -- Query builder for searching
+function Users:RebuildDatabaseTable()
+	if( not self.rebuildDatabase ) then return end
+	self.rebuildDatabase = nil
+	
+	for playerID, data in pairs(ElitistGroup.db.faction.users) do
+		local user = userList[playerID]
+		if( not user or not user.classToken or not user.level or not user.server or not user.name ) then
+			local classToken, level, server, name
+			-- Get the data first
+			if( rawget(ElitistGroup.userData, playerID) ) then
+				name, server, level, classToken = ElitistGroup.userData[playerID].name, ElitistGroup.userData[playerID].server, ElitistGroup.userData[playerID].level, ElitistGroup.userData[playerID].classToken
+			elseif( data ~= "" ) then
+				name, server, level, classToken = string.match(data, "name=\"(.-)\""), string.match(data, "server=\"(.-)\""), tonumber(string.match(data, "level=([0-9]+)")), string.match(data, "classToken=\"([A-Z]+)\"")
+			end
+			
+			user = user or {}
+			user.playerID = playerID
+			user.classToken = classToken
+			user.level = level
+			user.name = name
+			user.server = server
+			
+			if( not userList[playerID] ) then
+				userList[playerID] = user
+				table.insert(userList, playerID)
+			end
+		end
+	end
+end
+
 local query
 local function buildQuery(search)
 	search = string.lower(search)
 	
---local search = not self.frame.databaseFrame.search.searchText and string.gsub(string.lower(self.frame.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
+--local search = not self.databaseFrame.search.searchText and string.gsub(string.lower(self.databaseFrame.search:GetText() or ""), "%-", "%%-") or ""
 	local class = string.match(search, L["c%-\"(.-)\""])
 	local minRange, maxRange = string.match(search, "(%d+)%-(%d+)")
 	local level = string.match(search, "(%d+)")
@@ -408,37 +397,7 @@ local function buildQuery(search)
 	end
 end
 
-function Users:RebuildDatabaseTable()
-	if( not self.rebuildDatabase ) then return end
-	self.rebuildDatabase = nil
-	
-	for playerID, data in pairs(ElitistGroup.db.faction.users) do
-		local user = userList[playerID]
-		if( not user or not user.classToken or not user.level or not user.server or not user.name ) then
-			local classToken, level, server, name
-			-- Get the data first
-			if( rawget(ElitistGroup.userData, playerID) ) then
-				name, server, level, classToken = ElitistGroup.userData[playerID].name, ElitistGroup.userData[playerID].server, ElitistGroup.userData[playerID].level, ElitistGroup.userData[playerID].classToken
-			elseif( data ~= "" ) then
-				name, server, level, classToken = string.match(data, "name=\"(.-)\""), string.match(data, "server=\"(.-)\""), tonumber(string.match(data, "level=([0-9]+)")), string.match(data, "classToken=\"([A-Z]+)\"")
-			end
-			
-			user = user or {}
-			user.playerID = playerID
-			user.classToken = classToken
-			user.level = level
-			user.name = name
-			user.server = server
-			
-			if( not userList[playerID] ) then
-				userList[playerID] = user
-				table.insert(userList, playerID)
-			end
-		end
-	end
-end
-
-function Users:UpdateDatabasePage()
+function Users:BuildDatabasePage()
 	self = Users
 	if( not ElitistGroup.db.profile.general.databaseExpanded ) then return end
 	
@@ -447,14 +406,14 @@ function Users:UpdateDatabasePage()
 		query = query or {}
 		table.wipe(query)
 
-		local useSearch = not self.frame.databaseFrame.search.searchText and self.frame.databaseFrame.search:GetText()
+		local useSearch = not self.databaseFrame.search.searchText and self.databaseFrame.search:GetText()
 		useSearch = useSearch and useSearch ~= "" and useSearch or nil
 		if( useSearch ) then
 			buildQuery(useSearch)
 		end
 		
 		self:RebuildDatabaseTable()
-		self.frame.databaseFrame.visibleUsers = 0
+		self.databaseFrame.visibleUsers = 0
 
 		for i=1, #(userList) do
 			local user = userList[userList[i]]
@@ -468,7 +427,7 @@ function Users:UpdateDatabasePage()
 						-- Search class token
 						if( not query.classToken or not user.classToken or user.classToken == query.classToken ) then
 							user.visible = true
-							self.frame.databaseFrame.visibleUsers = self.frame.databaseFrame.visibleUsers + 1
+							self.databaseFrame.visibleUsers = self.databaseFrame.visibleUsers + 1
 						end
 					end
 				end
@@ -478,32 +437,27 @@ function Users:UpdateDatabasePage()
 		table.sort(userList, sortNames)
 	end
 	
-	FauxScrollFrame_Update(self.frame.databaseFrame.scroll, self.frame.databaseFrame.visibleUsers, MAX_DATABASE_ROWS, 16)
-	ElitistGroupDatabaseSearch:SetWidth(self.frame.databaseFrame.scroll:IsVisible() and 195 or 210)
+	FauxScrollFrame_Update(self.databaseFrame.scroll, self.databaseFrame.visibleUsers, MAX_DATABASE_ROWS, 16)
+	ElitistGroupDatabaseSearch:SetWidth(self.databaseFrame.scroll:IsVisible() and 195 or 210)
 
-	for _, row in pairs(self.frame.databaseFrame.rows) do row:Hide() end
+	for _, row in pairs(self.databaseFrame.rows) do row:Hide() end
 
-	local offset = FauxScrollFrame_GetOffset(self.frame.databaseFrame.scroll)
-	local rowWidth = self.frame.databaseFrame:GetWidth() - (self.frame.databaseFrame.scroll:IsVisible() and 40 or 24)
+	local offset = FauxScrollFrame_GetOffset(self.databaseFrame.scroll)
+	local rowWidth = self.databaseFrame:GetWidth() - (self.databaseFrame.scroll:IsVisible() and 40 or 24)
 	
 	local rowID, userID = 1, 1
 	for id=1, #(userList) do
 		local user = userList[userList[id]]
 		if( userID > offset and user.visible ) then
-			local row = self.frame.databaseFrame.rows[rowID]
+			local row = self.databaseFrame.rows[rowID]
 			row.userID = user.playerID
 			row.tooltip = string.format(L["View info on %s."], user.playerID)
 			row:SetWidth(rowWidth)
 			row:Show()
 			
-			local classHex, selected = "", ""
 			local classColor = user.classToken and RAID_CLASS_COLORS[user.classToken]
-			if( self.activeData and row.userID == self.activeUserID ) then
-				selected = "[*] "
-				classHex = "|cffffffff"
-			elseif( classColor ) then
-				classHex = string.format("|cff%02x%02x%02x", classColor.r * 255, classColor.g * 255, classColor.b * 255)
-			end
+			local classHex = classColor and string.format("|cff%02x%02x%02x", classColor.r * 255, classColor.g * 255, classColor.b * 255) or ""
+			local selected = userData and row.userID == self.activeUserID and "[*] " or ""
 			
 			if( user.playerID ~= ElitistGroup.playerID and UnitExists(user.name) ) then
 				row:SetFormattedText("%s|cffffffff[%s]|r %s%s|r", selected, GROUP, classHex, user.playerID)
@@ -521,43 +475,161 @@ function Users:UpdateDatabasePage()
 	end
 end
 
-function Users:UpdateTabPage()
-	self.frame.userTabFrame.notesButton:SetFormattedText(L["Notes (%d)"], self.activeDataNotes)
-	if( self.activeData.pruned ) then
-		self.frame.userTabFrame.selectedTab = "notes"
-		self.frame.userTabFrame.notesButton:Enable()
-		self.frame.userTabFrame.achievementsButton:Disable()
-	elseif( self.activeDataNotes == 0 ) then
-		self.frame.userTabFrame.selectedTab = "achievements"
-		self.frame.userTabFrame.notesButton:Disable()
-		self.frame.userTabFrame.achievementsButton:Enable()
-	else
-		self.frame.userTabFrame.notesButton:Enable()
-		self.frame.userTabFrame.achievementsButton:Enable()
-	end
+-- EQUIPMENT PAGE UPDATE
+function Users:BuildEquipmentPage()
+	local equipmentFrame = self.equipmentFrame
+	local enchantTooltips, gemTooltips = ElitistGroup:GetGearSummaryTooltip(userData.equipment, enchantData, gemData)
 	
-	if( self.frame.userTabFrame.selectedTab == "notes" ) then
-		self.frame.noteFrame:Show()
-		self.frame.achievementFrame:Hide()
+	for _, slot in pairs(equipmentFrame.equipSlots) do
+		-- Yay, item!
+		if( slot.inventoryID and userData.equipment[slot.inventoryID] ) then
+			local itemLink = userData.equipment[slot.inventoryID]
+			local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
+			if( itemQuality and itemLevel ) then
+				local baseItemLink = ElitistGroup:GetBaseItemLink(itemLink)
+			
+				-- Now sum it all up
+				slot.tooltip = nil
+				slot.equippedItem = itemLink
+				slot.gemTooltip = gemTooltips[itemLink]
+				slot.enchantTooltip = enchantTooltips[itemLink]
+				slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
+				slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
+				slot.fullItemLink = fullItemLink
+				slot.icon:SetTexture(itemIcon)
+				slot.typeText:SetText(slot.itemTalentType)
+				slot:Enable()
+				slot:Show()
+			
+				if( equipmentData[itemLink] ) then
+					slot.typeText:SetTextColor(1, 0.15, 0.15)
+				else
+					slot.typeText:SetTextColor(1, 1, 1)
+				end
 
-		self.frame.userTabFrame.notesButton:LockHighlight()
-		self.frame.userTabFrame.achievementsButton:UnlockHighlight()
+				local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[-1]
+				slot.levelText:SetText(math.floor(ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)))
+				slot.levelText:SetTextColor(color.r, color.g, color.b)
+
+				if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
+					slot.enhanceText:SetText(L["Enhancements"])
+				else
+					slot.enhanceText:SetText(nil)
+				end
+
+			-- We have an item, but the cache does't exist yet
+			else
+				slot.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+				slot.enhanceText:SetText(nil)
+				slot.typeText:SetFormattedText(L["Item #%d not in cache"], string.match(itemLink, "item:(%d+)") or -1)
+				slot.typeText:SetTextColor(1, 1, 1)
+				slot.levelText:SetText("---")
+				slot.levelText:SetTextColor(1, 1, 1)
+				slot:Disable()
+				slot:Show()
+			end
+		-- No item :(
+		elseif( slot.inventoryID ) then
+			local texture = slot.emptyTexture
+			if( slot.checkRelic and ( userData.classToken == "PALADIN" or userData.classToken == "DRUID" or userData.classToken == "SHAMAN" ) ) then
+				texture = "Interface\\Paperdoll\\UI-PaperDoll-Slot-Relic.blp"
+			end
 		
-		self:UpdateNoteInfo()
-	else
-		self.frame.noteFrame:Hide()
-		self.frame.achievementFrame:Show()
-
-		self.frame.userTabFrame.notesButton:UnlockHighlight()
-		self.frame.userTabFrame.achievementsButton:LockHighlight()
-
-		self:UpdateAchievementInfo()
+			slot.icon:SetTexture(texture)
+			slot.enhanceText:SetText(nil)
+			slot.typeText:SetText(L["No item equipped"])
+			slot.typeText:SetTextColor(1, 1, 1)
+			slot.levelText:SetText("---")
+			slot.levelText:SetTextColor(1, 1, 1)
+			slot.tooltip = L["No item equipped"]
+			slot:Disable()
+			slot:Show()
+		end
 	end
+
+	ElitistGroup:ReleaseTables(enchantTooltips, gemTooltips)
 end
 
-function Users:UpdateAchievementInfo()
+
+-- Create the achievement data
+function Users:UpdateAchievementData()
+	if( not self.updateAchievements ) then return end
+	self.updateAchievements = true
+	
+	tempList = ElitistGroup:GetTable()
+	table.wipe(achievementTooltips)
+	table.wipe(experienceData)
+	table.wipe(experienceDataMain)
+
+	for _, data in pairs(DungeonData.experience) do
+		experienceData[data.id] = experienceData[data.id] or 0
+		experienceDataMain[data.id] = experienceDataMain[data.id] or 0
+			
+		for id, points in pairs(data) do
+			if( userData.achievements[id] ) then
+				experienceData[data.id] = experienceData[data.id] + (userData.achievements[id] * points)
+			end
+			
+			if( userData.mainAchievements and userData.mainAchievements[id] ) then
+				experienceDataMain[data.id] = experienceDataMain[data.id] + (userData.mainAchievements[id] * points)
+			end
+		end
+		
+		-- Add the childs score to the parents
+		if( not data.parent ) then
+			experienceData[data.childOf] = (experienceData[data.childOf] or 0) + experienceData[data.id]
+			experienceDataMain[data.childOf] = (experienceDataMain[data.childOf] or 0) + experienceDataMain[data.id]
+		end
+		
+		-- Cascade the scores from this one to whatever it's supposed to
+		if( data.cascade ) then
+			experienceData[data.cascade] = (experienceData[data.cascade] or 0) + experienceData[data.id]
+			experienceDataMain[data.cascade] = (experienceDataMain[data.cascade] or 0) + experienceDataMain[data.id]
+		end
+		
+		-- Build the tooltip, caching it because it really does not need to be recalcualted that often
+		table.wipe(tempList)
+		for achievementID, points in pairs(data) do
+			if( type(achievementID) == "number" and type(points) == "number" ) then
+				table.insert(tempList, achievementID)
+			end
+		end
+		
+		table.sort(tempList, sortAchievements)
+		
+		achievementTooltips[data.id] = ""
+		for i=1, #(tempList) do
+			local achievementID = tempList[i]
+			local name, _, _, _, _, _, _, flags = select(2, GetAchievementInfo(achievementID))
+			name = string.trim(string.gsub(name, "%((.-)%)$", ""))
+			
+			local earned = userData.achievements[achievementID]
+			local mainEarned = userData.mainAchievements and userData.mainAchievements[achievementID]
+			if( mainEarned and userData.mainAchievements ) then
+				if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
+					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d | %d]|r %s", mainEarned or 0, earned or 0, name)
+				else
+					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s | %s]|r %s", mainEarned == 1 and YES or NO, earned == 1 and YES or NO, name)
+				end
+			else
+				if( bit.band(flags, ACHIEVEMENT_FLAGS_STATISTIC) > 0 ) then
+					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%d]|r %s", earned or 0, name)
+				else
+					achievementTooltips[data.id] = achievementTooltips[data.id] .. "\n" .. string.format("|cffffffff[%s]|r %s", earned == 1 and YES or NO, name)
+				end
+			end
+		end
+	end
+	
+	ElitistGroup:ReleaseTables(tempList)
+end
+
+-- ACHIEVEMENTS
+function Users:BuildAchievementPage()
 	local self = Users
-	local totalEntries = self.activeData.mainAchievements and 1 or 0
+	local totalEntries = userData.mainAchievements and 1 or 0
+
+	-- Figure out what's visible, since some categories can be expanded
 	for id, data in pairs(DungeonData.experience) do
 		experienceData[data.id] = experienceData[data.id] or 0
 		if( not data.childOf or ( data.childOf and ElitistGroup.db.profile.expExpanded[data.childOf] and ( not DungeonData.experienceParents[data.childOf] or ElitistGroup.db.profile.expExpanded[DungeonData.experienceParents[data.childOf]] ) ) ) then
@@ -568,13 +640,13 @@ function Users:UpdateAchievementInfo()
 		end
 	end
 	
-	FauxScrollFrame_Update(self.frame.achievementFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS, 18)
+	FauxScrollFrame_Update(self.achievementsFrame.scroll, totalEntries, MAX_ACHIEVEMENT_ROWS, 18)
 	
-	for _, row in pairs(self.frame.achievementFrame.rows) do row.tooltip = nil; row.toggle:Hide(); row:Hide() end
+	for _, row in pairs(self.achievementsFrame.rows) do row.tooltip = nil; row.toggle:Hide(); row:Hide() end
 
 	local rowID, rowOffset, id = 1, 0, 0
-	local rowWidth = self.frame.achievementFrame:GetWidth() - (self.frame.achievementFrame.scroll:IsVisible() and 26 or 10)
-	local offset = FauxScrollFrame_GetOffset(self.frame.achievementFrame.scroll)
+	local rowWidth = self.achievementsFrame:GetWidth() - (self.achievementsFrame.scroll:IsVisible() and 26 or 10)
+	local offset = FauxScrollFrame_GetOffset(self.achievementsFrame.scroll)
 	
 	if( self.activeData.mainAchievements and offset == 0 ) then
 		local row = self.frame.achievementFrame.rows[rowID]
@@ -595,7 +667,7 @@ function Users:UpdateAchievementInfo()
 		if( data.isVisible ) then
 			id = id + 1
 			if( id >= offset ) then
-				local row = self.frame.achievementFrame.rows[rowID]
+				local row = self.achievementsFrame.rows[rowID]
 
 				-- Setup toggle button
 				if( not data.childless and ( DungeonData.experienceParents[data.id] or data.parent ) ) then
@@ -621,7 +693,7 @@ function Users:UpdateAchievementInfo()
 				elseif( data.experienced ) then
 					local experienceText
 					-- Not an alt, so do the simple display
-					if( not self.activeData.mainAchievements ) then
+					if( not userData.mainAchievements ) then
 						local percent = math.min(experienceData[data.id] / data.experienced, 1)
 						local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 						local g = (percent > 0.5 and 1.0 or percent * 2) * 255
@@ -659,7 +731,7 @@ function Users:UpdateAchievementInfo()
 				
 				row:SetWidth(rowWidth - rowOffset)
 				row:ClearAllPoints()
-				row:SetPoint("TOPLEFT", self.frame.achievementFrame, "TOPLEFT", 4 + rowOffset, -3 - 17 * (rowID - 1))
+				row:SetPoint("TOPLEFT", self.achievementsFrame, "TOPLEFT", 4 + rowOffset, -3 - 17 * (rowID - 1))
 				row:Show()
 				
 				rowID = rowID + 1
@@ -669,18 +741,19 @@ function Users:UpdateAchievementInfo()
 	end
 end
 
-function Users:UpdateNoteInfo()
-	local self = Users
-	FauxScrollFrame_Update(self.frame.noteFrame.scroll, self.activeDataNotes, MAX_NOTE_ROWS - 1, 48)
+-- NOTES
+function Users:BuildNotesPage()
+	self = Users
+	FauxScrollFrame_Update(self.notesFrame.scroll, self.activeDataNotes, MAX_NOTE_ROWS - 1, 48)
 		
-	for _, row in pairs(self.frame.noteFrame.rows) do row:Hide() end
-	local rowWidth = self.frame.noteFrame:GetWidth() - (self.frame.noteFrame.scroll:IsVisible() and 24 or 10)
+	for _, row in pairs(self.notesFrame.rows) do row:Hide() end
+	local rowWidth = self.notesFrame:GetWidth() - (self.notesFrame.scroll:IsVisible() and 24 or 10)
 	
 	local id, rowID = 1, 1
-	local offset = FauxScrollFrame_GetOffset(self.frame.noteFrame.scroll)
-	for from, note in pairs(self.activeData.notes) do
+	local offset = FauxScrollFrame_GetOffset(self.notesFrame.scroll)
+	for from, note in pairs(userData.notes) do
 		if( id >= offset ) then
-			local row = self.frame.noteFrame.rows[rowID]
+			local row = self.notesFrame.rows[rowID]
 
 			local percent = (note.rating - 1) / (ElitistGroup.MAX_RATING - 1)
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
@@ -705,28 +778,29 @@ function Users:UpdateNoteInfo()
 	end
 end
 
-function Users:UpdateDungeonInfo()
+-- SUGGESTED DUNGEONS
+function Users:BuildDungeonSuggestPage()
 	local self = Users
 	local TOTAL_DUNGEONS = #(DungeonData.suggested) / 4
 
-	FauxScrollFrame_Update(self.frame.dungeonFrame.scroll, TOTAL_DUNGEONS, MAX_DUNGEON_ROWS - 1, 28)
+	FauxScrollFrame_Update(self.dungeonFrame.scroll, TOTAL_DUNGEONS, MAX_DUNGEON_ROWS - 1, 28)
 	if( self.forceOffset ) then
 		self.forceOffset = math.min(self.forceOffset, TOTAL_DUNGEONS - MAX_DUNGEON_ROWS + 1)
-		self.frame.dungeonFrame.scroll.offset = self.forceOffset
-		self.frame.dungeonFrame.scroll.bar:SetValue(28 * self.forceOffset)
+		self.dungeonFrame.scroll.offset = self.forceOffset
+		self.dungeonFrame.scroll.bar:SetValue(28 * self.forceOffset)
 		self.forceOffset = nil
 	end
 
-	for _, row in pairs(self.frame.dungeonFrame.rows) do row:Hide() end
+	for _, row in pairs(self.dungeonFrame.rows) do row:Hide() end
 	
 	local id, rowID = 1, 1
-	local offset = FauxScrollFrame_GetOffset(self.frame.dungeonFrame.scroll)
+	local offset = FauxScrollFrame_GetOffset(self.dungeonFrame.scroll)
 	for dataID=1, #(DungeonData.suggested), 4 do
 		if( id >= offset ) then
-			local row = self.frame.dungeonFrame.rows[rowID]
+			local row = self.dungeonFrame.rows[rowID]
 			
 			local name, score, players, type = DungeonData.suggested[dataID], DungeonData.suggested[dataID + 1], DungeonData.suggested[dataID + 2], DungeonData.suggested[dataID + 3]
-			local levelDiff = score - self.activePlayerScore
+			local levelDiff = score - equipmentData.totalScore
 			local percent = levelDiff <= 0 and 1 or levelDiff >= 30 and 0 or levelDiff <= 10 and 0.80 or levelDiff <= 20 and 0.50 or levelDiff <= 30 and 0.40
 			local r = (percent > 0.5 and (1.0 - percent) * 2 or 1.0) * 255
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
@@ -744,6 +818,49 @@ function Users:UpdateDungeonInfo()
 	end
 end
 
+-- TAB UPDATER
+function Users:UpdateTabs()
+	self.tabContainer.notes:SetFormattedText(L["Notes (%d)"], self.activeDataNotes)
+	if( userData.pruned ) then
+		self.tabContainer.achievements:Disable()
+		self.tabContainer.equipment:Disable()
+	else
+		self.tabContainer.achievements:Enable()
+		self.tabContainer.equipment:Enable()
+	end
+	
+	if( self.activeDataNotes == 0 ) then
+		self.tabContainer.notes:Disable()
+	else
+		self.tabContainer.notes:Enable()
+	end
+	
+	local selectedTab = self.tabContainer.selectedTab
+	selectedTab = selectedTab ~= "notes" and userData.pruned and "notes" or selectedTab == "notes" and self.activeDataNotes == 0 and "achievements" or selectedTab
+	
+	-- Handle the visuals
+	self.notesFrame:Hide()
+	self.tabContainer.notes:UnlockHighlight()
+	self.equipmentFrame:Hide()
+	self.tabContainer.equipment:UnlockHighlight()
+	self.achievementsFrame:Hide()
+	self.tabContainer.achievements:UnlockHighlight()
+	
+	self[selectedTab .. "Frame"]:Show()
+	self.tabContainer[selectedTab]:LockHighlight()
+	
+	-- Now handle the updating part
+	if( selectedTab == "achievements" ) then
+		self:UpdateAchievementData()
+		self:BuildAchievementPage()
+	elseif( selectedTab == "notes" ) then
+		self:BuildNotesPage()
+	elseif( selectedTab == "equipment" ) then
+		self:BuildEquipmentPage()
+	end
+end
+
+-- MANUAL NOTE MANAGER
 managePlayerNote = function()
 	local self = Users
 	local frame = self.frame
@@ -751,31 +868,31 @@ managePlayerNote = function()
 		if( frame.manageNote ) then
 			frame.manageNote:Hide()
 		end
-		frame.userFrame.manageNote:UnlockHighlight()
+		infoFrame.manageNote:UnlockHighlight()
 		return
 	end
 	
 	local defaultRole = 0
 	if( not frame.manageNote ) then
 		local function getNote()
-			if( not Users.activeData.notes[ElitistGroup.playerID] ) then
+			if( not userData.notes[ElitistGroup.playerID] ) then
 				Users.activeDataNotes = Users.activeDataNotes + 1
-				Users.activeData.notes[ElitistGroup.playerID] = {rating = 3, role = defaultRole, time = time()}
+				userData.notes[ElitistGroup.playerID] = {rating = 3, role = defaultRole, time = time()}
 			end
 			
 			ElitistGroup.writeQueue[Users.activeUserID] = true
+			Users.infoFrame.manageNote:SetText(L["Edit"])
 			frame.manageNote.delete:Enable()
-			return Users.activeData.notes[ElitistGroup.playerID]
+			return userData.notes[ElitistGroup.playerID]
 		end
 		
 		local function UpdateComment(self)
 			local text = self:GetText()
 			if( text ~= self.lastText ) then
 				self.lastText = text
-				
 				local playerNote = getNote()
 				playerNote.comment = string.trim(text) ~= "" and text or nil
-				Users:UpdateTabPage()
+				Users:UpdateTabs()
 			end
 		end
 		
@@ -792,103 +909,34 @@ managePlayerNote = function()
 			
 			playerNote.role = bit.bor(isTank and ElitistGroup.ROLE_TANK or 0, isHealer and ElitistGroup.ROLE_HEALER or 0, isDamage and ElitistGroup.ROLE_DAMAGE or 0)
 			SetDesaturation(self:GetNormalTexture(), bit.band(playerNote.role, self.roleID) == 0)
-			Users:UpdateTabPage()
+			Users:UpdateTabs()
 		end
 		
 		local function UpdateRating(self)
 			local playerNote = getNote()
 			playerNote.rating = self:GetValue()
-			Users:UpdateTabPage()
+			Users:UpdateTabs()
 		end
 		
 		frame.manageNote = CreateFrame("Frame", nil, frame)
-		frame.manageNote:SetFrameLevel(frame.dungeonFrame:GetFrameLevel() + 10)
+		frame.manageNote:EnableMouse(true)
+		frame.manageNote:SetFrameLevel(self.dungeonFrame:GetFrameLevel() + 10)
 		frame.manageNote:SetFrameStrata("MEDIUM")
 		frame.manageNote:SetBackdrop(backdrop)
 		frame.manageNote:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
 		frame.manageNote:SetBackdropColor(0, 0, 0)
-		frame.manageNote:SetHeight(252)
-		frame.manageNote:SetWidth(175)
-		frame.manageNote:SetPoint("TOPLEFT", frame.userFrame.manageNote, "BOTTOMLEFT", -3, -1)
+		frame.manageNote:SetHeight(99)
+		frame.manageNote:SetWidth(185)
+		frame.manageNote:SetPoint("TOPRIGHT", self.infoFrame.manageNote, "BOTTOMRIGHT", 3, -1)
 		frame.manageNote:Hide()
-		
-		frame.manageNote.role = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-		frame.manageNote.role:SetPoint("TOPLEFT", frame.manageNote, "TOPLEFT", 4, -14)
-		frame.manageNote.role:SetText("Role")
-
-		frame.manageNote.roleTank = CreateFrame("Button", nil, frame.manageNote)
-		frame.manageNote.roleTank:SetSize(18, 18)
-		frame.manageNote.roleTank:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
-		frame.manageNote.roleTank:GetNormalTexture():SetTexCoord(0, 19/64, 22/64, 41/64)
-		frame.manageNote.roleTank:SetPoint("LEFT", frame.manageNote.role, "RIGHT", 24, 0)
-		frame.manageNote.roleTank:SetScript("OnClick", UpdateRole)
-		frame.manageNote.roleTank.roleID = ElitistGroup.ROLE_TANK
-
-		frame.manageNote.roleHealer = CreateFrame("Button", nil, frame.manageNote)
-		frame.manageNote.roleHealer:SetSize(18, 18)
-		frame.manageNote.roleHealer:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
-		frame.manageNote.roleHealer:GetNormalTexture():SetTexCoord(20/64, 39/64, 1/64, 20/64)
-		frame.manageNote.roleHealer:SetPoint("LEFT", frame.manageNote.roleTank, "RIGHT", 6, 0)
-		frame.manageNote.roleHealer:SetScript("OnClick", UpdateRole)
-		frame.manageNote.roleHealer.roleID = ElitistGroup.ROLE_HEALER
-
-		frame.manageNote.roleDamage = CreateFrame("Button", nil, frame.manageNote)
-		frame.manageNote.roleDamage:SetSize(18, 18)
-		frame.manageNote.roleDamage:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
-		frame.manageNote.roleDamage:GetNormalTexture():SetTexCoord(20/64, 39/64, 22/64, 41/64)
-		frame.manageNote.roleDamage:SetPoint("LEFT", frame.manageNote.roleHealer, "RIGHT", 6, 0)
-		frame.manageNote.roleDamage:SetScript("OnClick", UpdateRole)
-		frame.manageNote.roleDamage.roleID = ElitistGroup.ROLE_DAMAGE
-
-		frame.manageNote.rating = CreateFrame("Slider", nil, frame.manageNote)
-		frame.manageNote.rating:SetBackdrop({bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
-			edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
-			tile = true, tileSize = 8, edgeSize = 8,
-			insets = { left = 3, right = 3, top = 6, bottom = 6 }
-		})
-
-		frame.manageNote.rating:SetPoint("TOPLEFT", frame.manageNote.role, "BOTTOMLEFT", 1, -26)
-		frame.manageNote.rating:SetHeight(15)
-		frame.manageNote.rating:SetWidth(165)
-		frame.manageNote.rating:SetOrientation("HORIZONTAL")
-		frame.manageNote.rating:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
-		frame.manageNote.rating:SetMinMaxValues(1, 5)
-		frame.manageNote.rating:SetValue(3)
-		frame.manageNote.rating:SetValueStep(1)
-		frame.manageNote.rating:SetScript("OnValueChanged", UpdateRating)
-
-		local rating = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-		rating:SetPoint("BOTTOMLEFT", frame.manageNote.rating, "TOPLEFT", 0, 3)
-		rating:SetPoint("BOTTOMRIGHT", frame.manageNote.rating, "TOPRIGHT", 0, 3)
-		rating:SetText(L["Rating"])
-
-		local min = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		min:SetText(L["Terrible"])
-		min:SetPoint("TOPLEFT", frame.manageNote.rating, "BOTTOMLEFT", 0, -2)
-
-		local max = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-		max:SetText(L["Great"])
-		max:SetPoint("TOPRIGHT", frame.manageNote.rating, "BOTTOMRIGHT", 0, -2)
-
-		frame.manageNote.comment = CreateFrame("EditBox", "ElitistGroupUsersComment", frame.manageNote, "InputBoxTemplate")
-		frame.manageNote.comment:SetHeight(18)
-		frame.manageNote.comment:SetWidth(166)
-		frame.manageNote.comment:SetAutoFocus(false)
-		frame.manageNote.comment:SetPoint("TOPLEFT", frame.manageNote.rating, "BOTTOMLEFT", 2, -46)
-		frame.manageNote.comment:SetScript("OnTextChanged", UpdateComment)
-		frame.manageNote.comment:SetMaxLetters(256)
-
-		local text = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-		text:SetText(L["Comment"])
-		text:SetPoint("BOTTOMLEFT", frame.manageNote.comment, "TOPLEFT", -4, 4)
 		
 		frame.manageNote.delete = CreateFrame("Button", nil, frame.manageNote, "UIPanelButtonGrayTemplate")
 		frame.manageNote.delete:SetHeight(18)
-		frame.manageNote.delete:SetWidth(140)
-		frame.manageNote.delete:SetText(L["Delete your note"])
-		frame.manageNote.delete:SetPoint("BOTTOMLEFT", frame.manageNote, "BOTTOMLEFT", 0, 1)
+		frame.manageNote.delete:SetWidth(55)
+		frame.manageNote.delete:SetText(L["Delete"])
+		frame.manageNote.delete:SetPoint("TOPLEFT", frame.manageNote, "TOPLEFT", 2, -4)
 		frame.manageNote.delete:SetScript("OnClick", function(self)
-			frame.userFrame.manageNote:UnlockHighlight()
+			Users.infoFrame.manageNote:UnlockHighlight()
 
 			local parent = self:GetParent()
 			parent.lastText = ""
@@ -903,14 +951,95 @@ managePlayerNote = function()
 			ElitistGroup.userData[Users.activeUserID].notes[ElitistGroup.playerID] = nil
 			ElitistGroup.writeQueue[Users.activeUserID] = true
 
-			Users.activeDataNotes = Users.activeDataNotes - 1
-			Users:UpdateTabPage()
+			Users:BuildUI(userData, "notes")
 			self:Disable()
 		end)
+
+		frame.manageNote.roleTank = CreateFrame("Button", nil, frame.manageNote)
+		frame.manageNote.roleTank:SetSize(20, 20)
+		frame.manageNote.roleTank:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
+		frame.manageNote.roleTank:GetNormalTexture():SetTexCoord(0, 19/64, 22/64, 41/64)
+		frame.manageNote.roleTank:SetPoint("TOPLEFT", frame.manageNote, "TOPLEFT", 110, -5)
+		frame.manageNote.roleTank:SetScript("OnClick", UpdateRole)
+		frame.manageNote.roleTank:SetScript("OnEnter", OnEnter)
+		frame.manageNote.roleTank:SetScript("OnLeave", OnLeave)
+		frame.manageNote.roleTank.tooltip = L["Set role as tank."]
+		frame.manageNote.roleTank.roleID = ElitistGroup.ROLE_TANK
+
+		frame.manageNote.roleHealer = CreateFrame("Button", nil, frame.manageNote)
+		frame.manageNote.roleHealer:SetSize(20, 20)
+		frame.manageNote.roleHealer:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
+		frame.manageNote.roleHealer:GetNormalTexture():SetTexCoord(20/64, 39/64, 1/64, 20/64)
+		frame.manageNote.roleHealer:SetPoint("LEFT", frame.manageNote.roleTank, "RIGHT", 4, 0)
+		frame.manageNote.roleHealer:SetScript("OnClick", UpdateRole)
+		frame.manageNote.roleHealer:SetScript("OnEnter", OnEnter)
+		frame.manageNote.roleHealer:SetScript("OnLeave", OnLeave)
+		frame.manageNote.roleHealer.tooltip = L["Set role as healer."]
+		frame.manageNote.roleHealer.roleID = ElitistGroup.ROLE_HEALER
+
+		frame.manageNote.roleDamage = CreateFrame("Button", nil, frame.manageNote)
+		frame.manageNote.roleDamage:SetSize(20, 20)
+		frame.manageNote.roleDamage:SetNormalTexture("Interface\\LFGFrame\\UI-LFG-ICON-PORTRAITROLES")
+		frame.manageNote.roleDamage:GetNormalTexture():SetTexCoord(20/64, 39/64, 22/64, 41/64)
+		frame.manageNote.roleDamage:SetPoint("LEFT", frame.manageNote.roleHealer, "RIGHT", 4, 0)
+		frame.manageNote.roleDamage:SetScript("OnClick", UpdateRole)
+		frame.manageNote.roleDamage:SetScript("OnEnter", OnEnter)
+		frame.manageNote.roleDamage:SetScript("OnLeave", OnLeave)
+		frame.manageNote.roleDamage.tooltip = L["Set role as damage."]
+		frame.manageNote.roleDamage.roleID = ElitistGroup.ROLE_DAMAGE
+
+		frame.manageNote.comment = CreateFrame("EditBox", "ElitistGroupUsersComment", frame.manageNote, "InputBoxTemplate")
+		frame.manageNote.comment:SetHeight(18)
+		frame.manageNote.comment:SetWidth(175)
+		frame.manageNote.comment:SetAutoFocus(false)
+		frame.manageNote.comment:SetPoint("TOPLEFT", frame.manageNote.delete, "BOTTOMLEFT", 6, -12)
+		frame.manageNote.comment:SetScript("OnTextChanged", UpdateComment)
+		frame.manageNote.comment:SetScript("OnEditFocusGained", function(self)
+			if( self.searchText ) then
+				self.searchText = nil
+				self.lastText = ""
+				self:SetText("")
+				self:SetTextColor(1, 1, 1, 1)
+			end
+		end)
+		frame.manageNote.comment:SetScript("OnEditFocusLost", function(self)
+			if( string.trim(self:GetText()) == "" ) then
+				self.searchText = true
+				self.lastText = L["Comment..."]
+				self:SetText(L["Comment..."])
+				self:SetTextColor(0.90, 0.90, 0.90, 0.80)
+			end
+		end)
+		frame.manageNote.comment:SetMaxLetters(256)
+
+		frame.manageNote.rating = CreateFrame("Slider", nil, frame.manageNote)
+		frame.manageNote.rating:SetBackdrop({bgFile = "Interface\\Buttons\\UI-SliderBar-Background",
+			edgeFile = "Interface\\Buttons\\UI-SliderBar-Border",
+			tile = true, tileSize = 8, edgeSize = 8,
+			insets = { left = 3, right = 3, top = 6, bottom = 6 }
+		})
+
+		frame.manageNote.rating:SetPoint("TOPLEFT", frame.manageNote.comment, "BOTTOMLEFT", -4, -14)
+		frame.manageNote.rating:SetHeight(15)
+		frame.manageNote.rating:SetWidth(175)
+		frame.manageNote.rating:SetOrientation("HORIZONTAL")
+		frame.manageNote.rating:SetThumbTexture("Interface\\Buttons\\UI-SliderBar-Button-Horizontal")
+		frame.manageNote.rating:SetMinMaxValues(1, 5)
+		frame.manageNote.rating:SetValue(3)
+		frame.manageNote.rating:SetValueStep(1)
+		frame.manageNote.rating:SetScript("OnValueChanged", UpdateRating)
+		
+		local min = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		min:SetText(L["Terrible"])
+		min:SetPoint("TOPLEFT", frame.manageNote.rating, "BOTTOMLEFT", 0, -2)
+
+		local max = frame.manageNote:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		max:SetText(L["Great"])
+		max:SetPoint("TOPRIGHT", frame.manageNote.rating, "BOTTOMRIGHT", 0, -2)
 	end
 		
 	-- Now setup what we got
-	local note = self.activeData.notes[ElitistGroup.playerID]
+	local note = userData.notes[ElitistGroup.playerID]
 	if( note ) then
 		frame.manageNote.comment.lastText = note.comment or ""
 		frame.manageNote.comment:SetText(note.comment or "")
@@ -922,12 +1051,15 @@ managePlayerNote = function()
 		frame.manageNote.rating:SetValue(3)
 		frame.manageNote.delete:Disable()
 		
-		if( not self.activeData.pruned ) then
-			local specType = ElitistGroup:GetPlayerSpec(self.activeData)
+		if( not userData.pruned ) then
+			local specType = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
 			defaultRole = specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
 		end
 	end
 
+	-- Show the comment... text if we have nothing useful in it
+	frame.manageNote.comment:GetScript("OnEditFocusLost")(frame.manageNote.comment)
+	
 	local role = note and note.role or defaultRole
 	SetDesaturation(frame.manageNote.roleTank:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_TANK) == 0)
 	SetDesaturation(frame.manageNote.roleHealer:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_HEALER) == 0)
@@ -944,7 +1076,6 @@ function Users:CreateUI()
 	-- Initial database has to be built still
 	self.rebuildDatabase = true
 	
-
 	local function OnAchievementEnter(self)
 		if( self.tooltip ) then
 			GameTooltip:SetOwner(self.toggle:IsVisible() and self.toggle or self, "ANCHOR_LEFT")
@@ -954,7 +1085,7 @@ function Users:CreateUI()
 		end
 	end
 	
-	local function OnEnter(self)
+	OnEnter = function(self)
 		if( self.tooltip ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
@@ -977,13 +1108,13 @@ function Users:CreateUI()
 			
 			-- Show the item as a second though
 			ElitistGroup.tooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-			ElitistGroup.tooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 10, 0)
+			ElitistGroup.tooltip:SetPoint("TOPRIGHT", GameTooltip, "TOPLEFT", -10, 0)
 			ElitistGroup.tooltip:SetHyperlink(self.equippedItem)
 			ElitistGroup.tooltip:Show()
 		end
 	end
-
-	local function OnLeave(self)
+	
+	OnLeave = function(self)
 		GameTooltip:Hide()
 		ElitistGroup.tooltip:Hide()
 	end
@@ -992,7 +1123,7 @@ function Users:CreateUI()
 	local frame = CreateFrame("Frame", "ElitistGroupUserInfo", UIParent)
 	self.frame = frame
 	frame:SetClampedToScreen(true)
-	frame:SetWidth(675)
+	frame:SetWidth(468)
 	frame:SetHeight(400)
 	frame:RegisterForDrag("LeftButton", "RightButton")
 	frame:EnableMouse(true)
@@ -1002,7 +1133,7 @@ function Users:CreateUI()
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()
-			frame:SetPoint("CENTER", UIParent, "CENTER", ElitistGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+			frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 			ElitistGroup.db.profile.positions.user = nil
 			return
 		end
@@ -1029,7 +1160,7 @@ function Users:CreateUI()
 		local scale = frame:GetEffectiveScale()
 		frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", ElitistGroup.db.profile.positions.user.x / scale, ElitistGroup.db.profile.positions.user.y / scale)
 	else
-		frame:SetPoint("CENTER", UIParent, "CENTER", ElitistGroup.db.profile.general.databaseExpanded and -75 or 0, 0)
+		frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	end
 
 	frame.titleBar = frame:CreateTexture(nil, "ARTWORK")
@@ -1044,38 +1175,39 @@ function Users:CreateUI()
 
 	-- Close button
 	local button = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-	button:SetPoint("TOPRIGHT", -3, -3)
+	button:SetPoint("TOPRIGHT", -2, -2)
 	button:SetHeight(28)
 	button:SetWidth(28)
 	button:SetScript("OnClick", function() frame:Hide() end)
 	
 	-- Database frame
-	frame.databaseFrame = CreateFrame("Frame", nil, frame)   
-	frame.databaseFrame:SetHeight(frame:GetHeight() - 6)
-	frame.databaseFrame:SetWidth(230)
-	frame.databaseFrame:SetFrameLevel(2)
-	frame.databaseFrame:SetBackdrop({
+	local databaseFrame = CreateFrame("Frame", nil, frame)   
+	databaseFrame:SetHeight(frame:GetHeight() - 6)
+	databaseFrame:SetWidth(230)
+	databaseFrame:SetFrameLevel(2)
+	databaseFrame:SetBackdrop({
 		  bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
 		  edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
 		  edgeSize = 20,
 		  insets = {left = 6, right = 6, top = 6, bottom = 6},
 	})
-	frame.databaseFrame:SetBackdropColor(0, 0, 0, 0.9)
-	frame.databaseFrame.fadeFrame = CreateFrame("Frame", nil, frame.databaseFrame)
-	frame.databaseFrame.fadeFrame:SetAllPoints(frame.databaseFrame)
-	frame.databaseFrame.fadeFrame:SetFrameLevel(3)
-
+	databaseFrame:SetBackdropColor(0, 0, 0, 0.9)
+	databaseFrame.fadeFrame = CreateFrame("Frame", nil, databaseFrame)
+	databaseFrame.fadeFrame:SetAllPoints(databaseFrame)
+	databaseFrame.fadeFrame:SetFrameLevel(3)
+	self.databaseFrame = databaseFrame
+	
 	if( ElitistGroup.db.profile.general.databaseExpanded ) then
-		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -10, -3)
+		databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -10, -3)
 	else
-		frame.databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -230, -3)
-		frame.databaseFrame.fadeFrame:SetAlpha(0)
+		databaseFrame:SetPoint("TOPLEFT", frame, "TOPRIGHT", -230, -3)
+		databaseFrame.fadeFrame:SetAlpha(0)
 	end
 
 	local TIME_TO_MOVE = 0.50
 	local TIME_TO_FADE = 0.25
 	
-	frame.databaseFrame.timeElapsed = 0
+	databaseFrame.timeElapsed = 0
 	local function frameAnimator(self, elapsed)
 		self.timeElapsed = self.timeElapsed + elapsed
 		self:SetPoint("TOPLEFT", frame, "TOPRIGHT", self.startOffset + (self.endOffset * math.min((self.timeElapsed / TIME_TO_MOVE), 1)), -3)
@@ -1086,66 +1218,66 @@ function Users:CreateUI()
 		end
 	end
 
-	frame.databaseFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameDatabase", frame.databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
-	frame.databaseFrame.scroll.bar = ElitistGroupUserFrameDatabase
-	frame.databaseFrame.scroll:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 0, -7)
-	frame.databaseFrame.scroll:SetPoint("BOTTOMRIGHT", frame.databaseFrame, "BOTTOMRIGHT", -28, 6)
-	frame.databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateDatabasePage); Users.scrollUpdate = nil end)
+	databaseFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameDatabase", databaseFrame.fadeFrame, "FauxScrollFrameTemplate")
+	databaseFrame.scroll.bar = ElitistGroupUserFrameDatabase
+	databaseFrame.scroll:SetPoint("TOPLEFT", databaseFrame, "TOPLEFT", 0, -7)
+	databaseFrame.scroll:SetPoint("BOTTOMRIGHT", databaseFrame, "BOTTOMRIGHT", -28, 6)
+	databaseFrame.scroll:SetScript("OnVerticalScroll", function(self, value) Users.scrollUpdate = true; FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.BuildDatabasePage); Users.scrollUpdate = nil end)
 
-	frame.databaseFrame.toggle = CreateFrame("Button", nil, frame.databaseFrame)
-	frame.databaseFrame.toggle:SetPoint("LEFT", frame.databaseFrame, "RIGHT", -3, 0)
-	frame.databaseFrame.toggle:SetFrameLevel(frame:GetFrameLevel() + 2)
-	frame.databaseFrame.toggle:SetHeight(128)
-	frame.databaseFrame.toggle:SetWidth(8)
-	frame.databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\ElitistGroup\\media\\tabhandle")
-	frame.databaseFrame.toggle:SetScript("OnEnter", function(self)
+	databaseFrame.toggle = CreateFrame("Button", nil, databaseFrame)
+	databaseFrame.toggle:SetPoint("LEFT", databaseFrame, "RIGHT", -3, 0)
+	databaseFrame.toggle:SetFrameLevel(frame:GetFrameLevel() + 2)
+	databaseFrame.toggle:SetHeight(128)
+	databaseFrame.toggle:SetWidth(8)
+	databaseFrame.toggle:SetNormalTexture("Interface\\AddOns\\ElitistGroup\\media\\tabhandle")
+	databaseFrame.toggle:SetScript("OnEnter", function(self)
 		SetCursor("INTERACT_CURSOR")
 		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 		GameTooltip:SetText(L["Click to open and close the database viewer."])
 		GameTooltip:Show()
 	end)
-	frame.databaseFrame.toggle:SetScript("OnLeave", function(self)
+	databaseFrame.toggle:SetScript("OnLeave", function(self)
 		GameTooltip:Hide()
 		SetCursor(nil)
 	end)
-	frame.databaseFrame.toggle:SetScript("OnClick", function(self)
+	databaseFrame.toggle:SetScript("OnClick", function(self)
 		if( ElitistGroup.db.profile.general.databaseExpanded ) then
-			frame.databaseFrame.startOffset = -10
-			frame.databaseFrame.endOffset = -220
+			databaseFrame.startOffset = -10
+			databaseFrame.endOffset = -220
 
-			UIFrameFadeIn(frame.databaseFrame.fadeFrame, 0.25, 1, 0)
+			UIFrameFadeIn(databaseFrame.fadeFrame, 0.25, 1, 0)
 		else
-			frame.databaseFrame.startOffset = -220
-			frame.databaseFrame.endOffset = 210
+			databaseFrame.startOffset = -220
+			databaseFrame.endOffset = 210
 			
-			UIFrameFadeIn(frame.databaseFrame.fadeFrame, 0.50, 0, 1)
+			UIFrameFadeIn(databaseFrame.fadeFrame, 0.50, 0, 1)
 		end
 		
 		ElitistGroup.db.profile.general.databaseExpanded = not ElitistGroup.db.profile.general.databaseExpanded
-		Users:UpdateDatabasePage()
-		frame.databaseFrame:SetScript("OnUpdate", frameAnimator)
+		Users:BuildDatabasePage()
+		databaseFrame:SetScript("OnUpdate", frameAnimator)
 	end)
 
-	frame.databaseFrame.search = CreateFrame("EditBox", "ElitistGroupDatabaseSearch", frame.databaseFrame.fadeFrame, "InputBoxTemplate")
-	frame.databaseFrame.search:SetHeight(18)
-	frame.databaseFrame.search:SetWidth(195)
-	frame.databaseFrame.search:SetAutoFocus(false)
-	frame.databaseFrame.search:ClearAllPoints()
-	frame.databaseFrame.search:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -7)
-	frame.databaseFrame.search:SetFrameLevel(3)
+	databaseFrame.search = CreateFrame("EditBox", "ElitistGroupDatabaseSearch", databaseFrame.fadeFrame, "InputBoxTemplate")
+	databaseFrame.search:SetHeight(18)
+	databaseFrame.search:SetWidth(195)
+	databaseFrame.search:SetAutoFocus(false)
+	databaseFrame.search:ClearAllPoints()
+	databaseFrame.search:SetPoint("TOPLEFT", databaseFrame, "TOPLEFT", 12, -7)
+	databaseFrame.search:SetFrameLevel(3)
 
-	frame.databaseFrame.search.searchText = true
-	frame.databaseFrame.search:SetText(L["Search..."])
-	frame.databaseFrame.search:SetTextColor(0.90, 0.90, 0.90, 0.80)
-	frame.databaseFrame.search:SetScript("OnTextChanged", function(self) Users:UpdateDatabasePage() end)
-	frame.databaseFrame.search:SetScript("OnEditFocusGained", function(self)
+	databaseFrame.search.searchText = true
+	databaseFrame.search:SetText(L["Search..."])
+	databaseFrame.search:SetTextColor(0.90, 0.90, 0.90, 0.80)
+	databaseFrame.search:SetScript("OnTextChanged", function(self) Users:BuildDatabasePage() end)
+	databaseFrame.search:SetScript("OnEditFocusGained", function(self)
 		if( self.searchText ) then
 			self.searchText = nil
 			self:SetText("")
 			self:SetTextColor(1, 1, 1, 1)
 		end
 	end)
-	frame.databaseFrame.search:SetScript("OnEditFocusLost", function(self)
+	databaseFrame.search:SetScript("OnEditFocusLost", function(self)
 		if( not self.searchText and string.trim(self:GetText()) == "" ) then
 			self.searchText = true
 			self:SetText(L["Search..."])
@@ -1157,9 +1289,9 @@ function Users:CreateUI()
 		Users:Show(ElitistGroup.userData[self.userID])
 	end
 
-	frame.databaseFrame.rows = {}
+	databaseFrame.rows = {}
 	for i=1, MAX_DATABASE_ROWS do
-		local button = CreateFrame("Button", nil, frame.databaseFrame.fadeFrame)
+		local button = CreateFrame("Button", nil, databaseFrame.fadeFrame)
 		button:SetScript("OnClick", viewUserData)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
@@ -1173,189 +1305,127 @@ function Users:CreateUI()
 		button:GetFontString():SetJustifyV("CENTER")
 		
 		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.databaseFrame.rows[i - 1], "BOTTOMLEFT", 0, -6)
+			button:SetPoint("TOPLEFT", databaseFrame.rows[i - 1], "BOTTOMLEFT", 0, -6)
 		else
-			button:SetPoint("TOPLEFT", frame.databaseFrame, "TOPLEFT", 12, -30)
+			button:SetPoint("TOPLEFT", databaseFrame, "TOPLEFT", 12, -30)
 		end
 
-		frame.databaseFrame.rows[i] = button
+		databaseFrame.rows[i] = button
 	end
 
-	-- Equipment frame
-	frame.gearFrame = CreateFrame("Frame", nil, frame)
-	frame.gearFrame:SetBackdrop(backdrop)
-	frame.gearFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.gearFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.gearFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
-	frame.gearFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 15)
-	frame.gearFrame:SetWidth(225)
-
-	frame.gearFrame.headerText = frame.gearFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
-	frame.gearFrame.headerText:SetPoint("BOTTOMLEFT", frame.gearFrame, "TOPLEFT", 0, 5)
-	frame.gearFrame.headerText:SetText(L["Equipped gear"])
-	
-	frame.pruneInfo = frame.gearFrame:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	frame.pruneInfo:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 4, -4)
-	frame.pruneInfo:SetPoint("BOTTOMRIGHT", frame.gearFrame, "BOTTOMRIGHT", -4, 4)
-	frame.pruneInfo:SetJustifyH("LEFT")
-	frame.pruneInfo:SetJustifyV("TOP")
-	frame.pruneInfo:SetText(L["Gear and achievement data for this player has been pruned to reduce database size.\nNotes and basic data have been kept, you can view gear and achievements again by inspecting the player.\n\n\nPruning settings can be changed through /elitistgroup."])
-
-	local function OnItemClick(self)
-		if( self.fullItemLink ) then
-			HandleModifiedItemClick(self.fullItemLink)
-		end
-	end
-		local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
-	frame.gearFrame.equipSlots = {}
-	for i=1, 18 do
-		local slot = CreateFrame("Button", nil, frame.gearFrame)
-		slot:SetHeight(30)
-		slot:SetWidth(100)
-		slot:SetScript("OnEnter", OnEnter)
-		slot:SetScript("OnLeave", OnLeave)
-		slot:SetScript("OnClick", OnItemClick)
-		slot:SetMotionScriptsWhileDisabled(true)
-		slot.icon = slot:CreateTexture(nil, "BACKGROUND")
-		slot.icon:SetHeight(30)
-		slot.icon:SetWidth(30)
-		slot.icon:SetPoint("TOPLEFT", slot)
-
-		if( i < 18 ) then
-			slot.typeText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-			slot.typeText:SetPoint("TOPLEFT", slot.icon, "TOPRIGHT", 2, -1)
-			slot.typeText:SetJustifyV("CENTER")
-			slot.typeText:SetJustifyH("LEFT")
-			slot.typeText:SetWidth(74)
-			slot.typeText:SetHeight(11)
-
-			slot.extraText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-			slot.extraText:SetPoint("BOTTOMLEFT", slot.icon, "BOTTOMRIGHT", 2, 2)
-			slot.extraText:SetJustifyV("CENTER")
-			slot.extraText:SetJustifyH("LEFT")
-			slot.extraText:SetWidth(74)
-			slot.extraText:SetHeight(11)
-			slot.extraText:SetTextColor(0.90, 0.90, 0.90)
-		else
-			slot.text = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-			slot.text:SetFont(GameFontHighlight:GetFont(), 16)
-			slot.text:SetPoint("LEFT", slot.icon, "RIGHT", 2, 0)
-			slot.text:SetWidth(72)
-			slot.text:SetHeight(14)
-			slot.text:SetJustifyV("CENTER")
-			slot.text:SetJustifyH("LEFT")
-		end
-			
-	   if( i == 10 ) then
-		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[1], "TOPRIGHT", 10, 0)    
-	   elseif( i > 1 ) then
-		  slot:SetPoint("TOPLEFT", frame.gearFrame.equipSlots[i - 1], "BOTTOMLEFT", 0, -9)
-	   else
-		  slot:SetPoint("TOPLEFT", frame.gearFrame, "TOPLEFT", 3, -8)
-	   end
-
-		if( inventoryMap[i] ) then
-			slot.inventorySlot = inventoryMap[i]
-			slot.inventoryType = ElitistGroup.Items.inventoryToID[inventoryMap[i]]
-			slot.inventoryID, slot.emptyTexture, slot.checkRelic = GetInventorySlotInfo(inventoryMap[i])
-		end
-		
-		frame.gearFrame.equipSlots[i] = slot
-	end
-		
 	-- User data container
-	frame.userFrame = CreateFrame("Frame", nil, frame)   
-	frame.userFrame:SetBackdrop(backdrop)
-	frame.userFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.userFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.userFrame:SetWidth(175)
-	frame.userFrame:SetHeight(97)
-	frame.userFrame:SetPoint("TOPLEFT", frame.gearFrame, "TOPRIGHT", 10, -8)
+	local infoFrame = CreateFrame("Frame", nil, frame)   
+	infoFrame:SetBackdrop(backdrop)
+	infoFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	infoFrame:SetBackdropColor(0, 0, 0, 0)
+	infoFrame:SetWidth(185)
+	infoFrame:SetHeight(176)
+	infoFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -42)
+	self.infoFrame = infoFrame
+	
+	infoFrame.headerText = infoFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
+	infoFrame.headerText:SetPoint("BOTTOMLEFT", infoFrame, "TOPLEFT", 0, 5)
+	infoFrame.headerText:SetText(L["Player info"])
 
-	frame.userFrame.headerText = frame.userFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
-	frame.userFrame.headerText:SetPoint("BOTTOMLEFT", frame.userFrame, "TOPLEFT", 0, 5)
-	frame.userFrame.headerText:SetText(L["Player info"])
-
-	local buttonList = {"playerInfo", "talentInfo", "scannedInfo", "trustedInfo"}
+	local buttonList = {"playerInfo", "trustedInfo", "scannedInfo", "averageInfo", "talentInfo", "secondTalentInfo", "equipmentInfo", "enchantInfo", "gemInfo"}
 	for i, key in pairs(buttonList) do
-		local button = CreateFrame("Button", nil, frame.userFrame)
+		local button = CreateFrame("Button", nil, infoFrame)
 		button:SetNormalFontObject(GameFontHighlight)
 		button:SetText("*")
 		button:SetHeight(15)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
 		button:SetPushedTextOffset(0, 0)
-		button.icon = button:CreateTexture(nil, "ARTWORK")
-		button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
-		button.icon:SetSize(16, 16)
-		button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
 		button:GetFontString():SetJustifyH("LEFT")
 		button:GetFontString():SetJustifyV("CENTER")
-		button:GetFontString():SetWidth(frame.userFrame:GetWidth() - 23)
+		button:GetFontString():SetWidth(infoFrame:GetWidth() - 23)
 		button:GetFontString():SetHeight(15)
 		
-		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.userFrame[buttonList[i - 1]], "BOTTOMLEFT", 0, -4)
-			button:SetPoint("TOPRIGHT", frame.userFrame[buttonList[i - 1]], "BOTTOMRIGHT", 0, -4)
+		if( i > 6 ) then
+			button:GetFontString():SetPoint("LEFT", button, "LEFT", 2, 0)
 		else
-			button:SetPoint("TOPLEFT", frame.userFrame, "TOPLEFT", 3, -4)
-			button:SetPoint("TOPRIGHT", frame.userFrame, "TOPRIGHT", 0, 0)
+			button.icon = button:CreateTexture(nil, "ARTWORK")
+			button.icon:SetPoint("LEFT", button, "LEFT", 0, 0)
+			button.icon:SetSize(16, 16)
+			button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
 		end
 		
-		frame.userFrame[key] = button
+		if( i > 1 ) then
+			local offset = key == "averageInfo" and -50 or 0
+			button:SetPoint("TOPLEFT", infoFrame[buttonList[i - 1]], "BOTTOMLEFT", 0, -4)
+			button:SetPoint("TOPRIGHT", infoFrame[buttonList[i - 1]], "BOTTOMRIGHT", offset, -4)
+		else
+			button:SetPoint("TOPLEFT", infoFrame, "TOPLEFT", 3, -4)
+			button:SetPoint("TOPRIGHT", infoFrame, "TOPRIGHT", 0, 0)
+		end
+		
+		infoFrame[key] = button
 	end
 	
-	local button = CreateFrame("Button", nil, frame.userFrame, "UIPanelButtonGrayTemplate")
+	-- Add a highlight indicating it's the primary
+	--[[
+	local talentInfo = infoFrame.talentInfo
+	talentInfo.highlight = talentInfo:CreateTexture(nil, "OVERLAY")
+	talentInfo.highlight:SetSize(31, 31)
+	talentInfo.highlight:ClearAllPoints()
+	talentInfo.highlight:SetPoint("CENTER", talentInfo.icon, "CENTER", 0, 0)
+	talentInfo.highlight:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
+	talentInfo.highlight:SetVertexColor(1, 1, 1)
+	talentInfo.highlight:SetBlendMode("ADD")
+	]]
+	
+	-- Editing notes
+	local button = CreateFrame("Button", nil, infoFrame, "UIPanelButtonGrayTemplate")
+	button:SetWidth(45)
 	button:SetHeight(15)
-	button:SetWidth(100)
-	button:SetPoint("TOPLEFT", frame.userFrame.trustedInfo, "BOTTOMLEFT", 0, -3)
-	button:SetText(L["Edit Note"])
+	button:SetPoint("LEFT", infoFrame.averageInfo, "RIGHT", 2, 0)
+	button:SetText(L["Edit"])
 	button:SetScript("OnClick", function(self)
 		managePlayerNote()
 		
 		if( frame.manageNote:IsVisible() ) then
 			frame.manageNote:Hide()
-			frame.userFrame.manageNote:UnlockHighlight()
+			infoFrame.manageNote:UnlockHighlight()
 		else
 			frame.manageNote:Show()
-			frame.userFrame.manageNote:LockHighlight()
+			infoFrame.manageNote:LockHighlight()
 		end
 	end)
 	button:SetScript("OnEnter", OnEnter)
 	button:SetScript("OnLeave", OnLeave)
-	button:SetMotionScriptsWhileDisabled(true)
-	frame.userFrame.manageNote = button
+	infoFrame.manageNote = button
 	
 	-- Dungeon suggested container
-	frame.dungeonFrame = CreateFrame("Frame", nil, frame)   
-	frame.dungeonFrame:SetBackdrop(backdrop)
-	frame.dungeonFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.dungeonFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.dungeonFrame:SetWidth(175)
-	frame.dungeonFrame:SetHeight(226)
-	frame.dungeonFrame:SetPoint("TOPLEFT", frame.userFrame, "BOTTOMLEFT", 0, -24)
-	frame.dungeonFrame:SetScript("OnShow", function(self)
+	local dungeonFrame = CreateFrame("Frame", nil, frame)   
+	dungeonFrame:SetBackdrop(backdrop)
+	dungeonFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	dungeonFrame:SetBackdropColor(0, 0, 0, 0)
+	dungeonFrame:SetWidth(185)
+	dungeonFrame:SetHeight(147)
+	dungeonFrame:SetPoint("TOPLEFT", infoFrame, "BOTTOMLEFT", 0, -24)
+	dungeonFrame:SetScript("OnShow", function(self)
 		local parent = self:GetParent()
 		if( parent.manageNote ) then
 			parent.manageNote:SetFrameLevel(self:GetFrameLevel() + 10)
 		end
 	end)
+	self.dungeonFrame = dungeonFrame
 
-	frame.dungeonFrame.headerText = frame.dungeonFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
-	frame.dungeonFrame.headerText:SetPoint("BOTTOMLEFT", frame.dungeonFrame, "TOPLEFT", 0, 5)
-	frame.dungeonFrame.headerText:SetText(L["Suggested dungeons"])
+	dungeonFrame.headerText = dungeonFrame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
+	dungeonFrame.headerText:SetPoint("BOTTOMLEFT", dungeonFrame, "TOPLEFT", 0, 5)
+	dungeonFrame.headerText:SetText(L["Suggested dungeons"])
 
-	frame.dungeonFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameDungeon", frame.dungeonFrame, "FauxScrollFrameTemplate")
-	frame.dungeonFrame.scroll.bar = ElitistGroupUserFrameDungeonScrollBar
-	frame.dungeonFrame.scroll:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 0, -2)
-	frame.dungeonFrame.scroll:SetPoint("BOTTOMRIGHT", frame.dungeonFrame, "BOTTOMRIGHT", -24, 1)
-	frame.dungeonFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 28, Users.UpdateDungeonInfo) end)
+	dungeonFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameDungeon", dungeonFrame, "FauxScrollFrameTemplate")
+	dungeonFrame.scroll.bar = ElitistGroupUserFrameDungeonScrollBar
+	dungeonFrame.scroll:SetPoint("TOPLEFT", dungeonFrame, "TOPLEFT", 0, -2)
+	dungeonFrame.scroll:SetPoint("BOTTOMRIGHT", dungeonFrame, "BOTTOMRIGHT", -24, 1)
+	dungeonFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 28, Users.BuildDungeonSuggestPage) end)
 
-	frame.dungeonFrame.rows = {}
+	dungeonFrame.rows = {}
 	for i=1, MAX_DUNGEON_ROWS do
-		local button = CreateFrame("Frame", nil, frame.dungeonFrame)
+		local button = CreateFrame("Frame", nil, dungeonFrame)
 		button:SetHeight(28)
-		button:SetWidth(frame.dungeonFrame:GetWidth() - 25)
+		button:SetWidth(dungeonFrame:GetWidth() - 25)
 		button.dungeonName = button:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 		button.dungeonName:SetHeight(14)
 		button.dungeonName:SetJustifyH("LEFT")
@@ -1369,80 +1439,159 @@ function Users:CreateUI()
 		button.dungeonInfo:SetPoint("TOPRIGHT", button.dungeonName, "BOTTOMRIGHT", 0, 2)
 
 		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.dungeonFrame.rows[i - 1], "BOTTOMLEFT", 0, -5)
+			button:SetPoint("TOPLEFT", dungeonFrame.rows[i - 1], "BOTTOMLEFT", 0, -2)
 		else
-			button:SetPoint("TOPLEFT", frame.dungeonFrame, "TOPLEFT", 3, -2)
+			button:SetPoint("TOPLEFT", dungeonFrame, "TOPLEFT", 3, -1)
 		end
 
-		frame.dungeonFrame.rows[i] = button
+		dungeonFrame.rows[i] = button
 	end
 	
 	-- Parent container
-	frame.userTabFrame = CreateFrame("Frame", nil, frame)   
-	frame.userTabFrame:SetBackdrop(backdrop)
-	frame.userTabFrame:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
-	frame.userTabFrame:SetBackdropColor(0, 0, 0, 0)
-	frame.userTabFrame:SetWidth(235)
-	frame.userTabFrame:SetHeight(347)
-	frame.userTabFrame:SetPoint("TOPLEFT", frame.userFrame, "TOPRIGHT", 10, 0)
+	local tabContainer = CreateFrame("Frame", nil, frame)   
+	tabContainer:SetBackdrop(backdrop)
+	tabContainer:SetBackdropBorderColor(0.60, 0.60, 0.60, 1)
+	tabContainer:SetBackdropColor(0, 0, 0, 0)
+	tabContainer:SetWidth(250)
+	tabContainer:SetHeight(347)
+	tabContainer:SetPoint("TOPLEFT", infoFrame, "TOPRIGHT", 10, 0)
+	tabContainer.selectedTab = ElitistGroup.db.profile.general.selectedTab
+	self.tabContainer = tabContainer
 	
-	frame.userTabFrame.selectedTab = "notes"
 	local function tabClicked(self)
-		frame.userTabFrame.selectedTab = self.tabID
-		Users:UpdateTabPage()
+		tabContainer.selectedTab = self.tabID
+		ElitistGroup.db.profile.general.selectedTab = self.tabID
+		
+		Users:UpdateTabs()
+	end
+
+	tabContainer.equipment = CreateFrame("Button", nil, tabContainer)
+	tabContainer.equipment:SetNormalFontObject(GameFontNormal)
+	tabContainer.equipment:SetHighlightFontObject(GameFontHighlight)
+	tabContainer.equipment:SetDisabledFontObject(GameFontDisable)
+	tabContainer.equipment:SetPoint("BOTTOMLEFT", tabContainer, "TOPLEFT", 0, -1)
+	tabContainer.equipment:SetScript("OnClick", tabClicked)
+	tabContainer.equipment:SetText(L["Gear"])
+	tabContainer.equipment:GetFontString():SetPoint("LEFT", 3, 0)
+	tabContainer.equipment:SetHeight(18)
+	tabContainer.equipment:SetWidth(62)
+	tabContainer.equipment:SetBackdrop(backdrop)
+	tabContainer.equipment:SetBackdropColor(0, 0, 0, 0)
+	tabContainer.equipment:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	tabContainer.equipment.tabID = "equipment"
+
+	tabContainer.achievements = CreateFrame("Button", nil, tabContainer)
+	tabContainer.achievements:SetNormalFontObject(GameFontNormal)
+	tabContainer.achievements:SetHighlightFontObject(GameFontHighlight)
+	tabContainer.achievements:SetDisabledFontObject(GameFontDisable)
+	tabContainer.achievements:SetPoint("TOPLEFT", tabContainer.equipment, "TOPRIGHT", 4, 0)
+	tabContainer.achievements:SetScript("OnClick", tabClicked)
+	tabContainer.achievements:SetText(L["Experience"])
+	tabContainer.achievements:GetFontString():SetPoint("LEFT", 3, 0)
+	tabContainer.achievements:SetHeight(18)
+	tabContainer.achievements:SetWidth(90)
+	tabContainer.achievements:SetBackdrop(backdrop)
+	tabContainer.achievements:SetBackdropColor(0, 0, 0, 0)
+	tabContainer.achievements:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	tabContainer.achievements.tabID = "achievements"
+	
+	tabContainer.notes = CreateFrame("Button", nil, tabContainer)
+	tabContainer.notes:SetNormalFontObject(GameFontNormal)
+	tabContainer.notes:SetHighlightFontObject(GameFontHighlight)
+	tabContainer.notes:SetDisabledFontObject(GameFontDisable)
+	tabContainer.notes:SetPoint("TOPLEFT", tabContainer.achievements, "TOPRIGHT", 4, 0)
+	tabContainer.notes:SetScript("OnClick", tabClicked)
+	tabContainer.notes:SetText("*")
+	tabContainer.notes:GetFontString():SetPoint("LEFT", 3, 0)
+	tabContainer.notes:SetHeight(18)
+	tabContainer.notes:SetWidth(90)
+	tabContainer.notes:SetBackdrop(backdrop)
+	tabContainer.notes:SetBackdropColor(0, 0, 0, 0)
+	tabContainer.notes:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
+	tabContainer.notes.tabID = "notes"
+
+	-- Equipment container
+	local equipmentFrame = CreateFrame("Frame", nil, tabContainer)
+	equipmentFrame:SetAllPoints(tabContainer)
+	self.equipmentFrame = equipmentFrame
+	
+	local function OnItemClick(self)
+		if( self.fullItemLink ) then
+			HandleModifiedItemClick(self.fullItemLink)
+		end
 	end
 	
-	frame.userTabFrame.notesButton = CreateFrame("Button", nil, frame.userTabFrame)
-	frame.userTabFrame.notesButton:SetNormalFontObject(GameFontNormal)
-	frame.userTabFrame.notesButton:SetHighlightFontObject(GameFontHighlight)
-	frame.userTabFrame.notesButton:SetDisabledFontObject(GameFontDisable)
-	frame.userTabFrame.notesButton:SetPoint("BOTTOMLEFT", frame.userTabFrame, "TOPLEFT", 0, -1)
-	frame.userTabFrame.notesButton:SetScript("OnClick", tabClicked)
-	frame.userTabFrame.notesButton:SetText("*")
-	frame.userTabFrame.notesButton:GetFontString():SetPoint("LEFT", 3, 0)
-	frame.userTabFrame.notesButton:SetHeight(22)
-	frame.userTabFrame.notesButton:SetWidth(90)
-	frame.userTabFrame.notesButton:SetBackdrop(backdrop)
-	frame.userTabFrame.notesButton:SetBackdropColor(0, 0, 0, 0)
-	frame.userTabFrame.notesButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
-	frame.userTabFrame.notesButton.tabID = "notes"
-	
-	frame.userTabFrame.achievementsButton = CreateFrame("Button", nil, frame.userTabFrame)
-	frame.userTabFrame.achievementsButton:SetNormalFontObject(GameFontNormal)
-	frame.userTabFrame.achievementsButton:SetHighlightFontObject(GameFontHighlight)
-	frame.userTabFrame.achievementsButton:SetDisabledFontObject(GameFontDisable)
-	frame.userTabFrame.achievementsButton:SetPoint("TOPLEFT", frame.userTabFrame.notesButton, "TOPRIGHT", 4, 0)
-	frame.userTabFrame.achievementsButton:SetScript("OnClick", tabClicked)
-	frame.userTabFrame.achievementsButton:SetText(L["Experience"])
-	frame.userTabFrame.achievementsButton:GetFontString():SetPoint("LEFT", 3, 0)
-	frame.userTabFrame.achievementsButton:SetHeight(22)
-	frame.userTabFrame.achievementsButton:SetWidth(90)
-	frame.userTabFrame.achievementsButton:SetBackdrop(backdrop)
-	frame.userTabFrame.achievementsButton:SetBackdropColor(0, 0, 0, 0)
-	frame.userTabFrame.achievementsButton:SetBackdropBorderColor(0.7, 0.7, 0.7, 1)
-	frame.userTabFrame.achievementsButton.tabID = "achievements"
+	local inventoryMap = {"HeadSlot", "NeckSlot", "ShoulderSlot", "BackSlot", "ChestSlot", "WristSlot", "HandsSlot", "WaistSlot", "LegsSlot", "FeetSlot", "Finger0Slot", "Finger1Slot", "Trinket0Slot", "Trinket1Slot", "MainHandSlot", "SecondaryHandSlot", "RangedSlot"}
+	equipmentFrame.equipSlots = {}
+	for i=1, 17 do
+		local slot = CreateFrame("Button", nil, equipmentFrame)
+		slot:SetHeight(16)
+		slot:SetWidth(tabContainer:GetWidth() - 3)
+		slot:SetScript("OnEnter", OnEnter)
+		slot:SetScript("OnLeave", OnLeave)
+		slot:SetScript("OnClick", OnItemClick)
+		slot:SetMotionScriptsWhileDisabled(true)
+		slot.icon = slot:CreateTexture(nil, "BACKGROUND")
+		slot.icon:SetHeight(16)
+		slot.icon:SetWidth(16)
+		slot.icon:SetPoint("TOPLEFT", slot)
+
+		slot.levelText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		slot.levelText:SetPoint("LEFT", slot.icon, "RIGHT", 2, 0)
+		slot.levelText:SetJustifyV("CENTER")
+		slot.levelText:SetJustifyH("LEFT")
+		slot.levelText:SetWidth(30)
+		slot.levelText:SetHeight(11)
+
+		slot.typeText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		slot.typeText:SetPoint("LEFT", slot.levelText, "RIGHT", 6, 0)
+		slot.typeText:SetJustifyV("CENTER")
+		slot.typeText:SetJustifyH("LEFT")
+		slot.typeText:SetWidth(100)
+		slot.typeText:SetHeight(11)
+
+		slot.enhanceText = slot:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		slot.enhanceText:SetPoint("RIGHT", slot, "RIGHT", -4, 0)
+		slot.enhanceText:SetJustifyV("CENTER")
+		slot.enhanceText:SetJustifyH("RIGHT")
+		slot.enhanceText:SetWidth(90)
+		slot.enhanceText:SetHeight(11)
+		slot.enhanceText:SetTextColor(1, 0.15, 0.15)
+
+		if( i > 1 ) then
+			slot:SetPoint("TOPLEFT", equipmentFrame.equipSlots[i - 1], "BOTTOMLEFT", 0, -4)
+		else
+			slot:SetPoint("TOPLEFT", equipmentFrame, "TOPLEFT", 3, -6)
+		end
+
+		slot.inventorySlot = inventoryMap[i]
+		slot.inventoryType = ElitistGroup.Items.inventoryToID[inventoryMap[i]]
+		slot.inventoryID, slot.emptyTexture, slot.checkRelic = GetInventorySlotInfo(inventoryMap[i])
+		equipmentFrame.equipSlots[i] = slot
+	end
 
 	-- Achievement container
-	frame.achievementFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
-	frame.achievementFrame:SetAllPoints(frame.userTabFrame)
-
-	frame.achievementFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameAchievements", frame.achievementFrame, "FauxScrollFrameTemplate")
-	frame.achievementFrame.scroll.bar = ElitistGroupUserFrameAchievementsScrollBar
-	frame.achievementFrame.scroll:SetPoint("TOPLEFT", frame.achievementFrame, "TOPLEFT", 0, -2)
-	frame.achievementFrame.scroll:SetPoint("BOTTOMRIGHT", frame.achievementFrame, "BOTTOMRIGHT", -24, 1)
-	frame.achievementFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.UpdateAchievementInfo) end)
-
+	local achievementsFrame = CreateFrame("Frame", nil, tabContainer)   
+	achievementsFrame:SetAllPoints(tabContainer)
+	self.achievementsFrame = achievementsFrame
+	
+	achievementsFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameAchievements", achievementsFrame, "FauxScrollFrameTemplate")
+	achievementsFrame.scroll.bar = ElitistGroupUserFrameAchievementsScrollBar
+	achievementsFrame.scroll:SetPoint("TOPLEFT", achievementsFrame, "TOPLEFT", 0, -2)
+	achievementsFrame.scroll:SetPoint("BOTTOMRIGHT", achievementsFrame, "BOTTOMRIGHT", -24, 1)
+	achievementsFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 14, Users.BuildAchievementPage) end)
+	
 	local function toggleCategory(self)
 		local id = self.toggle and self.toggle.id or self.id
 		if( not id ) then return end
 		
 		ElitistGroup.db.profile.expExpanded[id] = not ElitistGroup.db.profile.expExpanded[id]
-		Users:UpdateAchievementInfo()
+		Users:BuildAchievementPage()
 	end
 	
-	frame.achievementFrame.rows = {}
+	achievementsFrame.rows = {}
 	for i=1, MAX_ACHIEVEMENT_ROWS do
-		local button = CreateFrame("Button", nil, frame.achievementFrame)
+		local button = CreateFrame("Button", nil, achievementsFrame)
 		button:SetScript("OnEnter", OnAchievementEnter)
 		button:SetScript("OnLeave", OnLeave)
 		button:SetScript("OnClick", toggleCategory)
@@ -1459,27 +1608,28 @@ function Users:CreateUI()
 		button.toggle:SetHeight(14)
 		button.toggle:SetWidth(14)
 
-		frame.achievementFrame.rows[i] = button
+		achievementsFrame.rows[i] = button
 	end
 
 	-- Notes container
-	frame.noteFrame = CreateFrame("Frame", nil, frame.userTabFrame)   
-	frame.noteFrame:SetAllPoints(frame.userTabFrame)
+	local notesFrame = CreateFrame("Frame", nil, tabContainer)   
+	notesFrame:SetAllPoints(tabContainer)
+	self.notesFrame = notesFrame
 	
-	frame.noteFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameNotes", frame.noteFrame, "FauxScrollFrameTemplate")
-	frame.noteFrame.scroll.bar = ElitistGroupUserFrameNotesScrollBar
-	frame.noteFrame.scroll:SetPoint("TOPLEFT", frame.noteFrame, "TOPLEFT", 0, -2)
-	frame.noteFrame.scroll:SetPoint("BOTTOMRIGHT", frame.noteFrame, "BOTTOMRIGHT", -24, 1)
-	frame.noteFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 46, Users.UpdateNoteInfo) end)
+	notesFrame.scroll = CreateFrame("ScrollFrame", "ElitistGroupUserFrameNotes", notesFrame, "FauxScrollFrameTemplate")
+	notesFrame.scroll.bar = ElitistGroupUserFrameNotesScrollBar
+	notesFrame.scroll:SetPoint("TOPLEFT", notesFrame, "TOPLEFT", 0, -2)
+	notesFrame.scroll:SetPoint("BOTTOMRIGHT", notesFrame, "BOTTOMRIGHT", -24, 1)
+	notesFrame.scroll:SetScript("OnVerticalScroll", function(self, value) FauxScrollFrame_OnVerticalScroll(self, value, 46, Users.BuildNotesPage) end)
 
-	frame.noteFrame.rows = {}
+	notesFrame.rows = {}
 	for i=1, MAX_NOTE_ROWS do
-		local button = CreateFrame("Frame", nil, frame.noteFrame)
+		local button = CreateFrame("Frame", nil, notesFrame)
 		button:SetScript("OnEnter", OnEnter)
 		button:SetScript("OnLeave", OnLeave)
 		button:EnableMouse(true)
 		button:SetHeight(46)
-		button:SetWidth(frame.noteFrame:GetWidth() - 24)
+		button:SetWidth(notesFrame:GetWidth() - 24)
 		button.infoText = button:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 		button.infoText:SetHeight(16)
 		button.infoText:SetJustifyH("LEFT")
@@ -1494,11 +1644,11 @@ function Users:CreateUI()
 		button.commentText:SetPoint("TOPRIGHT", button.infoText, "BOTTOMRIGHT", 0, 0)
 
 		if( i > 1 ) then
-			button:SetPoint("TOPLEFT", frame.noteFrame.rows[i - 1], "BOTTOMLEFT", 0, -4)
+			button:SetPoint("TOPLEFT", notesFrame.rows[i - 1], "BOTTOMLEFT", 0, -4)
 		else
-			button:SetPoint("TOPLEFT", frame.noteFrame, "TOPLEFT", 4, -2)
+			button:SetPoint("TOPLEFT", notesFrame, "TOPLEFT", 4, -2)
 		end
-		frame.noteFrame.rows[i] = button
+		notesFrame.rows[i] = button
 	end
 end
 
