@@ -648,9 +648,9 @@ function Users:BuildAchievementPage()
 	local rowWidth = self.achievementsFrame:GetWidth() - (self.achievementsFrame.scroll:IsVisible() and 26 or 10)
 	local offset = FauxScrollFrame_GetOffset(self.achievementsFrame.scroll)
 	
-	if( self.activeData.mainAchievements and offset == 0 ) then
+	if( userData.mainAchievements and offset == 0 ) then
 		local row = self.frame.achievementFrame.rows[rowID]
-		row.nameText:SetFormattedText(L["Mains experience on left, %s on right"], self.activeData.name)
+		row.nameText:SetFormattedText(L["Mains experience on left, %s on right"], userData.name)
 		row.tooltip = row.nameText:GetText()
 		row.expandedInfo = nil
 		row:SetWidth(rowWidth - 4)
