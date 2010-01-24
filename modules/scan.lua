@@ -115,7 +115,7 @@ function Scan:CheckInspectGems()
 		pending.gems = nil
 		
 		if( pending.playerID ) then
-			self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
+			self:SendMessage("EG_DATA_UPDATED", "gems", pending.playerID)
 		end
 		return
 	end
@@ -137,7 +137,7 @@ function Scan:CheckInspectGems()
 		removeGemQueue(pending.unit)
 		pending.gems = nil
 		self.frame.gearTimer = nil
-		self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
+		self:SendMessage("EG_DATA_UPDATED", "gems", pending.playerID)
 
 		checkPending(pending.unit)
 	end
@@ -159,7 +159,7 @@ function Scan:INSPECT_ACHIEVEMENT_READY()
 		end
 		
 		ClearAchievementComparisonUnit()
-		self:SendMessage("SG_DATA_UPDATED", "achievements", pending.playerID)
+		self:SendMessage("EG_DATA_UPDATED", "achievements", pending.playerID)
 		checkPending(pending.unit)
 	end
 end
@@ -173,7 +173,7 @@ function Scan:INSPECT_TALENT_READY()
 		
 		local userData = ElitistGroup.userData[pending.playerID]
 		self:SetTalentData(userData, true)
-		self:SendMessage("SG_DATA_UPDATED", "talents", pending.playerID)
+		self:SendMessage("EG_DATA_UPDATED", "talents", pending.playerID)
 		checkPending(pending.unit)
 	end
 end
@@ -205,7 +205,7 @@ local function getTalentData(classToken, inspect, activeTalentGroup)
 end
 
 function Scan:SetTalentData(userData, inspect)
-	local activeTalentGroup = GetActiveTalentGroup()
+	local activeTalentGroup = GetActiveTalentGroup(inspect)
 	local first, second, third, unspentPoints, specRole = getTalentData(userData.classToken, inspect, activeTalentGroup)
 	userData.talentTree1 = first
 	userData.talentTree2 = second
@@ -315,8 +315,7 @@ function Scan:UpdateUnitData(unit)
 		Scan.frame:Show()
 	elseif( pending.unit == unit ) then
 		removeGemQueue(pending.unit)
-		
-		self:SendMessage("SG_DATA_UPDATED", "gems", pending.playerID)
+		self:SendMessage("EG_DATA_UPDATED", "gems", pending.playerID)
 	end
 end
 
