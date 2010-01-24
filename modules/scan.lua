@@ -95,7 +95,7 @@ local function checkPending(unit)
 	if( inspectQueue[unit] and not pending.achievements and not pending.gear and not pending.talents ) then
 		pending.activeInspect = nil
 		pending.expirationTime = nil
-		self:ProcessQueue()
+		Scan:ProcessQueue()
 	end
 end
 
