@@ -57,9 +57,12 @@ function Summary:Show()
 		ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())
 	end
 	
+	local height = GetNumPartyMembers() > 2 and 2 or 1
+	local width = GetNumPartyMembers() > 1 and 2 or 1
+	
 	self:CreateUI()
-	self.frame:SetHeight(35 + (142 * math.ceil(GetNumPartyMembers() / 2)))
-	self.frame:SetWidth(30 + (175 * math.ceil(GetNumPartyMembers() / 2)))
+	self.frame:SetHeight(35 + (142 * height))
+	self.frame:SetWidth(30 + (175 * width))
 	self.frame:Show()
 	
 	for _, row in pairs(self.summaryRows) do row:Hide() end
