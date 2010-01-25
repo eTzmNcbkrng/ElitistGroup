@@ -123,7 +123,7 @@ local function loadOptions()
 								ElitistGroup.db.global.main.data = nil
 							end
 							
-							ElitistGroup.modules.Sync:ResetPlayerData()
+							ElitistGroup.modules.Sync:ResetPlayerCache()
 						end,
 						get = function(info) return ElitistGroup.db.global.main.character == ElitistGroup.playerID end,
 						width = "full",
