@@ -157,7 +157,7 @@ function Notes:Update()
 			end
 			
 			local userData = ElitistGroup.userData[name]
-			if( not userData[name] ) then
+			if( not userData ) then
 				ElitistGroup.modules.Scan:ManualCreateCore(name, playerLevels[name], playerClasses[name])
 			end
 			
