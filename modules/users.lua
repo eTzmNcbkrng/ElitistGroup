@@ -279,7 +279,7 @@ function Users:BuildUI(userData, updateType)
 				infoFrame.averageInfo.tooltip = nil
 			end
 		else
-			infoFrame.averageInfo:SetFormattedText(L["No ratings found"])
+			infoFrame.averageInfo:SetFormattedText(L["Not rated"])
 			infoFrame.averageInfo.icon:SetTexture(READY_CHECK_NOT_READY_TEXTURE)
 			infoFrame.averageInfo.tooltip = nil
 		end
@@ -510,9 +510,13 @@ function Users:BuildEquipmentPage()
 				local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[-1]
 				slot.levelText:SetText(math.floor(ElitistGroup:CalculateScore(itemLink, itemQuality, itemLevel)))
 				slot.levelText:SetTextColor(color.r, color.g, color.b)
-
-				if( enchantData[fullItemLink] or gemData[fullItemLink] ) then
-					slot.enhanceText:SetText(L["Enhancements"])
+				
+				if( enchantData[fullItemLink] and gemData[fullItemLink] ) then
+					slot.enhanceText:SetText(L["Gems/Enchants"])
+				elseif( gemData[fullItemLink] ) then
+					slot.enhanceText:SetText(L["Gems"])
+				elseif( enchantData[fullItemLink] ) then
+					slot.enhanceText:SetText(L["Enchants"])
 				else
 					slot.enhanceText:SetText(nil)
 				end
@@ -1106,9 +1110,20 @@ function Users:CreateUI()
 			
 			GameTooltip:Show()
 			
+			-- Because of how large equipment tooltips are, and the positioning of them now
+			-- it's better to smart anchor tooltips based off of where the most room is
+			local left, right = GameTooltip:GetLeft(), GameTooltip:GetRight()
+			local totalRight = UIParent:GetRight()
+			right = totalRight - right
+			
+			local point, relative, pos = "TOPRIGHT", "TOPLEFT", -10
+			if( right > left ) then
+				point, relative, pos = "TOPLEFT", "TOPRIGHT", 10
+			end
+				
 			-- Show the item as a second though
 			ElitistGroup.tooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-			ElitistGroup.tooltip:SetPoint("TOPRIGHT", GameTooltip, "TOPLEFT", -10, 0)
+			ElitistGroup.tooltip:SetPoint(point, GameTooltip, relative, pos, 0)
 			ElitistGroup.tooltip:SetHyperlink(self.equippedItem)
 			ElitistGroup.tooltip:Show()
 		end
