@@ -151,6 +151,7 @@ function Users:BuildUI(userData, updateType)
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			infoFrame.equipmentInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] [%s%d|r] Equipment"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 			infoFrame.equipmentInfo.tooltip = equipmentTooltip
+			infoFrame.equipmentInfo.suitationalTooltip = ElitistGroup:GetSuitationalTooltip(nil, equipmentData)
 			infoFrame.equipmentInfo.disableWrap = true
 		
 			-- ENCHANTS
@@ -179,6 +180,7 @@ function Users:BuildUI(userData, updateType)
 
 				infoFrame.gemInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Gems"], r, g, percent * 100)
 				infoFrame.gemInfo.tooltip = gemTooltip
+				infoFrame.gemInfo.suitationalTooltip = ElitistGroup:GetSuitationalTooltip(nil, nil, gemData)
 				infoFrame.gemInfo.disableWrap = not gemData.noData
 			else
 				infoFrame.gemInfo:SetText(L["[|cffff20200%|r] Gems"])
@@ -495,6 +497,7 @@ function Users:BuildEquipmentPage()
 				slot.enchantTooltip = enchantTooltips[itemLink]
 				slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
 				slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
+				slot.suitationalTooltip = ElitistGroup:GetSuitationalTooltip(itemLink, equipmentData, gemData)
 				slot.fullItemLink = fullItemLink
 				slot.icon:SetTexture(itemIcon)
 				slot.typeText:SetText(slot.itemTalentType)
@@ -512,11 +515,11 @@ function Users:BuildEquipmentPage()
 				slot.levelText:SetTextColor(color.r, color.g, color.b)
 				
 				if( enchantData[fullItemLink] and gemData[fullItemLink] ) then
-					slot.enhanceText:SetText(L["Gems/Enchants"])
+					slot.enhanceText:SetText(L["Gems/Enchant"])
 				elseif( gemData[fullItemLink] ) then
 					slot.enhanceText:SetText(L["Gems"])
 				elseif( enchantData[fullItemLink] ) then
-					slot.enhanceText:SetText(L["Enchants"])
+					slot.enhanceText:SetText(L["Enchant"])
 				else
 					slot.enhanceText:SetText(nil)
 				end
@@ -1089,11 +1092,19 @@ function Users:CreateUI()
 		end
 	end
 	
+	local suitTooltip
 	OnEnter = function(self)
 		if( self.tooltip ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
 			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
 			GameTooltip:Show()
+
+			if( self.suitationalTooltip ) then
+				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupSuitationalTooltip", UIParent, "GameTooltipTemplate")
+				suitTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
+				suitTooltip:SetText(self.suitationalTooltip, 1, 1, 1, nil, true)
+				suitTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 0, 10)
+			end
 
 		elseif( self.equippedItem ) then
 			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
@@ -1109,6 +1120,13 @@ function Users:CreateUI()
 			end
 			
 			GameTooltip:Show()
+			
+			if( self.suitationalTooltip ) then
+				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupSuitationalTooltip", UIParent, "GameTooltipTemplate")
+				suitTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
+				suitTooltip:SetText(self.suitationalTooltip, 1, 1, 1, nil, true)
+				suitTooltip:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 0, -10)
+			end
 			
 			-- Because of how large equipment tooltips are, and the positioning of them now
 			-- it's better to smart anchor tooltips based off of where the most room is
