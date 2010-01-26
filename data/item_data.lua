@@ -6,7 +6,7 @@ local function loadData()
 	local Items = ElitistGroup.Items
 	-- While it's true that we could apply additional modifiers like 1.05 for legendaries, it's not really necessary because legendaries aren't items
 	-- that people have 70% of their equipment as that need a modifier to separate them.
-	ElitistGroup.Items.qualityModifiers = {
+	Items.qualityModifiers = {
 		[ITEM_QUALITY_POOR] = 0.50,
 		[ITEM_QUALITY_COMMON] = 0.60,
 		[ITEM_QUALITY_UNCOMMON] = 0.90,
@@ -15,16 +15,16 @@ local function loadData()
 	}
 
 	-- Specific override, epic items must have a rare or higher quality gem in them
-	ElitistGroup.Items.gemQualities = {
+	Items.gemQualities = {
 		[ITEM_QUALITY_EPIC] = ITEM_QUALITY_RARE,
 	}
 
 	-- Item level of heirlooms based on the player's level. Currently this is ~2.22/per player level, meaning they work out to 187 item level blues at 80
 	-- with the quality modifier they are item level ~177
 	-- This will have to change come Cataclysm, not quite sure how Blizzard is going to handle heirlooms then
-	ElitistGroup.Items.heirloomLevel = (187 / 80)
+	Items.heirloomLevel = (187 / 80)
 
-	ElitistGroup.Items.inventoryToID = {
+	Items.inventoryToID = {
 		["HeadSlot"] = "head", ["ChestSlot"] = "chest", ["RangedSlot"] = "ranged",
 		["WristSlot"] = "wrists", ["Trinket1Slot"] = "trinkets", ["Trinket0Slot"] = "trinkets",
 		["MainHandSlot"] = "weapons", ["SecondaryHandSlot"] = "weapons", ["Finger0Slot"] = "rings",
@@ -32,21 +32,21 @@ local function loadData()
 		["WaistSlot"] = "waist", ["HandsSlot"] = "hands", ["BackSlot"] = "cloak", ["ShoulderSlot"] = "shoulders",
 	}
 
-	ElitistGroup.Items.validInventorySlots = {}
-	for slotType in pairs(ElitistGroup.Items.inventoryToID) do
-		ElitistGroup.Items.validInventorySlots[GetInventorySlotInfo(slotType)] = slotType
+	Items.validInventorySlots = {}
+	for slotType in pairs(Items.inventoryToID) do
+		Items.validInventorySlots[GetInventorySlotInfo(slotType)] = slotType
 	end
 
 	-- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
 	-- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
 	-- Setting a class token means that it's unenchantable for everyone except that class
-	ElitistGroup.Items.unenchantableTypes = {
+	Items.unenchantableTypes = {
 		["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true,
 		["INVTYPE_RANGEDRIGHT"] = "HUNTER",
 		["INVTYPE_RANGED"] = "HUNTER",
 	}
 
-	ElitistGroup.Items.equipToType = {
+	Items.equipToType = {
 		["INVTYPE_RANGEDRIGHT"] = "ranged", ["INVTYPE_SHIELD"] = "weapons", ["INVTYPE_WEAPONOFFHAND"] = "weapons",
 		["INVTYPE_RANGED"] = "ranged", ["INVTYPE_WEAPON"] = "weapons", ["INVTYPE_2HWEAPON"] = "weapons",
 		["INVTYPE_WRIST"] = "wrists", ["INVTYPE_TRINKET"] = "trinkets", ["INVTYPE_NECK"] = "neck",
@@ -57,9 +57,9 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	ElitistGroup.Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["disc-priest"] = L["Priest (Discipline)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
+	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["suitational-caster"] = L["Suitational (Caster)"], ["suitational-healer"] = L["Suitational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
 
-	ElitistGroup.Items.talentToRole = {
+	Items.talentToRole = {
 		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
 		["caster-dps"] = {["caster-spirit"] = true, ["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
@@ -71,26 +71,28 @@ local function loadData()
 		["disc-priest"] = false,
 		["resto-druid"] = false, 
 		["balance-druid"] = false,
+		["resto-shaman"] = false,
 	}
 	
-	local manalessHealer = CopyTable(ElitistGroup.Items.talentToRole.healer)
+	local manalessHealer = CopyTable(Items.talentToRole.healer)
 	manalessHealer.manaless = true
 	
-	ElitistGroup.Items.talentToRole["dk-tank"] = ElitistGroup.Items.talentToRole.tank
-	ElitistGroup.Items.talentToRole["disc-priest"] = manalessHealer
-	ElitistGroup.Items.talentToRole["holy-priest"] = manalesshealer
-	ElitistGroup.Items.talentToRole["resto-druid"] = manalessHealer
-	ElitistGroup.Items.talentToRole["balance-druid"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])	
-	ElitistGroup.Items.talentToRole["balance-druid"].manaless = true
-	ElitistGroup.Items.talentToRole["elemental-shaman"] = CopyTable(ElitistGroup.Items.talentToRole["caster-dps"])
-	ElitistGroup.Items.talentToRole["elemental-shaman"]["elemental/pvp"] = true
+	Items.talentToRole["dk-tank"] = Items.talentToRole.tank
+	Items.talentToRole["resto-shaman"] = Items.talentToRole["mp5-healer"]
+	Items.talentToRole["disc-priest"] = manalessHealer
+	Items.talentToRole["holy-priest"] = manalesshealer
+	Items.talentToRole["resto-druid"] = manalessHealer
+	Items.talentToRole["balance-druid"] = CopyTable(Items.talentToRole["caster-dps"])	
+	Items.talentToRole["balance-druid"].manaless = true
+	Items.talentToRole["elemental-shaman"] = CopyTable(Items.talentToRole["caster-dps"])
+	Items.talentToRole["elemental-shaman"]["elemental/pvp"] = true
 
 	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
-	for type in pairs(ElitistGroup.Items.talentToRole["melee-dps"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
-	for type in pairs(ElitistGroup.Items.talentToRole["tank"]) do ElitistGroup.Items.talentToRole["feral-tank"][type] = true end
+	for type in pairs(Items.talentToRole["melee-dps"]) do Items.talentToRole["feral-tank"][type] = true end
+	for type in pairs(Items.talentToRole["tank"]) do Items.talentToRole["feral-tank"][type] = true end
 
 	-- This will likely have to be cleaned up, but for now this will allow overrides on what is allowed based on slot
-	ElitistGroup.Items.roleOverrides = {
+	Items.roleOverrides = {
 		["dk-tank"] = {type = "weapons", ["physical-dps"] = true, ["dps"] = true, ["melee-dps"] = true}
 	}
 
@@ -107,7 +109,7 @@ local function loadData()
 	end
 
 	-- Hybrid relics should be listed in Items.itemOverrides
-	ElitistGroup.Items.relicSpells = {
+	Items.relicSpells = {
 		[getSpell(24974)] = "caster-dps", -- Insect Swarm
 		[getSpell(8921)] = "caster-dps", -- Moonfire
 		[getSpell(2912)] = "caster-dps", -- Starfire
@@ -161,7 +163,7 @@ local function loadData()
 	}
 
 	-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
-	ElitistGroup.Items.enchantOverrides = {
+	Items.enchantOverrides = {
 		[3826] = "all", -- Icewalker
 		[3253] = "tank", -- Armsman
 		[3852] = "tank/pvp", -- Greater Inscription of the Gladiator
@@ -216,9 +218,47 @@ local function loadData()
 		[3595] = "pvp", -- Rune of Spellbreaking
 		[3366] = "never", -- Rune of Lichbane
 	}
+	
+	-- Allows overriding of items based on the presence of other items and in general, more complicated factors
+	local TRINKET1 = GetInventorySlotInfo("Trinket0Slot")
+	local TRINKET2 = GetInventorySlotInfo("Trinket1Slot")
+	local solace = {["47041"] = true, ["47059"] = true, ["47271"] = true, ["47432"] = true}
+	Items.suitationalOverrides = {
+		-- Revitalizing Skyflare Diamond
+		["item:41376"] = function(type, userData, specType)
+			if( specType == "disc-priest" ) then return "healer" end
+			if( specType ~= "resto-shaman" ) then return nil end
+			
+			-- As per: http://elitistjerks.com/f47/t24796-shaman_restoration/#Gems
+			-- One or more Solace trinkets makes Revitalizing Skyflare Diamond good for Shamans
+			local equipTrinket1 = userData.equipment[TRINKET1] and string.match(userData.equipment[TRINKET1], "item:(%d+)")
+			local equipTrinket2 = userData.equipment[TRINKET2] and string.match(userData.equipment[TRINKET2], "item:(%d+)")
+			if( ( equipTrinket1 and solaceIDs[equipTrinket1] ) or ( equipTrinket2 and solaceIDs[equipTrinket2] ) ) then
+				return "healer"
+			end
+			
+			return "suitational-healer", L["Revitalizing meta requires a Solace of the Fallen/Defeated trinket for it to be a good meta gem for Restoration Shamans."]
+		end,
+		-- Shiny Shard of the Flame
+		["item:49464"] = function(type, userdata, specType)
+			local reverseType = type == TRINKET1 and TRINKET2 or TRINKET1
+			local trinket = userData.equipment[reverseType] and string.match(userData.equipment[reverseType], "item:(%d+)")
+			
+			-- 49488 Shiny Shard of the Scale / 49310 Purified Shard of the Scale
+			if( trinket == "49488" or trinket == "49310" ) then
+				return "healer"
+			end
+				
+			return "suitational-caster", L["Purified/Shiny Shard of the Flame are only good if the player also has the \"of the Scale\" trinket."]
+		end,
+	}
+	
+	-- Purified Shard of the Flame
+	Items.suitationalOverrides["item:49463"] = Items.suitationalOverrides["item:49464"]
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
-	ElitistGroup.Items.itemOverrides = {
+	Items.itemOverrides = {
+		[25897] = "never", -- Bracing Earthsiege Diamond
 		[41389] = "never", -- Beaming Earthsiege Diamond
 		[35503] = "manaless", -- Ember Skyfire Diamond
 		[41333] = "manaless", -- Ember Skyflare Diamond
@@ -233,8 +273,6 @@ local function loadData()
 		[44254] = "caster-spirit", -- Darkmoon Card: Greatness (+90 SPI)
 		[44253] = "tank/dps", -- Darkmoon Card: Greantess (+90 AGI)
 		[42987] = "tank/dps", -- Darkmoon Card: Greatness (+90 STR)
-		[49464] = "caster", -- Shiny Shard of the Flame, this would be only useful if you have both trinkets, but still
-		[49463] = "caster", -- Purified Shard of the Flame, ^
 		[47668] = "tank/dps", -- Idol of Mutilation
 		[50456] = "tank/dps", -- Idol of the Crying Moon
 		[38365] = "tank/dps", -- Idol of Perspicacious Attacks
@@ -263,7 +301,7 @@ local function loadData()
 		[44087] = "never", -- Persistent Earthshatter Diamond
 		[41381] = "never", -- Persistent Earthsiege Diamond
 		[32640] = "never", -- Potent Unstable Diamond
-		[41376] = "disc-priest", -- Revitalizing Skyflare Diamond
+		[41376] = "suitational-healer", -- Revitalizing Skyflare Diamond
 		[25894] = "never", -- Swift Skyfire Diamond
 		[41339] = "never", -- Swift Skyflare Diamond
 		[28557] = "never", -- Swift Starfire Diamond
@@ -279,7 +317,7 @@ local function loadData()
 	}
 
 	-- Map for checking stats on gems and enchants
-	ElitistGroup.Items.statMap = {
+	Items.statMap = {
 		RESILIENCE_RATING = "ITEM_MOD_RESILIENCE_RATING_SHORT", SPELL_PENETRATION = "ITEM_MOD_SPELL_PENETRATION_SHORT", SPELL_HEALING_DONE = "ITEM_MOD_SPELL_HEALING_DONE_SHORT",
 		HIT_SPELL_RATING = "ITEM_MOD_HIT_SPELL_RATING_SHORT", RANGED_ATTACK_POWER = "ITEM_MOD_RANGED_ATTACK_POWER_SHORT", CRIT_RANGED_RATING = "ITEM_MOD_CRIT_RANGED_RATING_SHORT",
 		HIT_RANGED_RATING = "ITEM_MOD_HIT_RANGED_RATING_SHORT", DODGE_RATING = "ITEM_MOD_DODGE_RATING_SHORT", DEFENSE_SKILL_RATING = "ITEM_MOD_DEFENSE_SKILL_RATING_SHORT",
@@ -295,26 +333,27 @@ local function loadData()
 		HELPFUL_SPELL = L["helpful spell"], HARMFUL_SPELL = L["harmful spell"], PERIODIC_DAMAGE = L["periodic damage"], MELEE_ATTACK = L["chance on melee attack"],
 		CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"], RANGED_CRITICAL_STRIKE = L["ranged critical"],
 		MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
-		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"], WHEN_HIT = L["when hit"],
+		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"], WHEN_HIT = L["when hit"], ROOT_DURATION = L["root duration"], SILENCE_DURATION = L["silence duration"],
+		STUN_RESISTANCE = L["stun resistance"], FEAR_DURATION = L["fear duration"], STUN_DURATION = L["stun duration"], RUN_SPEED = L["run speed"]
 	}
 
-	ElitistGroup.Items.safeStatMatch = {}
-	for _, key in pairs(ElitistGroup.Items.statMap) do
+	Items.safeStatMatch = {}
+	for _, key in pairs(Items.statMap) do
 		local text = _G[key] or key
 		text = string.gsub(text, "%(", "%%(")
 		text = string.gsub(text, "%)", "%%)")
 		text = string.gsub(text, "%.", "%%.")
-		ElitistGroup.Items.safeStatMatch[key] = string.lower(text)
+		Items.safeStatMatch[key] = string.lower(text)
 	end
 
 	-- Basically, some stats like "armor" will conflict with "armor penetration", as well melee hit and so on
 	-- so will set it up so the longest strings get matched first to prevent any chance of conflicts happening
-	ElitistGroup.Items.orderedStatMap = {}
-	for key in pairs(ElitistGroup.Items.safeStatMatch) do table.insert(ElitistGroup.Items.orderedStatMap, key) end
-	table.sort(ElitistGroup.Items.orderedStatMap, function(a, b) return string.len(_G[a] or a) > string.len(_G[b] or b) end)
+	Items.orderedStatMap = {}
+	for key in pairs(Items.safeStatMatch) do table.insert(Items.orderedStatMap, key) end
+	table.sort(Items.orderedStatMap, function(a, b) return string.len(_G[a] or a) > string.len(_G[b] or b) end)
 
 	-- These are strings returned from GlobalStrings, ITEM_MOD_####_SHORT/####_NAME for GetItemStats, the ordering is important, do not mess with it
-	ElitistGroup.Items.statTalents = {
+	Items.statTalents = {
 		{type = "pvp",			default = "RESILIENCE_RATING@SPELL_PENETRATION@"},
 		{type = "elemental/pvp",gems = "STAMINA@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "all",			gems = "SPELL_STATALL@", enchants = "SPELL_STATALL@"},
@@ -349,7 +388,7 @@ end
 -- so for the cost of a table, I get free loading on demand
 ElitistGroup.Items = setmetatable({}, {
 	__index = function(tbl, key)
-		loadData()
 		setmetatable(tbl, nil)
+		loadData()
 		return tbl[key]
 end})
