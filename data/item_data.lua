@@ -38,7 +38,7 @@ local function loadData()
 	end
 
 	-- Yes, technically you can enchant rings. But we can't accurately figure out if the person is an enchanter
-	-- while we will rate the enchant if one is present, it won't be flagged as they don't have everything enchanted
+	-- while we will rate the enchant if one is present, it won't be flagged as they don't have it enchanted
 	-- Setting a class token means that it's unenchantable for everyone except that class
 	Items.unenchantableTypes = {
 		["INVTYPE_NECK"] = true, ["INVTYPE_FINGER"] = true, ["INVTYPE_TRINKET"] = true, ["INVTYPE_HOLDABLE"] = true, ["INVTYPE_THROWN"] = true, ["INVTYPE_RELIC"] = true, ["INVTYPE_WAIST"] = true,
@@ -57,43 +57,80 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["suitational-caster"] = L["Suitational (Caster)"], ["suitational-healer"] = L["Suitational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
+	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["suitational-caster"] = L["Suitational (Caster)"], ["suitational-healer"] = L["Suitational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/range"] = L["Tank/range DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
 
+	local function mergeTable(into, ...)
+		for i=1, select("#", ...) do
+			local key = select(i, ...)
+			if( type(key) == "table" ) then
+				for subKey in pairs(key) do
+					into[subKey] = true
+				end
+			else
+				into[key] = true
+			end
+		end
+		
+		return into
+	end
+	
+	-- Set the primary spec arch types
+	local tank = {["all"] = true, ["tank"] = true, ["melee"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank/range"] = true, ["tank/pvp"] = true}
+	local casterDamage = {["all"] = true, ["caster-spirit"] = true, ["caster-dps"] = true, ["caster"] = true, ["healer/dps"] = true, ["tank/dps"] = true, ["dps"] = true}
+	local meleeDamage = {["all"] = true, ["melee"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true}
+	local rangeDamage = {["all"] = true, ["range-dps"] = true, ["physical-dps"] = true, ["physical-all"] = true, ["healer/dps"] = true, ["tank/dps"] = true, ["dps"] = true}
+	local healer = {["all"] = true, ["healer"] = true, ["caster"] = true, ["healer/dps"] = true}
+	local spiritHealer = mergeTable({}, healer, "caster-spirit")
+
+	-- Now define type by spec
 	Items.talentToRole = {
-		["mp5-healer"] = {["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
-		["healer"] = {["caster-spirit"] = true, ["all"] = true, ["healer/dps"] = true, ["healer"] = true, ["caster"] = true},
-		["caster-dps"] = {["caster-spirit"] = true, ["all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["caster"] = true, ["caster-dps"] = true},
-		["melee-dps"] = {["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["melee"] = true},
-		["range-dps"] = {["all"] = true, ["tank/ranged"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true, ["physical-dps"] = true, ["ranged"] = true},
-		["tank"] = {["tank/ranged"] = true, ["tank/pvp"] = true, ["all"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank"] = true, ["melee"] = true},
-		["feral-tank"] = {["pvp"] = true},
-		["dk-tank"] = false, -- Set below
-		["disc-priest"] = false,
-		["resto-druid"] = false, 
-		["balance-druid"] = false,
-		["resto-shaman"] = false,
+		-- Shamans
+		["elemental-shaman"] = mergeTable({}, casterDamage, "elemental/pvp"),
+		["enhance-shaman"] = meleeDamage,
+		["resto-shaman"] = healer,
+		-- Mages
+		["arcane-mage"] = casterDamage,
+		["fire-mage"] = casterDamage,
+		["frost-mage"] = casterDamage,
+		-- Warlocks
+		["afflict-warlock"] = casterDamage,
+		["demon-warlock"] = casterDamage,
+		["destro-warlock"] = casterDamage,
+		-- Druids
+		["balance-druid"] = mergeTable({}, casterDamage, "manaless"),
+		["cat-druid"] = meleeDamage,
+		["bear-druid"] = mergeTable({}, meleeDamage, tank, "pvp"),
+		["resto-druid"] = mergeTable({}, spiritHealer, "manaless"),
+		-- Warriors
+		["arms-warrior"] = meleeDamage,
+		["fury-warrior"] = meleeDamage,
+		["prot-warrior"] = tank,
+		-- Rogues
+		["assass-rogue"] = meleeDamage,
+		["combat-rogue"] = meleeDamage,
+		["subtlety-rogue"] = meleeDamage,
+		-- Paladins
+		["holy-paladin"] = healer,
+		["prot-paladin"] = tank,
+		["ret-paladin"] = meleeDamage,
+		-- Hunters
+		["beast-hunter"] = rangeDamage,
+		["marks-hunter"] = rangeDamage,
+		["survival-hunter"] = rangeDamage,
+		-- Priests
+		["disc-priest"] = mergeTable({}, spiritHealer, "manaless"),
+		["holy-priest"] = mergeTable({}, spiritHealer, "manaless"),
+		["shadow-priest"] = casterDamage,
+		-- Death Knights
+		["blood-dk"] = meleeDamage,
+		["frost-dk"] = meleeDamage,
+		["unholy-dk"] = meleeDamage,
+		["tank-dk"] = tank,
 	}
-	
-	local manalessHealer = CopyTable(Items.talentToRole.healer)
-	manalessHealer.manaless = true
-	
-	Items.talentToRole["dk-tank"] = Items.talentToRole.tank
-	Items.talentToRole["resto-shaman"] = Items.talentToRole["mp5-healer"]
-	Items.talentToRole["disc-priest"] = manalessHealer
-	Items.talentToRole["holy-priest"] = manalesshealer
-	Items.talentToRole["resto-druid"] = manalessHealer
-	Items.talentToRole["balance-druid"] = CopyTable(Items.talentToRole["caster-dps"])	
-	Items.talentToRole["balance-druid"].manaless = true
-	Items.talentToRole["elemental-shaman"] = CopyTable(Items.talentToRole["caster-dps"])
-	Items.talentToRole["elemental-shaman"]["elemental/pvp"] = true
-
-	-- Unfortunately ferals are a pain, because of how they work they essentially are going to wear a mix of tank gear and DPS gear which is still valid for them
-	for type in pairs(Items.talentToRole["melee-dps"]) do Items.talentToRole["feral-tank"][type] = true end
-	for type in pairs(Items.talentToRole["tank"]) do Items.talentToRole["feral-tank"][type] = true end
 
 	-- This will likely have to be cleaned up, but for now this will allow overrides on what is allowed based on slot
 	Items.roleOverrides = {
-		["dk-tank"] = {type = "weapons", ["physical-dps"] = true, ["dps"] = true, ["melee-dps"] = true}
+		["tank-dk"] = {type = "weapons", ["physical-dps"] = true, ["dps"] = true, ["melee-dps"] = true}
 	}
 
 	local function getSpell(id)
@@ -193,7 +230,7 @@ local function loadData()
 		[930] = "never", -- Riding Skill
 		[803] = "melee-dps", -- Fiery Weapon
 		[3731] = "tank/pvp", -- Titanium Weapon Chain
-		[3788] = "tank/ranged", -- Accuracy
+		[3788] = "tank/range", -- Accuracy
 		[3728] = "caster", -- Darkglow Embroidery
 		[3730] = "physical-dps", -- Swordguard Embroidery
 		[3722] = "caster", -- Lightweave Embroidery
@@ -366,7 +403,7 @@ local function loadData()
 		{type = "caster-dps",	default = "HIT_RATING@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "physical-all",	default = "AGILITY@"},
 		{type = "physical-dps", default = "ARMOR_PENETRATION_RATING@", trinkets = "ATTACK@MELEE_OR_RANGE_DAMAGE@CHANCE_MELEE_OR_RANGE@MELEE_AND_RANGE@MELEE_AND_RANGE@"},
-		{type = "ranged",		default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
+		{type = "range-dps",	default = "RANGED_ATTACK_POWER@CRIT_RANGED_RATING@HIT_RANGED_RATING@RANGED_CRITICAL_STRIKE@"},
 		{type = "melee",		gems = "STRENGTH@", require = "ITEM_MOD_STAMINA_SHORT"},
 		{type = "caster-spirit",gems = "SPIRIT@", enchants = "SPIRIT@", trinkets = "SPIRIT@"},
 		{type = "caster-spirit",default = "SPIRIT@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
