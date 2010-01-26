@@ -62,7 +62,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 
 		pending.playerID = ElitistGroup:GetPlayerID(unit)
 		pending.classToken = select(2, UnitClass(unit))
-		pending.totalChecks = 0
+		pending.checksLeft = 30
 		pending.talents = true
 		pending.achievements = true
 		pending.unit = unit
@@ -110,7 +110,7 @@ local function removeGemQueue(unit)
 end
 
 function Scan:CheckInspectGems()
-	if( not pending.gems or not pending.playerID or pending.totalChecks >= 30 or UnitGUID(pending.unit) ~= pending.guid ) then
+	if( not pending.gems or not pending.playerID or pending.checksLeft <= 0 or UnitGUID(pending.unit) ~= pending.guid ) then
 		self.frame.gearTimer = nil
 		pending.gems = nil
 		
@@ -120,7 +120,7 @@ function Scan:CheckInspectGems()
 		return
 	end
 	
-	pending.totalChecks = pending.totalChecks + 1
+	pending.checksLeft = pending.checksLeft - 1
 	
 	local totalPending = 0
 	for inventoryID, itemLink in pairs(pendingGear) do
@@ -170,6 +170,9 @@ function Scan:INSPECT_TALENT_READY()
 	
 	if( pending.playerID and pending.talents and ElitistGroup.userData[pending.playerID] ) then
 		pending.talents = nil
+		-- Once we receive the talent data, we can assume that the request has reached the server and the server has responded
+		-- meaning gems should be available within 0.30 seconds at the most.
+		pending.checksLeft = math.min(pending.checksLeft, 3)
 		
 		local userData = ElitistGroup.userData[pending.playerID]
 		self:SetTalentData(userData, true)
