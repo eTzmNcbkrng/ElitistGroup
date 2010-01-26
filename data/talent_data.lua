@@ -4,8 +4,13 @@ local L = ElitistGroup.L
 local function loadData()
 	local Talents = ElitistGroup.Talents
 
-	Talents.talentText = {["healer"] = L["Healer"], ["caster-dps"] = L["Caster DPS"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["Melee DPS"], ["range-dps"] = L["Ranged DPS"], ["feral-tank"] = L["Tank"], ["mp5-healer"] = L["Healer"], ["disc-priest"] = L["Healer"], ["dk-tank"] = L["Tank"], ["resto-druid"] = L["Healer"], ["balance-druid"] = L["Caster DPS"], ["elemental-shaman"] = L["Caster DPS"], ["holy-priest"] = L["Healer"], ["resto-shaman"] = L["Healer"]}
-
+	local CASTER_DAMAGE = L["DPS, Caster"]
+	local MELEE_DAMAGE = L["DPS, Melee"]
+	local RANGE_DAMAGE = L["DPS, Ranged"]
+	local HEALER = L["Healer"]
+	local TANK = L["Tank"]
+	Talents.talentText = {["elemental-shaman"] = CASTER_DAMAGE, ["enhance-shaman"] = MELEE_DAMAGE, ["resto-shaman"] = HEALER, ["arcane-mage"] = CASTER_DAMAGE, ["fire-mage"] = CASTER_DAMAGE, ["frost-mage"] = CASTER_DAMAGE, ["afflict-warlock"] = CASTER_DAMAGE, ["demon-warlock"] = CASTER_DAMAGE, ["destro-warlock"] = CASTER_DAMAGE, ["balance-druid"] = CASTER_DAMAGE, ["cat-druid"] = MELEE_DAMAGE, ["bear-druid"] = TANK, ["resto-druid"] = HEALER, ["arms-warrior"] = MELEE_DAMAGE, ["fury-warrior"] = MELEE_DAMAGE, ["prot-warrior"] = TANK, ["assass-rogue"] = MELEE_DAMAGE, ["combat-rogue"] = MELEE_DAMAGE, ["subtlety-rogue"] = MELEE_DAMAGE, ["holy-paladin"] = HEALER, ["prot-paladin"] = TANK, ["ret-paladin"] = MELEE_DAMAGE, ["beast-hunter"] = RANGE_DAMAGE, ["marks-hunter"] = RANGE_DAMAGE, ["survival-hunter"] = RANGE_DAMAGE, ["disc-priest"] = HEALER, ["holy-priest"] = HEALER, ["shadow-priest"] = CASTER_DAMAGE, ["blood-dk"] = MELEE_DAMAGE, ["frost-dk"] = MELEE_DAMAGE, ["unholy-dk"] = MELEE_DAMAGE, ["tank-dk"] = TANK}
+	
 	-- required = How many of the talents the class needs
 	-- the number set for the talent is how many they need
 	-- Death Knights for example need capped Blade Barrier, Anticipation or Toughness, any 2 to be a tank
@@ -14,7 +19,7 @@ local function loadData()
 	Talents.specOverride = {
 		["DEATHKNIGHT"] = {
 			["required"] = 3,
-			["role"] = "dk-tank",
+			["role"] = "tank-dk",
 			
 			[GetSpellInfo(16271)] = 5, -- Anticipation
 			[GetSpellInfo(49042)] = 5, -- Toughness
@@ -22,7 +27,7 @@ local function loadData()
 		},
 		["DRUID"] = {
 			["required"] = 3,
-			["role"] = "feral-tank",
+			["role"] = "bear-druid",
 			
 			[GetSpellInfo(57881)] = 2, -- Natural Reaction
 			[GetSpellInfo(16929)] = 3, -- Thick Hide
@@ -35,53 +40,53 @@ local function loadData()
 	Talents.treeData = {
 		["SHAMAN"] = {
 			"elemental-shaman", L["Elemental"], "Interface\\Icons\\Spell_Nature_Lightning",
-			"melee-dps", L["Enhancement"], "Interface\\Icons\\Spell_Nature_LightningShield",
+			"enhance-shaman", L["Enhancement"], "Interface\\Icons\\Spell_Nature_LightningShield",
 			"resto-shaman", L["Restoration"], "Interface\\Icons\\Spell_Nature_MagicImmunity",
 		},
 		["MAGE"] = {
-			"caster-dps", L["Arcane"], "Interface\\Icons\\Spell_Holy_MagicalSentry",
-			"caster-dps", L["Fire"], "Interface\\Icons\\Spell_Fire_FlameBolt", 
-			"caster-dps", L["Frost"], "Interface\\Icons\\Spell_Frost_FrostBolt02",
+			"arcane-mage", L["Arcane"], "Interface\\Icons\\Spell_Holy_MagicalSentry",
+			"fire-mage", L["Fire"], "Interface\\Icons\\Spell_Fire_FlameBolt", 
+			"frost-mage", L["Frost"], "Interface\\Icons\\Spell_Frost_FrostBolt02",
 		},
 		["WARLOCK"] = {
-			"caster-dps", L["Affliction"], "Interface\\Icons\\Spell_Shadow_DeathCoil",
-			"caster-dps", L["Demonology"], "Interface\\Icons\\Spell_Shadow_Metamorphosis",
-			"caster-dps", L["Destruction"], "Interface\\Icons\\Spell_Shadow_RainOfFire",
+			"afflict-warlock", L["Affliction"], "Interface\\Icons\\Spell_Shadow_DeathCoil",
+			"demon-warlock", L["Demonology"], "Interface\\Icons\\Spell_Shadow_Metamorphosis",
+			"destro-warlock", L["Destruction"], "Interface\\Icons\\Spell_Shadow_RainOfFire",
 		},
 		["DRUID"] = {
 			"balance-druid", L["Balance"], "Interface\\Icons\\Spell_Nature_Lightning",
-			"melee-dps", L["Feral"], "Interface\\Icons\\Ability_Racial_BearForm",
+			"cat-druid", L["Feral"], "Interface\\Icons\\Ability_Racial_BearForm",
 			"resto-druid", L["Restoration"], "Interface\\Icons\\Spell_Nature_HealingTouch",
 		},
 		["WARRIOR"] = {
-			"melee-dps", L["Arms"], "Interface\\Icons\\Ability_Rogue_Eviscerate", 
-			"melee-dps", L["Fury"], "Interface\\Icons\\Ability_Warrior_InnerRage", 
-			"tank", L["Protection"], "Interface\\Icons\\INV_Shield_06",
+			"arms-warrior", L["Arms"], "Interface\\Icons\\Ability_Rogue_Eviscerate", 
+			"fury-warrior", L["Fury"], "Interface\\Icons\\Ability_Warrior_InnerRage", 
+			"prot-warrior", L["Protection"], "Interface\\Icons\\INV_Shield_06",
 		},
 		["ROGUE"] = {
-			"melee-dps", L["Assassination"], "Interface\\Icons\\Ability_Rogue_Eviscerate",
-			"melee-dps", L["Combat"], "Interface\\Icons\\Ability_BackStab", 
-			"melee-dps", L["Subtlety"], "Interface\\Icons\\Ability_Stealth",
+			"assass-rogue", L["Assassination"], "Interface\\Icons\\Ability_Rogue_Eviscerate",
+			"combat-rogue", L["Combat"], "Interface\\Icons\\Ability_BackStab", 
+			"subtlety-rogue", L["Subtlety"], "Interface\\Icons\\Ability_Stealth",
 		},
 		["PALADIN"] = {
-			"mp5-healer", L["Holy"], "Interface\\Icons\\Spell_Holy_HolyBolt", 
-			"tank", L["Protection"], "Interface\\Icons\\Spell_Holy_DevotionAura",
-			"melee-dps", L["Retribution"], "Interface\\Icons\\Spell_Holy_AuraOfLight",
+			"holy-paladin", L["Holy"], "Interface\\Icons\\Spell_Holy_HolyBolt", 
+			"prot-paladin", L["Protection"], "Interface\\Icons\\Spell_Holy_DevotionAura",
+			"ret-paladin", L["Retribution"], "Interface\\Icons\\Spell_Holy_AuraOfLight",
 		},
 		["HUNTER"] = {
-			"range-dps", L["Beast Mastery"], "Interface\\Icons\\Ability_Hunter_BeastTaming",
-			"range-dps", L["Marksmanship"], "Interface\\Icons\\Ability_Marksmanship",
-			"range-dps", L["Survival"], "Interface\\Icons\\Ability_Hunter_SwiftStrike",
+			"beast-hunter", L["Beast Mastery"], "Interface\\Icons\\Ability_Hunter_BeastTaming",
+			"marks-hunter", L["Marksmanship"], "Interface\\Icons\\Ability_Marksmanship",
+			"survival-hunter", L["Survival"], "Interface\\Icons\\Ability_Hunter_SwiftStrike",
 		},
 		["PRIEST"] = {
 			"disc-priest", L["Discipline"], "Interface\\Icons\\Spell_Holy_WordFortitude",
 			"holy-priest", L["Holy"], "Interface\\Icons\\Spell_Holy_HolyBolt",
-			"caster-dps", L["Shadow"], "Interface\\Icons\\Spell_Shadow_ShadowWordPain",
+			"shadow-priest", L["Shadow"], "Interface\\Icons\\Spell_Shadow_ShadowWordPain",
 		},
 		["DEATHKNIGHT"] = {
-			"melee-dps", L["Blood"], "Interface\\Icons\\Spell_Shadow_BloodBoil",
-			"melee-dps", L["Frost"], "Interface\\Icons\\Spell_Frost_FrostNova",
-			"melee-dps", L["Unholy"], "Interface\\Icons\\Spell_Shadow_ShadeTrueSight",
+			"blood-dk", L["Blood"], "Interface\\Icons\\Spell_Shadow_BloodBoil",
+			"frost-dk", L["Frost"], "Interface\\Icons\\Spell_Frost_FrostNova",
+			"unholy-dk", L["Unholy"], "Interface\\Icons\\Spell_Shadow_ShadeTrueSight",
 		},
 	}
 end
