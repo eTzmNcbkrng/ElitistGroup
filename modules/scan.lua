@@ -282,7 +282,7 @@ function Scan:UpdateUnitData(unit)
 		else
 			-- The item has gems, so we need to make sure we have data for it (or don't)
 			local totalSockets = ElitistGroup.EMPTY_GEM_SLOTS[itemLink]
-			if( totalSockets > 0 ) then
+			if( totalSockets > 0 or ( userData.level >= 70 and itemType == "WaistSlot" ) ) then
 				local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
 				-- Invalid gem data, queue it up, don't change the saved data
 				if( gem1 == "0" and gem2 == "0" and gem3 == "0" ) then
