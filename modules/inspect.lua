@@ -153,14 +153,7 @@ function Inspect:SetupSummary(updateType)
 		if( not updateType or updateType == "talents" ) then
 			-- Make sure they are talented enough
 			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
-			specType = ElitistGroup.Talents.talentText[specType] or specType
-			if( not userData.unspentPoints ) then
-				self.frame.talentInfo:SetFormattedText("%d/%d/%d [%s]", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
-				self.frame.talentInfo.tooltip = string.format(L["%s, %s role."], specName, specType)
-			else
-				self.frame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-				self.frame.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, specType)
-			end
+			ElitistGroup:SetTalentText(self.frame.talentInfo, specType, specName, userData, "primary")
 		end
 		
 		local equipmentData, enchantData, gemData = ElitistGroup:GetGearSummary(userData)

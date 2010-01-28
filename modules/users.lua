@@ -104,30 +104,14 @@ function Users:BuildUI(userData, updateType)
 	if( not userData.pruned and userData.talentTree1 and userData.talentTree2 and userData.talentTree3 ) then
 		-- PRIMARY
 		local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
-		specType = ElitistGroup.Talents.talentText[specType] or specType
-		if( not userData.unspentPoints ) then
-			infoFrame.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specType)
-			infoFrame.talentInfo.tooltip = string.format(L["|cffffffffActive:|r %s, %s role."], specName, specType)
-			infoFrame.talentInfo.icon:SetTexture(specIcon)
-		else
-			infoFrame.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
-			infoFrame.talentInfo.tooltip = string.format(L["|cffffffffActive:|r %s, %s role.\n\nThe player has not spent all their talent points!"], specName, specType)
-			infoFrame.talentInfo.icon:SetTexture(specIcon)
-		end
+		ElitistGroup:SetTalentText(infoFrame.talentInfo, specType, specName, userData, "primary")
+		infoFrame.talentInfo.icon:SetTexture(specIcon)
 		
 		-- SECONDARY
 		if( userData.secondarySpec ) then
 			local specType, specName, specIcon = ElitistGroup:GetPlayerSpec(userData.classToken, userData.secondarySpec)
-			specType = ElitistGroup.Talents.talentText[specType] or specType
-			if( not userData.unspentPoints ) then
-				infoFrame.secondTalentInfo:SetFormattedText("%d/%d/%d (%s)", userData.secondarySpec.talentTree1, userData.secondarySpec.talentTree2, userData.secondarySpec.talentTree3, L["Secondary"])
-				infoFrame.secondTalentInfo.tooltip = string.format(L["|cffffffffSecondary:|r %s, %s role."], specName, specType)
-				infoFrame.secondTalentInfo.icon:SetTexture(specIcon)
-			else
-				infoFrame.secondTalentInfo:SetFormattedText(L["%d unspent (Secondary)"], userData.unspentPoints)
-				infoFrame.secondTalentInfo.tooltip = string.format(L["|cffffffffSecondary:|r %s, %s role.\n\nThe player has not spent all their talent points!"], specName, specType)
-				infoFrame.secondTalentInfo.icon:SetTexture(specIcon)
-			end
+			ElitistGroup:SetTalentText(infoFrame.secondTalentInfo, specType, specName, userData, "secondary")
+			infoFrame.secondTalentInfo.icon:SetTexture(specIcon)
 		else
 			infoFrame.secondTalentInfo:SetText(L["No secondary spec"])
 			infoFrame.secondTalentInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
@@ -1102,7 +1086,7 @@ function Users:CreateUI()
 			if( self.suitationalTooltip ) then
 				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupSuitationalTooltip", UIParent, "GameTooltipTemplate")
 				suitTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-				suitTooltip:SetText(self.suitationalTooltip, 1, 1, 1, nil, true)
+				suitTooltip:SetText(self.suitationalTooltip, nil, nil, nil, nil, true)
 				suitTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 0, 10)
 			end
 
@@ -1124,7 +1108,7 @@ function Users:CreateUI()
 			if( self.suitationalTooltip ) then
 				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupSuitationalTooltip", UIParent, "GameTooltipTemplate")
 				suitTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-				suitTooltip:SetText(self.suitationalTooltip, 1, 1, 1, nil, true)
+				suitTooltip:SetText(self.suitationalTooltip, nil, nil, nil, nil, true)
 				suitTooltip:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 0, -10)
 			end
 			
