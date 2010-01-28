@@ -47,7 +47,7 @@ function Notes:LFG_COMPLETION_REWARD()
 		return
 	end
 	
-	if( ElitistGroup.db.profile.general.autoPopup ) then
+	if( ElitistGroup.db.profile.auto.autoPopup ) then
 		self:Show()
 	else
 		local name, typeID = GetLFGCompletionReward()
@@ -161,27 +161,31 @@ function Notes:Update()
 				ElitistGroup.modules.Scan:ManualCreateCore(name, playerLevels[name], playerClasses[name])
 			end
 			
-			local defaultRole = playerRoles[name]
-			local playerNote = userData.notes[ElitistGroup.playerID]
-			if( playerNote ) then
-				row.playerID = name
-				row.defaultRole = defaultRole
+			local role = 0
+			if( userData ) then
+				local defaultRole = playerRoles[name]
+				local playerNote = userData.notes[ElitistGroup.playerID]
+				if( playerNote ) then
+					row.playerID = name
+					row.defaultRole = defaultRole
 				
-				row.rating:SetValue(playerNote.rating)
-				row.comment.lastText = playerNote.comment or ""
-				row.comment:SetText(row.comment.lastText)
-			else
-				local specType = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
-				defaultRole = defaultRole > 0 and defaultRole or specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
-				row.playerID = name
-				row.defaultRole = defaultRole
+					row.rating:SetValue(playerNote.rating)
+					row.comment.lastText = playerNote.comment or ""
+					row.comment:SetText(row.comment.lastText)
+				else
+					local specType = ElitistGroup:GetPlayerSpec(userData.classToken, userData)
+					defaultRole = defaultRole > 0 and defaultRole or specType == "unknown" and 0 or specType == "healer" and ElitistGroup.ROLE_HEALER or ( specType == "feral-tank" or specType == "tank" ) and ElitistGroup.ROLE_TANK or ElitistGroup.ROLE_DAMAGE
+					row.playerID = name
+					row.defaultRole = defaultRole
 
-				row.rating:SetValue(3)
-				row.comment.lastText = ""
-				row.comment:SetText("")
+					row.rating:SetValue(3)
+					row.comment.lastText = ""
+					row.comment:SetText("")
+				end
+
+				role = defaultRole > 0 and defaultRole or playerNote.role
 			end
-
-			local role = defaultRole > 0 and defaultRole or playerNote.role
+			
 			SetDesaturation(row.roleTank:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_TANK) == 0)
 			SetDesaturation(row.roleHealer:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_HEALER) == 0)
 			SetDesaturation(row.roleDamage:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_DAMAGE) == 0)
