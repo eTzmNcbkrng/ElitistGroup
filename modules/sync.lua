@@ -259,8 +259,9 @@ function Sync:SendAllNotes(sender)
 			end
 		else
 			local note = userData and string.match(userData, NOTE_MATCH)
+			note = note and string.match(note, "={(.+);$")
 			if( note and note ~= "" ) then
-				queuedData = string.format('%s["%s"]={%s};', queuedData, name, string.match(note, "={(.+);$"))
+				queuedData = string.format('%s["%s"]={%s};', queuedData, name, note)
 			end
 		end
 	end
@@ -287,8 +288,9 @@ function Sync:SpecificNotesRequested(sender, ...)
 			else
 				local userData = ElitistGroup.db.faction.users[name]
 				local note = userData and string.match(userData, NOTE_MATCH)
+				note = note and string.match(note, "={(.+);$")
 				if( note ) then
-					queuedData = string.format('%s["%s"]={%s};', queuedData, name, string.match(note, "={(.+);$"))
+					queuedData = string.format('%s["%s"]={%s};', queuedData, name, note)
 				end
 			end
 		end
