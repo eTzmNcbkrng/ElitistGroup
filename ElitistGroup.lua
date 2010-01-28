@@ -233,6 +233,33 @@ function ElitistGroup:GetPlayerSpec(classToken, talentData)
 	return talentData.specRole or self.Talents.treeData[classToken][treeOffset], self.Talents.treeData[classToken][treeOffset + 1], self.Talents.treeData[classToken][treeOffset + 2] 
 end
 
+function ElitistGroup:SetTalentText(fontString, specType, specName, userData, talentType)
+	specType = self.Talents.talentText[specType] or specType
+
+	local specData = talentType == "primary" and userData or userData.secondarySpec
+	local detailText = talentType == "secondary" and L["Secondary"] or specType
+	local talentTypeText = talentType == "primary" and L["Active"] or L["Secondary"]
+	
+	if( specData.unspentPoints ) then
+		fontString:SetFormattedText(L["%d unspent |4point:points;"], specData.unspentPoints)
+		fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role.\n\nThe player has not spent %d talent points."], talentTypeText, specName, specType, specData.unspentPoints)
+		return
+	end
+	
+	-- No sense in flagging non-max level players, look for people who have no points spent in two trees, means they dumped it all into one
+	if( playerLevel == MAX_PLAYER_LEVEL ) then
+		local totalEmpty = (specData.talentTree1 == 0 and 1 or 0) + (specData.talentTree3 == 0 and 1 or 0) + (specData.talentTree3 == 0 and 1 or 0)
+		if( totalEmpty == 2 ) then
+			fontString:SetFormattedText("|cffff2020%d/%d/%d|r (%s)", specData.talentTree1, specData.talentTree2, specData.talentTree3, detailText)
+			fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role.\n\nThe player put all of his talent points into one tree."], talentTypeText, specName, specType)
+			return
+		end
+	end
+	
+	fontString:SetFormattedText("%d/%d/%d (%s)", specData.talentTree1, specData.talentTree2, specData.talentTree3, detailText)
+	fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role."], talentTypeText, specName, specType)
+end
+	
 local tableCache = setmetatable({}, {__mode = "k"})
 function ElitistGroup:GetTable()
 	return table.remove(tableCache, 1) or {}
@@ -405,8 +432,8 @@ function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantDa
 	return equipmentTooltip or L["Equipment: |cffffffffPass|r"], gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"]
 end
 
-local function getSuitationalOverride(type, itemID, itemType, userData, spec)
-	local suitational = ElitistGroup.Items.suitationalOverrides[baseItemLink]
+local function getSuitationalOverride(type, itemLink, itemType, userData, spec)
+	local suitational = ElitistGroup.Items.suitationalOverrides[itemLink]
 	if( suitational ) then
 		local type, message = suitational(type, userData, spec)
 		if( type ) then
