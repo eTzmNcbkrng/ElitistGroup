@@ -259,12 +259,12 @@ local function loadData()
 	-- Allows overriding of items based on the presence of other items and in general, more complicated factors
 	local TRINKET1 = GetInventorySlotInfo("Trinket0Slot")
 	local TRINKET2 = GetInventorySlotInfo("Trinket1Slot")
-	local solace = {["47041"] = true, ["47059"] = true, ["47271"] = true, ["47432"] = true}
+	local solaceIDs = {["47041"] = true, ["47059"] = true, ["47271"] = true, ["47432"] = true}
 	Items.suitationalOverrides = {
 		-- Revitalizing Skyflare Diamond
 		["item:41376"] = function(type, userData, specType)
 			if( specType == "disc-priest" ) then return "healer" end
-			if( specType ~= "resto-shaman" ) then return nil end
+			if( specType ~= "resto-shaman" ) then return "suitational-healer" end
 			
 			-- As per: http://elitistjerks.com/f47/t24796-shaman_restoration/#Gems
 			-- One or more Solace trinkets makes Revitalizing Skyflare Diamond good for Shamans
@@ -338,7 +338,6 @@ local function loadData()
 		[44087] = "never", -- Persistent Earthshatter Diamond
 		[41381] = "never", -- Persistent Earthsiege Diamond
 		[32640] = "never", -- Potent Unstable Diamond
-		[41376] = "suitational-healer", -- Revitalizing Skyflare Diamond
 		[25894] = "never", -- Swift Skyfire Diamond
 		[41339] = "never", -- Swift Skyflare Diamond
 		[28557] = "never", -- Swift Starfire Diamond
