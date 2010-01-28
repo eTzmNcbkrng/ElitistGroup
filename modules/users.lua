@@ -302,11 +302,11 @@ end
 
 -- DATABASE BROWSER
 local function sortNames(a, b)
-	if( UnitExists(userList[a]) == UnitExists(userList[b]) ) then
+	if( UnitExists(userList[a].name) == UnitExists(userList[b].name) ) then
 		return a < b
-	elseif( UnitExists(userList[a]) ) then
+	elseif( UnitExists(userList[a].name) ) then
 		return true
-	elseif( UnitExists(userList[b]) ) then
+	elseif( UnitExists(userList[b].name) ) then
 		return false
 	end
 end
