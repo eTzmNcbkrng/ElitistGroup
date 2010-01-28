@@ -44,9 +44,9 @@ function Summary:PLAYER_ROLES_ASSIGNED()
 	end
 	
 	-- Setup the actual UI
-	if( ElitistGroup.db.profile.general.autoSummary and not InCombatLockdown() ) then
+	if( ElitistGroup.db.profile.auto.autoSummary and not InCombatLockdown() ) then
 		self:Show()
-	else
+	elseif( select(2, IsInInstance()) == "party" ) then
 		ElitistGroup.modules.Scan:QueueGroup("party", GetNumPartyMembers())
 	end
 end
@@ -168,11 +168,11 @@ function Summary:UpdateSingle(row)
 			elseif( not userData.unspentPoints ) then
 				row.talentInfo:SetFormattedText("%d/%d/%d (%s)", userData.talentTree1, userData.talentTree2, userData.talentTree3, specName)
 				row.talentInfo.icon:SetTexture(specIcon)
-				row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType])
+				row.talentInfo.tooltip = string.format(L["%s, %s role."], specName, ElitistGroup.Talents.talentText[specType] or specType)
 			else
 				row.talentInfo:SetFormattedText(L["%d unspent |4point:points;"], userData.unspentPoints)
 				row.talentInfo.icon:SetTexture(specIcon)
-				row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType])
+				row.talentInfo.tooltip = string.format(L["%s, %s role.\n\nThis player has not spent all of their talent points!"], specName, ElitistGroup.Talents.talentText[specType] or specType)
 			end
 		end
 		
