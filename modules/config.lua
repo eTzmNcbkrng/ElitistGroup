@@ -469,6 +469,14 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		
 		StaticPopup_Show("ELITISTGROUP_CONFIRM_RESET")
 		return
+	elseif( cmd == "report" ) then
+		if( GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 ) then
+			ElitistGroup:Print(L["You must be in a group to use this."])
+			return
+		end
+		
+		ElitistGroup.modules.Report:Show()
+		return
 	elseif( cmd == "summary" ) then
 		local instanceType = select(2, IsInInstance())
 		if( GetNumPartyMembers() == 0 and GetNumRaidMembers() == 0 ) then
@@ -489,6 +497,7 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		DEFAULT_CHAT_FRAME:AddMessage(L["/eg send <name> - Sends your gear to another Elitist Group user"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/eg notes [name] - Requests all guild members notes on players, if [name] is passed requests notes FROM [name]"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/eg db [name] - Requests either everyones database or [name]s database if specified"])
+		DEFAULT_CHAT_FRAME:AdDMessage(L["/eg report - Opens the reporting UI for sending to chat summaries on your group"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/eg summary - Displays the summary page for your party or raid"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/eg rate - Opens the rating panel for your group"])
 		DEFAULT_CHAT_FRAME:AddMessage(L["/eg <name> - When <name> is passed opens up the player viewer for that person, otherwise it opens it on yourself"])

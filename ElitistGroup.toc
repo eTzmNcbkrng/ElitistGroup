@@ -43,7 +43,7 @@ modules\inspect.lua
 modules\sync.lua
 ## modules\mouseover.lua
 modules\config.lua
-
+modules\report.lua
 #@do-not-package@
 data\tests.lua
 #@end-do-not-package@

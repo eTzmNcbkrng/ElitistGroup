@@ -27,6 +27,9 @@ function ElitistGroup:OnInitialize()
 				pruneFull = 120,
 				ignoreBelow = 80,
 			},
+			report = {
+				
+			},
 			comm = {
 				enabled = true,
 				gearRequests = true,
@@ -57,6 +60,10 @@ function ElitistGroup:OnInitialize()
 	self.db.RegisterCallback(self, "OnProfileShutdown", "OnProfileShutdown")
 	self.db.RegisterCallback(self, "OnProfileReset", "OnProfileReset")
 	
+	self.version = "@project-version@"
+	self.version = string.match(self.version, "project%-version") and "repo" or string.gsub(self.version, "v", "")
+	self.version = string.split("-", self.version, 2)
+
 	self.playerID = string.format("%s-%s", UnitName("player"), GetRealmName())
 	self.tooltip = CreateFrame("GameTooltip", "ElitistGroupTooltip", UIParent, "GameTooltipTemplate")
 	self.tooltip:Hide()
@@ -669,11 +676,14 @@ LibStub("LibDataBroker-1.1"):NewDataObject("Elitist Group", {
 	type = "launcher",
 	icon = "Interface\\Icons\\inv_weapon_glave_01",
 	OnClick = function(self, mouseButton)
+		-- Reporting
+		if( mouseButton == "LeftButton" and IsAltKeyDown() and ( GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0 ) ) then
+			ElitistGroup.modules.Report:Show()
 		-- Inspecting
-		if( mouseButton == "LeftButton" ) then
+		elseif( mouseButton == "LeftButton" ) then
 			SlashCmdList["ELITISTGROUP"]("")
 		-- Rating
-		elseif( IsAltKeyDown() and mouseButton == "RightButton" ) then
+		elseif( mouseButton == "RightButton" and IsAltKeyDown() ) then
 			if( GetNumPartyMembers() > 0 ) then
 				SlashCmdList["ELITISTGROUPRATE"]("")
 			end
@@ -691,6 +701,10 @@ LibStub("LibDataBroker-1.1"):NewDataObject("Elitist Group", {
 		
 		tooltip:SetText("Elitist Group")
 		tooltip:AddLine(L["Left Click - Open player/target information"], 1, 1, 1, nil, nil)
+		
+		if( GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0 ) then
+			tooltip:AddLine(L["ALT + Left Click - Open report window for group"], 1, 1, 1, nil, nil)
+		end
 		
 		if( GetNumRaidMembers() > 0 ) then
 			tooltip:AddLine(L["Right Click - Open summary for your raid"], 1, 1, 1, nil, nil)
