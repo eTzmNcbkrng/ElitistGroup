@@ -263,7 +263,11 @@ local function loadData()
 	Items.suitationalOverrides = {
 		-- Revitalizing Skyflare Diamond
 		["item:41376"] = function(type, userData, specType)
-			if( specType == "disc-priest" ) then return "healer" end
+			if( specType == "disc-priest" or specType == "resto-shaman" ) then return "healer" end
+			
+			return "suitational-healer"
+			--[[
+			if( specType == "disc-priest" or specType == "resto-shaman" ) then return "healer" end
 			if( specType ~= "resto-shaman" ) then return "suitational-healer" end
 			
 			-- As per: http://elitistjerks.com/f47/t24796-shaman_restoration/#Gems
@@ -275,6 +279,7 @@ local function loadData()
 			end
 			
 			return "suitational-healer", L["Revitalizing meta requires a Solace of the Fallen/Defeated trinket for it to be a good meta gem for Restoration Shamans."]
+			]]
 		end,
 		-- Shiny Shard of the Flame
 		["item:49464"] = function(type, userdata, specType)
