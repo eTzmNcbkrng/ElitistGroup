@@ -201,8 +201,15 @@ end
 
 -- Request database
 function Sync:RequestDatabase(name)
+	if( not ElitistGroup.db.profile.comm.databaseSync ) then
+		ElitistGroup:Print(L["You need to enable database syncing in /eg config -> Addon communication to use this."])
+		return
+	end
+
 	local name = verifyInput(name)
-	if( name ) then
+	if( name and not ElitistGroup:IsTrusted(name) ) then
+		ElitistGroup:Print(string.format(L["You have to add %s to your trusted list before you can use this."], name))
+	elseif( name ) then
 		expectingList = true
 		ElitistGroup:Print(string.format(L["Requesting Elitist Group database from %s. Keep in mind this is hard throttled at once per hour."], name))
 		self:CommMessage("REQUSERS", "WHISPER", name)
