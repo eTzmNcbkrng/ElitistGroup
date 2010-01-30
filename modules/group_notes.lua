@@ -3,10 +3,7 @@ local Notes = ElitistGroup:NewModule("Notes", "AceEvent-3.0")
 local L = ElitistGroup.L
 local MAX_RATING_ROWS = 8
 local playerNames, playerClasses, playerLevels, playerRoles, queuedUnits = {}, {}, {}, {}, {}
-local raidUnits, partyUnits = {}, {}
-
-for i=1, MAX_RAID_MEMBERS do raidUnits[i] = "raid" .. i end
-for i=1, MAX_PARTY_MEMBERS do partyUnits[i] = "party" .. i end
+local raidUnits, partyUnits = ElitistGroup.raidUnits, ElitistGroup.partyUnits
 
 function Notes:OnInitialize()
 	self:RegisterEvent("RAID_ROSTER_UPDATE", "GroupUpdated")
