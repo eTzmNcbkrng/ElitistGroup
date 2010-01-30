@@ -93,7 +93,7 @@ function Users:BuildUI(userData, updateType)
 		infoFrame.playerInfo.icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4])
 		infoFrame.playerInfo.disableWrap = true
 	else
-		infoFrame.playerInfo:SetFormattedText("%s (%s)", userData.name, userData.level)
+		infoFrame.playerInfo:SetFormattedText("%s", userData.name)
 		infoFrame.playerInfo.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
 		infoFrame.playerInfo.icon:SetTexCoord(0, 1, 0, 1)
 		infoFrame.playerInfo.tooltip = string.format(L["%s - %s, level %s, unknown class."], userData.name, userData.server, userData.level)
@@ -443,7 +443,7 @@ function Users:BuildDatabasePage()
 			
 			local classColor = user.classToken and RAID_CLASS_COLORS[user.classToken]
 			local classHex = classColor and string.format("|cff%02x%02x%02x", classColor.r * 255, classColor.g * 255, classColor.b * 255) or ""
-			local selected = userData and row.userID == self.activeUserID and "[*] " or ""
+			local selected = row.userID == self.activeUserID and "[*] " or ""
 			
 			if( user.playerID ~= ElitistGroup.playerID and UnitExists(user.name) ) then
 				row:SetFormattedText("%s|cffffffff[%s]|r %s%s|r", selected, GROUP, classHex, user.playerID)
