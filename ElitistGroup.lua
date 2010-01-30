@@ -15,6 +15,7 @@ function ElitistGroup:OnInitialize()
 				announceData = false,
 				databaseExpanded = true,
 				selectedTab = "achievements",
+				showSlotName = false,
 			},
 			auto = {
 				autoPopup = false,
@@ -252,7 +253,11 @@ function ElitistGroup:SetTalentText(fontString, specType, specName, userData, ta
 	local talentTypeText = talentType == "primary" and L["Active"] or L["Secondary"]
 	
 	if( specData.unspentPoints ) then
-		fontString:SetFormattedText(L["%d unspent |4point:points;"], specData.unspentPoints)
+		if( talentType == "primary" ) then
+			fontString:SetFormattedText(L["|cffff2020%d unspent |4point:points;|r"], specData.unspentPoints)
+		else
+			fontString:SetFormattedText(L["|cffff2020%d unspent|r (Secondary)"], specData.unspentPoints)
+		end
 		fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role.\n\nThe player has not spent %d talent points."], talentTypeText, specName, specType, specData.unspentPoints)
 		return
 	end
@@ -341,7 +346,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		elseif( arg == "buckle" ) then
 			unusedTooltip = L[" (no belt buckle)"]
 		elseif( type(arg) == "string" ) then
-			table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, ElitistGroup.Items.itemRoleText[arg] or arg))
+			table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], select(2, GetItemInfo(gemLink)) or gemLink, self.Items.itemRoleText[arg] or arg))
 		else
 			table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], select(2, GetItemInfo(gemLink)) or gemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 		end
@@ -359,7 +364,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		if( enchantTalent == "missing" ) then
 			enchantTooltips[itemLink] = L["Enchant: |cffff2020[!]|r |cffffffffNone found|r"]
 		else
-			enchantTooltips[itemLink] = string.format(L["Enchant: |cffff2020[!]|r |cffffffff%s enchant|r"], ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent)
+			enchantTooltips[itemLink] = string.format(L["Enchant: |cffff2020[!]|r |cffffffff%s|r enchant"], self.Items.itemRoleText[enchantTalent] or enchantTalent)
 		end
 	end
 		
@@ -368,7 +373,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 		gemTooltips[link] = gemTooltips[link] or self.EMPTY_GEM_SLOTS[link] == 0 and L["Gems: |cffffffffNo sockets|r"] or L["Gems: |cffffffffPass|r"]
 	end
 	
-	for inventoryID, inventoryKey in pairs(ElitistGroup.Items.validInventorySlots) do
+	for inventoryID, inventoryKey in pairs(self.Items.validInventorySlots) do
 		local link = equipment[inventoryID]
 		if( link  ) then
 			enchantTooltips[link] = enchantTooltips[link] or enchantData[inventoryKey] and L["Enchant: |cffffffffPass|r"] or L["Enchant: |cffffffffCannot enchant|r"]
@@ -388,9 +393,13 @@ function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantDa
 		table.insert(tempList, string.format(L["Equipment: |cffffffff%d bad items found|r"], equipmentData.totalBad))
 		
 		for i=1, #(equipmentData), 2 do
-			local itemLink, message = equipmentData[i]
-			local fullItemLink = select(2, GetItemInfo(itemLink))
-			table.insert(tempList, string.format(L["%s - |cffffffff%s|r item"], fullItemLink, ElitistGroup.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink]))
+			local itemLink, message = equipmentData[i], equipmentData[i + 1]
+			local equipText = select(2, GetItemInfo(itemLink))
+			if( self.db.profile.general.showSlotName ) then
+				equipText = equipmentData[equipText]
+			end
+			
+			table.insert(tempList, string.format(L["%s - |cffffffff%s|r item"], equipText, self.Items.itemRoleText[equipmentData[itemLink]] or equipmentData[itemLink]))
 		end
 		
 		equipmentTooltip = table.concat(tempList, "\n")
@@ -405,14 +414,16 @@ function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantDa
 		
 		for i=1, #(gemData), 4 do
 			local fullItemLink, arg = gemData[i], gemData[i + 2]
+			local equipText = self.db.profile.general.showSlotName and equipmentData[fullItemLink] or fullItemLink
+			
 			if( arg == "buckle" ) then
-				table.insert(tempList, string.format(L["%s - Missing belt buckle or gem"], fullItemLink))
+				table.insert(tempList, string.format(L["%s - Missing belt buckle or gem"], equipText))
 			elseif( arg == "missing" ) then
-				table.insert(tempList, string.format(L["%s - |cffffffff%d|r missing |4gem:gems;"], fullItemLink, gemData[i + 1]))
+				table.insert(tempList, string.format(L["%s - |cffffffff%d|r missing |4gem:gems;"], equipText, gemData[i + 1]))
 			elseif( type(arg) == "string" ) then
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], fullItemLink, ElitistGroup.Items.itemRoleText[arg] or arg))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r gem"], equipText, self.Items.itemRoleText[arg] or arg))
 			else
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], fullItemLink, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r quality gem"], equipText, _G["ITEM_QUALITY" .. arg .. "_DESC"]))
 			end
 		end
 		
@@ -428,10 +439,12 @@ function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantDa
 		
 		for i=1, #(enchantData), 2 do
 			local fullItemLink, enchantTalent = enchantData[i], enchantData[i + 1]
+			local equipText = self.db.profile.general.showSlotName and equipmentData[fullItemLink] or fullItemLink
+
 			if( enchantTalent == "missing" ) then
-				table.insert(tempList, string.format(L["%s - Unenchanted"], fullItemLink))
+				table.insert(tempList, string.format(L["%s - Unenchanted"], equipText))
 			else
-				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], fullItemLink, ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent))
+				table.insert(tempList, string.format(L["%s - |cffffffff%s|r"], equipText, ElitistGroup.Items.itemRoleText[enchantTalent] or enchantTalent))
 			end
 		end
 		
@@ -490,11 +503,25 @@ function ElitistGroup:GetGearSummary(userData)
 			-- Check if we have an override on this item
 			local itemTalent, suitMessage = getSuitationalOverride(inventoryID, baseItemLink, self.ITEM_TALENTTYPE[baseItemLink], userData, spec)
 			
+			-- Figure out the items slot name if necessary
+			if( ElitistGroup.db.profile.general.showSlotName ) then
+				local equipSlot = self.Items.validInventorySlots[inventoryID]
+				if( equipSlot == "RangedSlot" and ( userData.classToken == "DRUID" or userData.classToken == "PALADIN" or userData.classToken == "SHAMAN") ) then
+					equipSlot = "RelicSlot"
+				-- Use the unique keys which show Ring #/Trinket #
+				elseif( equipID == "rings" or equipID == "trinkets" ) then
+					equipSlot = equipSlot .. "_UNIQUE"
+				end
+				
+				equipment[fullItemLink] = string.format("%s%s|r", ITEM_QUALITY_COLORS[itemQuality].hex, _G[string.upper(equipSlot)])
+			end
+
 			-- Now check item
 			if( itemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[itemTalent] and ( not roleOverride or not roleOverride[itemTalent] ) ) then
 				equipment.pass = nil
 				equipment[itemLink] = itemTalent
 				equipment.totalBad = equipment.totalBad + 1
+				
 				table.insert(equipment, itemLink)
 				table.insert(equipment, suitMessage)
 			end

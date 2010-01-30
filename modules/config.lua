@@ -49,19 +49,18 @@ local function loadOptions()
 				inline = true,
 				name = L["General"],
 				args = {
-					mouseover = {
-						order = 1,
-						type = "toggle",
-						name = L["Enable mouseover details"],
-						desc = L["Automatically adds gear, enchant and gem information to tooltips when mousing over people, if they are within inspect range or you have data.\nDisabled while in combat."],
-						hidden = true,
-					},
 					announceData = {
-						order = 2,
+						order = 1,
 						type = "toggle",
 						name = L["Announce synced data"],
 						desc = L["Alerts you in chat when you receive new notes or gear information from somebody."],
 					},
+					showSlotName = {
+						order = 2,
+						type = "toggle",
+						name = L["Show slot name"],
+						desc = L["Instead of listing item link when viewing overall status, you'll instead see the name of the slot."],
+					}
 				},
 			},
 			auto = {

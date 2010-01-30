@@ -31,7 +31,7 @@ local function loadData()
 		["Finger1Slot"] = "rings", ["NeckSlot"] = "neck", ["FeetSlot"] = "boots", ["LegsSlot"] = "legs",
 		["WaistSlot"] = "waist", ["HandsSlot"] = "hands", ["BackSlot"] = "cloak", ["ShoulderSlot"] = "shoulders",
 	}
-
+	
 	Items.validInventorySlots = {}
 	for slotType in pairs(Items.inventoryToID) do
 		Items.validInventorySlots[GetInventorySlotInfo(slotType)] = slotType
