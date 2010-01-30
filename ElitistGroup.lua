@@ -2,6 +2,10 @@ ElitistGroup = select(2, ...)
 ElitistGroup = LibStub("AceAddon-3.0"):NewAddon(ElitistGroup, "ElitistGroup", "AceEvent-3.0")
 local L = ElitistGroup.L
 
+ElitistGroup.raidUnits, ElitistGroup.partyUnits = {}, {}
+for i=1, MAX_RAID_MEMBERS do ElitistGroup.raidUnits[i] = "raid" .. i end
+for i=1, MAX_PARTY_MEMBERS do ElitistGroup.partyUnits[i] = "party" .. i end
+
 function ElitistGroup:OnInitialize()
 	self.defaults = {
 		profile = {
@@ -614,15 +618,16 @@ end
 
 -- While GetGearSummary works, for things like tooltips we really need an optimized form that is based on speed without extra data
 function ElitistGroup:GetOptimizedSummary(userData)
-	local spec = self:GetPlayerSpec(userData)
+	local spec = self:GetPlayerSpec(userData.classToken, userData)
 	local validSpecTypes = self.Items.talentToRole[spec]
-	if( not validSpecTypes ) then return 0, 0, 0 end
+	if( not validSpecTypes ) then return nil end
 
-	local totalGear, totalBadGear, totalEnchants, totalBadEnchants, totalGems, totalBadGems = 0, 0, 0, 0, 0, 0
+	local totalGear, totalBadGear, totalEnchants, totalBadEnchants, totalGems, totalBadGems, totalLevel = 0, 0, 0, 0, 0, 0, 0
 	for inventoryID, itemLink in pairs(userData.equipment) do
-		local itemEquipType = select(9, GetItemInfo(itemLink))
+		local itemQuality, itemLevel, _, _, _, _, itemEquipType = select(3, GetItemInfo(itemLink))
 		if( itemEquipType ) then
 			totalGear = totalGear + 1	
+			totalLevel = totalLevel + self:CalculateScore(itemLink, itemQuality, itemLevel)
 			
 			local itemTalent = self.ITEM_TALENTTYPE[string.match(itemLink, "item:%d+")]
 			local roleOverride = self.Items.roleOverrides[spec] and self.Items.roleOverrides[spec].type == self.Items.equipToType[itemEquipType] and self.Items.roleOverrides[spec]
@@ -665,10 +670,25 @@ function ElitistGroup:GetOptimizedSummary(userData)
 		end
 	end
 	
+	-- Belt buckles are a special case, you cannot detect them through item links at all or tooltip scanning
+	local itemLink = userData.equipment[WAIST_SLOT]
+	if( itemLink and userData.level >= 70 ) then
+		local baseSocketCount = self.EMPTY_GEM_SLOTS[self:GetBaseItemLink(itemLink)]
+		local gem1, gem2, gem3 = string.match(itemLink, "item:%d+:%d+:(%d+):(%d+):(%d+)")
+		local totalSockets = (gem1 ~= "0" and 1 or 0) + (gem2 ~= "0" and 1 or 0) + (gem3 ~= "0" and 1 or 0)
+		
+		-- The item by default has 1 socket, and the player only has 1 gem socketed, missing buckle
+		-- if the player had 2 available sockets and only 1 socketed, nothing is shown since they are missing a socket at that point
+		if( ( baseSocketCount > 0 and totalSockets == baseSocketCount ) or ( baseSocketCount == 0 and totalSockets == 0 ) ) then
+			totalBadGems = totalBadGems + 1
+			totalGems = totalGems + 1
+		end
+	end
+	
 	local percentGear = math.min(1, (totalGear - totalBadGear) / totalGear)
 	local percentEnchants = math.min(1, (totalEnchants - totalBadEnchants) / totalEnchants)
 	local percentGems = totalBadGems == 0 and totalGems == 0 and 0 or (totalGems - totalBadGems) / totalGems
-	return percentGear, percentEnchants, percentGems
+	return math.floor(totalLevel / totalGear), percentGear, percentEnchants, percentGems
 end
 
 -- Broker plugin
