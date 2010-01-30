@@ -248,7 +248,6 @@ end
 
 -- COMMUNICATION PARSERS
 function Sync:SendAllNotes(sender)
-	
 	local queuedData = ""
 	local NOTE_MATCH = string.format("[\"%s\"]={(.-)};", string.gsub(ElitistGroup.playerID, "%-", "%%-"))
 	for name, userData in pairs(ElitistGroup.db.faction.users) do
@@ -330,10 +329,11 @@ function Sync:ParseSentNotes(sender, currentTime, senderTime, data)
 			if( not userData ) then
 				userData = {notes = {}, achievements = {}, equipment = {}}
 				userData.name = name
-				userData.server = name
+				userData.server = server
 				userData.scanned = time()
 				userData.from = senderName
 				userData.level = -1
+				userData.pruned = true
 			end
 			
 			-- If the time drift is over a day, reset the time of the comment to right now
@@ -434,7 +434,7 @@ function Sync:ParseSelfSentGear(sender, data, mainExperience)
 	-- If the player already scanned data on this person from within 10 minutes, don't accept the comm
 	local playerID, playerName, playerServer = getFullName(sender)
 	local userData = ElitistGroup.userData[playerID]
-	if( userData and userData.from ~= ElitistGroup.playerID and userData.scanned and userData.scanned < (time() - 600) ) then
+	if( userData and userData.from ~= ElitistGroup.playerID and userData.scanned and userData.scanned > (time() - 600) ) then
 		return
 	end
 	
@@ -490,16 +490,15 @@ function Sync:QueueDatabaseRequests(sender, ...)
 		local playerID, secondsOld = select(i, ...)
 		secondsOld = tonumber(secondsOld)
 		-- Do some basic checking to make sure nothing bad is going down
-		if( playerID and secondsOld > 0 and string.match(playerID, "%-") and secondsOld > 0 and playerID ~= ElitistGroup.playerID ) then
+		if( playerID and secondsOld and secondsOld > 0 and string.match(playerID, "%-") and playerID ~= ElitistGroup.playerID ) then
 			-- Now make sure it's not too old
 			local daysOld = math.floor(secondsOld / 86400)
 			if( daysOld < ElitistGroup.db.profile.comm.databaseThreshold ) then
 				-- Find out if we don't have data that takes priority
-				local userData = ElitistGroup.db.faction.users[playerID]
-				if( userData ) then
-					local scanned = not string.match(userData, "pruned=true;") and tonumber(string.match(userData, "scanned=(%d+);"))
-					local scanAge = scanned and math.floor((time() - scanned) / 86400)
-					if( scanAge < daysOld ) then
+				local userData = ElitistGroup.userData[playerID]
+				if( userData and not userData.pruned and userData.level >= 0 and ( userData.talentTree1 ~= 0 or userData.talentTree2 ~= 0 or userData.talentTree3 ~= 0 ) ) then
+					local scanAge = time() - userData.scanned
+					if( not scanned or scanAge > secondsOld ) then
 						requestQueue[playerID] = sender
 					end
 				else
