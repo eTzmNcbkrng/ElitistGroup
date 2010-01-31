@@ -234,17 +234,7 @@ local function OnHide(self)
 	end
 end
 
-local function OnEnter(self)
-	if( self.tooltip ) then
-		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-		GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
-		GameTooltip:Show()
-	end
-end
-
-local function OnLeave(self)
-	GameTooltip:Hide()
-end
+local OnEnter, OnLeave = ElitistGroup.Widgets.OnEnter, ElitistGroup.Widgets.OnLeave
 
 local function OnClick(self)
 	local userData = self.playerID and ElitistGroup.userData[self.playerID]

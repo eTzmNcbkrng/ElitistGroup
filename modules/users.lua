@@ -859,7 +859,8 @@ managePlayerNote = function()
 		if( frame.manageNote ) then
 			frame.manageNote:Hide()
 		end
-		infoFrame.manageNote:UnlockHighlight()
+
+		Users.infoFrame.manageNote:UnlockHighlight()
 		return
 	end
 	
@@ -874,6 +875,7 @@ managePlayerNote = function()
 			ElitistGroup.writeQueue[Users.activeUserID] = true
 			Users.infoFrame.manageNote:SetText(L["Edit"])
 			frame.manageNote.delete:Enable()
+			frame.manageNote.queuedPlayer = Users.activeUserID
 			return userData.notes[ElitistGroup.playerID]
 		end
 		
@@ -909,6 +911,13 @@ managePlayerNote = function()
 			Users:UpdateTabs()
 		end
 		
+		local function OnHide(self)
+			if( self.queuedPlayer ) then
+				Users:SendMessage("EG_DATA_UPDATED", "notes", self.queuedPlayer)
+				self.queuedPlayer = nil
+			end
+		end
+		
 		frame.manageNote = CreateFrame("Frame", nil, frame)
 		frame.manageNote:EnableMouse(true)
 		frame.manageNote:SetFrameLevel(self.dungeonFrame:GetFrameLevel() + 10)
@@ -919,6 +928,7 @@ managePlayerNote = function()
 		frame.manageNote:SetHeight(99)
 		frame.manageNote:SetWidth(185)
 		frame.manageNote:SetPoint("TOPRIGHT", self.infoFrame.manageNote, "BOTTOMRIGHT", 3, -1)
+		frame.manageNote:SetScript("OnHide", OnHide)
 		frame.manageNote:Hide()
 		
 		frame.manageNote.delete = CreateFrame("Button", nil, frame.manageNote, "UIPanelButtonGrayTemplate")

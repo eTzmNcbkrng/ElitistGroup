@@ -207,17 +207,7 @@ function Notes:CreateUI()
 		return
 	end
 	
-	local function OnEnter(self)
-		if( self.tooltip ) then
-			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
-			GameTooltip:Show()
-		end
-	end
-
-	local function OnLeave(self)
-		GameTooltip:Hide()
-	end
+	local OnEnter, OnLeave = ElitistGroup.Widgets.OnEnter, ElitistGroup.Widgets.OnLeave
 	
 	local function getNote(playerID, defaultRole)
 		local userData = ElitistGroup.userData[playerID]
@@ -238,6 +228,8 @@ function Notes:CreateUI()
 	end
 	
 	local function UpdateRole(self)
+		if( not self.parent.playerID ) then return end
+		
 		local playerNote = getNote(self.parent.playerID, self.parent.defaultRole)
 		local isTank, isHealer, isDamage = bit.band(playerNote.role, ElitistGroup.ROLE_TANK) > 0, bit.band(playerNote.role, ElitistGroup.ROLE_HEALER) > 0, bit.band(playerNote.role, ElitistGroup.ROLE_DAMAGE) > 0
 		if( self.roleID == ElitistGroup.ROLE_TANK ) then
@@ -253,6 +245,8 @@ function Notes:CreateUI()
 	end
 	
 	local function UpdateRating(self)
+		if( not self.parent.playerID ) then return end
+		
 		local playerNote = getNote(self.parent.playerID, self.parent.defaultRole)
 		playerNote.rating = self:GetValue()
 	end

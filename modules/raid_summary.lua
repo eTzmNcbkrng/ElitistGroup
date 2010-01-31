@@ -285,17 +285,7 @@ function Summary:CreateUI()
 	Summary.sortType = "name"
 	Summary.sortOrder = true
 
-	local function OnEnter(self)
-		if( self.tooltip ) then
-			GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
-			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
-			GameTooltip:Show()
-		end
-	end
-
-	local function OnLeave(self)
-		GameTooltip:Hide()
-	end
+	local OnEnter, OnLeave = ElitistGroup.Widgets.OnEnter, ElitistGroup.Widgets.OnLeave
 	
 	-- Main container
 	local frame = CreateFrame("Frame", "ElitistGroupRaidSummaryFrame", UIParent)

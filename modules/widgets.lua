@@ -2,6 +2,19 @@ local ElitistGroup = select(2, ...)
 ElitistGroup.Widgets = {}
 local Widgets = ElitistGroup.Widgets
 
+Widgets.OnEnter = function(self)
+	if( self.tooltip ) then
+		GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+		GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
+		GameTooltip:Show()
+	end
+end
+
+Widgets.OnLeave = function(self)
+	GameTooltip:Hide()
+end
+
+
 -- SCROLL FRAME
 local function onVerticalScroll(self, offset)
 	offset = ceil(offset)
