@@ -232,13 +232,14 @@ end
 
 function Scan:ManualCreateCore(playerID, level, classToken)
 	local name, server = string.split("-", playerID, 2)
-	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerID, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, scanned = time(), notes = {}, achievements = {}, equipment = {}}
 	userData.name = name
 	userData.server = server
 	userData.level = level
 	userData.classToken = classToken
 	userData.scanned = time()
 	userData.pruned = nil
+	userData.from = ElitistGroup.playerID
 	
 	ElitistGroup.userData[playerID] = userData
 	ElitistGroup.writeQueue[playerID] = true
@@ -250,12 +251,13 @@ end
 function Scan:CreateCoreTable(unit)
 	local name, server = UnitName(unit)
 	local playerID = ElitistGroup:GetPlayerID(unit)
-	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, from = ElitistGroup.playerID, scanned = time(), notes = {}, achievements = {}, equipment = {}}
+	local userData = ElitistGroup.userData[playerID] or {talentTree1 = 0, talentTree2 = 0, talentTree3 = 0, scanned = time(), notes = {}, achievements = {}, equipment = {}}
 	userData.name = name
 	userData.server = server and server ~= "" and server or GetRealmName()
 	userData.level = UnitLevel(unit)
 	userData.classToken = select(2, UnitClass(unit))
 	userData.pruned = nil
+	userData.from = ElitistGroup.playerID
 	
 	ElitistGroup.userData[playerID] = userData
 	ElitistGroup.writeQueue[playerID] = true
