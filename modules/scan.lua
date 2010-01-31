@@ -396,8 +396,14 @@ end
 function Scan:QueueUnit(unit)
 	if( not inspectQueue[unit] ) then
 		inspectQueue[unit] = 0
-		inspectBadGems[unit] = nil
 		table.insert(inspectQueue, unit)
+
+		inspectBadGems[unit] = nil
+		for i=#(inspectBadGems), 1, -1 do
+			if( inspectBadGems[i] == unit ) then
+				table.remove(inspectBadGems, i)
+			end
+		end
 	end
 end
 
