@@ -33,6 +33,7 @@ data\talent_data.lua
 data\dungeon_data.lua
 data\item_data.lua
 
+modules\widgets.lua
 modules\cache.lua
 modules\users.lua
 modules\party_summary.lua
