@@ -10,6 +10,12 @@ local function loadData()
 	local HEALER = L["Healer"]
 	local TANK = L["Tank"]
 	Talents.talentText = {["elemental-shaman"] = CASTER_DAMAGE, ["enhance-shaman"] = MELEE_DAMAGE, ["resto-shaman"] = HEALER, ["arcane-mage"] = CASTER_DAMAGE, ["fire-mage"] = CASTER_DAMAGE, ["frost-mage"] = CASTER_DAMAGE, ["afflict-warlock"] = CASTER_DAMAGE, ["demon-warlock"] = CASTER_DAMAGE, ["destro-warlock"] = CASTER_DAMAGE, ["balance-druid"] = CASTER_DAMAGE, ["cat-druid"] = MELEE_DAMAGE, ["bear-druid"] = TANK, ["resto-druid"] = HEALER, ["arms-warrior"] = MELEE_DAMAGE, ["fury-warrior"] = MELEE_DAMAGE, ["prot-warrior"] = TANK, ["assass-rogue"] = MELEE_DAMAGE, ["combat-rogue"] = MELEE_DAMAGE, ["subtlety-rogue"] = MELEE_DAMAGE, ["holy-paladin"] = HEALER, ["prot-paladin"] = TANK, ["ret-paladin"] = MELEE_DAMAGE, ["beast-hunter"] = RANGE_DAMAGE, ["marks-hunter"] = RANGE_DAMAGE, ["survival-hunter"] = RANGE_DAMAGE, ["disc-priest"] = HEALER, ["holy-priest"] = HEALER, ["shadow-priest"] = CASTER_DAMAGE, ["blood-dk"] = MELEE_DAMAGE, ["frost-dk"] = MELEE_DAMAGE, ["unholy-dk"] = MELEE_DAMAGE, ["tank-dk"] = TANK}
+
+	Talents.TANK = TANK
+	Talents.HEALER = HEALER
+	Talents.MELEE_DAMAGE = MELEE_DAMAGE
+	Talents.CASTER_DAMAGE = CASTER_DAMAGE
+	Talents.RANGE_DAMAGE = RANGE_DAMAGE
 	
 	-- required = How many of the talents the class needs
 	-- the number set for the talent is how many they need
