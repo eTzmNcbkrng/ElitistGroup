@@ -33,6 +33,9 @@ local function reportSummary(self)
 	elseif( ( ElitistGroup.db.profile.report.channel == "GUILD" or ElitistGroup.db.profile.report.channel == "OFFICER" ) and not IsInGuild() ) then
 		ElitistGroup:Print(L["You need to be in a guild to output to this channel."])
 		return
+	elseif( not GetChannelName(ElitistGroup.db.profile.report.channel) ) then
+		ElitistGroup:Print(string.format(L["You are not inside chat channel #%d, can't send report."], ElitistGroup.db.profile.report.channel))
+		return
 	end
 	
 	-- Figure out how many valid matches will need, as well as if we listed any filters
@@ -69,7 +72,7 @@ local function reportSummary(self)
 			end
 		end
 	end
-	
+		
 	if( #(userList) == 0 ) then
 		ElitistGroup:Print(L["No data found on group, you might need to wait a minute for it to load."])
 		return
@@ -150,22 +153,28 @@ local function reportSummary(self)
 		moreInfo = L[", whisper !eg report for detailed info"]
 	end
 	
-	ChatThrottleLib:SendChatMessage("BULK", "EG", string.format(L["Elitist Group (%s): showing %d players%s. Format is, [name] (%s)"], ElitistGroup.version, #(queuedData), moreInfo, outputHelp), ElitistGroup.db.profile.report.channel)
+	local target, channelID = ElitistGroup.db.profile.report.channel
+	if( type(target) == "number" ) then
+		channelID = target
+		target = "CHANNEL"
+	end
+	
+	ChatThrottleLib:SendChatMessage("BULK", "EG", string.format(L["Elitist Group (%s): showing %d players%s. Format is, [name] (%s)"], ElitistGroup.version, #(queuedData), moreInfo, outputHelp), target, nil, channelID)
 	
 	-- Now do all of the actual work
 	local message = ""
 	for _, summary in pairs(queuedData) do
 		local testMessage = message .. ", " .. summary
 		if( string.len(testMessage) >= 250 ) then
-			ChatThrottleLib:SendChatMessage("BULK", "EG", string.gsub(message, "^, ", ""), ElitistGroup.db.profile.report.channel)
-			message = ""
+			ChatThrottleLib:SendChatMessage("BULK", "EG", string.gsub(message, "^, ", ""), target, nil, channelID)
+			message = summary
 		else
 			message = testMessage
 		end
 	end
 	
 	if( message ~= "" ) then
-		ChatThrottleLib:SendChatMessage("BULK", "EG", string.gsub(message, "^, ", ""), ElitistGroup.db.profile.report.channel)
+		ChatThrottleLib:SendChatMessage("BULK", "EG", string.gsub(message, "^, ", ""), target, nil, channelID)
 	end
 	
 	-- Disable it for 60 seconds
@@ -300,14 +309,29 @@ function Report:CreateUI()
 		if( not value ) then	
 			UIDropDownMenu_SetText(parent, parent.disabledText)
 		else
-			UIDropDownMenu_SetText(parent, string.format(parent.formatText, self.arg1))
+			local text = self.arg1
+			local channel = type(self.arg1) == "number" and select(2, GetChannelName(self.arg1))
+			if( channel ) then
+				text = string.format("%d. %s", self.arg1, channel)
+			end
+
+			UIDropDownMenu_SetText(parent, string.format(parent.formatText, text))
 		end
 	end
 	
 	local function initDropdownMenu(self)
 		for _, row in pairs(self.menu) do
 			row.checked = nil
-			UIDropDownMenu_AddButton(row)
+
+			if( row.isChannel ) then
+				local text = select(2, GetChannelName(row.arg1)) 
+				if( text ) then
+					row.text = string.format("%d. %s", row.arg1, text)
+					UIDropDownMenu_AddButton(row)
+				end
+			else
+				UIDropDownMenu_AddButton(row)
+			end
 		end
 	end
 	
@@ -324,6 +348,11 @@ function Report:CreateUI()
 			for _, row in pairs(self.menu) do
 				if( row.value == value ) then
 					text = row.arg1
+					local channel = row.isChannel and select(2, GetChannelName(row.arg1))
+					if( channel ) then
+						text = string.format("%d. %s", row.arg1, channel)
+					end
+					
 					row.checked = nil
 					break
 				end
@@ -428,13 +457,23 @@ function Report:CreateUI()
 	channelFilter:SetPoint("TOPLEFT", generalFrame.gemFilter, "BOTTOMLEFT", 0, SPACING)
 	channelFilter:SetScript("OnShow", initDropdown)
 	channelFilter.disabledText = L["No channel selected"]
-	channelFilter.formatText = L["Report to %s"]
+	channelFilter.formatText = L["Report to channel %s"]
 	channelFilter.configKey = "channel"
 	channelFilter.menu = {
 		{value = "GUILD", arg1 = L["guild"], text = L["Guild"], func = dropdownSelected},
 		{value = "OFFICER", arg1 = L["officer"], text = L["Officer"], func = dropdownSelected},
 		{value = "RAID", arg1 = L["raid"], text = L["Raid"], func = dropdownSelected},
 		{value = "PARTY", arg1 = L["party"], text = L["Party"], func = dropdownSelected},
+		{value = 1, arg1 = 1, text = 1, func = dropdownSelected, isChannel = true},
+		{value = 2, arg1 = 2, text = 2, func = dropdownSelected, isChannel = true},
+		{value = 3, arg1 = 3, text = 3, func = dropdownSelected, isChannel = true},
+		{value = 4, arg1 = 4, text = 4, func = dropdownSelected, isChannel = true},
+		{value = 5, arg1 = 5, text = 5, func = dropdownSelected, isChannel = true},
+		{value = 6, arg1 = 6, text = 6, func = dropdownSelected, isChannel = true},
+		{value = 7, arg1 = 7, text = 7, func = dropdownSelected, isChannel = true},
+		{value = 8, arg1 = 8, text = 8, func = dropdownSelected, isChannel = true},
+		{value = 9, arg1 = 9, text = 9, func = dropdownSelected, isChannel = true},
+		{value = 10, arg1 = 10, text = 10, func = dropdownSelected, isChannel = true},
 	}
 	initDropdown(channelFilter)
 	ElitistGroupReportChannelsButton:SetScript("OnEnter", OnEnter)
