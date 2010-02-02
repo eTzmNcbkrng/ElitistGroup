@@ -155,6 +155,7 @@ function ElitistGroup:OnInitialize()
 		self:RegisterEvent("PLAYER_ENTERING_WORLD", function()
 			ElitistGroup.db.profile.helped = true
 			ElitistGroup:Print(L["Welcome! Type /elitistgroup help (or /eg help) to see a list of available slash commands."])
+			DEFAULT_CHAT_FRAME:AddMessage(L["Play on alts all the time? Check out /eg config -> Main/alt experience to have your mains achievements carry over."])
 			ElitistGroup:UnregisterEvent("PLAYER_ENTERING_WORLD")
 		end)
 	end
