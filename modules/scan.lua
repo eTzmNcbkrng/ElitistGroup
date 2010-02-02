@@ -394,6 +394,11 @@ function Scan:QueueGroup(unitType, total)
 end
 
 function Scan:QueueUnit(unit)
+	if( UnitIsUnit(unit, "player") ) then
+		self:UpdatePlayerData()
+		return
+	end
+
 	if( not inspectQueue[unit] ) then
 		inspectQueue[unit] = 0
 		table.insert(inspectQueue, unit)
