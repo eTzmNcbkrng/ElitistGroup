@@ -492,7 +492,7 @@ function ElitistGroup:GetGearSummary(userData)
 	
 	for inventoryID, itemLink in pairs(userData.equipment) do
 		local fullItemLink, itemQuality, itemLevel, _, _, _, _, itemEquipType, itemIcon = select(2, GetItemInfo(itemLink))
-		if( fullItemLink ) then
+		if( fullItemLink and itemQuality ) then
 			local baseItemLink, enchantItemLink = string.match(itemLink, "item:%d+"), string.match(itemLink, "item:%d+:(%d+)")
 						
 			-- Figure out the items primary info
