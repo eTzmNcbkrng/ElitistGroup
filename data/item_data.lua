@@ -282,7 +282,7 @@ local function loadData()
 			]]
 		end,
 		-- Shiny Shard of the Flame
-		["item:49464"] = function(type, userdata, specType)
+		["item:49464"] = function(type, userData, specType)
 			local reverseType = type == TRINKET1 and TRINKET2 or TRINKET1
 			local trinket = userData.equipment[reverseType] and string.match(userData.equipment[reverseType], "item:(%d+)")
 			
