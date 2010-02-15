@@ -302,7 +302,7 @@ function Users:RebuildDatabaseTable()
 	
 	for playerID, data in pairs(ElitistGroup.db.faction.users) do
 		local user = userList[playerID]
-		if( not user or not user.classToken or not user.level or not user.server or not user.name ) then
+		if( data and ( not user or not user.classToken or not user.level or not user.server or not user.name ) ) then
 			local classToken, level, server, name
 			-- Get the data first
 			if( rawget(ElitistGroup.userData, playerID) ) then
