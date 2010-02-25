@@ -201,6 +201,7 @@ local function loadData()
 
 	-- As with some items, some enchants have special text that doesn't tell you what they do so we need manual flagging
 	Items.enchantOverrides = {
+		[3247] = "physical-dps", -- Scourgebane
 		[3826] = "all", -- Icewalker
 		[3253] = "tank", -- Armsman
 		[3852] = "tank/pvp", -- Greater Inscription of the Gladiator
