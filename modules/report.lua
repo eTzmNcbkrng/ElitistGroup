@@ -61,7 +61,7 @@ local function reportSummary(self)
 			table.insert(userList, userData)
 		end
 	end
-	
+		
 	if( GetNumRaidMembers() == 0 ) then
 		for i=1, GetNumPartyMembers() do
 			local playerID = ElitistGroup:GetPlayerID(partyUnits[i])
@@ -148,18 +148,15 @@ local function reportSummary(self)
 		outputHelp = outputHelp .. "/" .. L["[bad gems]"]
 	end
 	
-	local moreInfo = ""
-	if( ElitistGroup.db.profile.report.moreInfo ) then
-		moreInfo = L[", whisper !eg report for detailed info"]
-	end
-	
+	outputHelp = string.gsub(outputHelp, "^/", "")
+
 	local target, channelID = ElitistGroup.db.profile.report.channel
 	if( type(target) == "number" ) then
 		channelID = target
 		target = "CHANNEL"
 	end
 	
-	ChatThrottleLib:SendChatMessage("BULK", "EG", string.format(L["Elitist Group (%s): showing %d players%s. Format is, [name] (%s)"], ElitistGroup.version, #(queuedData), moreInfo, outputHelp), target, nil, channelID)
+	ChatThrottleLib:SendChatMessage("BULK", "EG", string.format(L["Elitist Group (%s): showing %d players, check out http://elitistarmory.com for more info. Format is, [name] (%s)"], ElitistGroup.version, #(queuedData), outputHelp), target, nil, channelID)
 	
 	-- Now do all of the actual work
 	local message = ""
