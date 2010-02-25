@@ -163,6 +163,14 @@ function ElitistGroup:OnInitialize()
 	self.modules.Sync:Setup()
 end
 
+local locale = GetLocale()
+function ElitistGroup:GetArmoryURL(realm, name)
+	local region = string.match(GetCVar("realmList"), "^(.-)%.")
+	region = locale == "koKR" and "kr" or locale == "zhCN" and "cn" or locale == "zhTW" and "tw" or region
+
+	return region and realm and name and string.format("http://elitistarmory.com/%s/%s/%s", region, realm, name)
+end
+
 -- Permissions, do we trust the person?
 local playerName = UnitName("player")
 function ElitistGroup:IsTrusted(name)

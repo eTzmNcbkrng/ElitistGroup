@@ -1067,6 +1067,43 @@ managePlayerNote = function()
 	SetDesaturation(frame.manageNote.roleDamage:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_DAMAGE) == 0)
 end
 
+local function showElitistArmoryURL(self)
+	local url = ElitistGroup:GetArmoryURL(userData.server, userData.name)
+	if( not url ) then
+		ElitistGroup:Print(L["Cannot find URL for this player, don't seem to have name, server or region data."])
+		return
+	end
+	
+	StaticPopupDialogs["ELITISTGROUP_URL"] = StaticPopupDialogs["ELITISTGROUP_URL"] or {
+		text = "Elitist Armory URLz",
+		button2 = CLOSE,
+		hasEditBox = 1,
+		hasWideEditBox = 1,
+		OnShow = function(self, url)
+			local editBox = _G[ this:GetName() .. "WideEditBox"]
+			if( editBox ) then
+				editBox:SetText(url)
+				editBox:SetFocus()
+				editBox:HighlightText(0)
+			end
+			
+			local button = _G[this:GetName().."Button2"]
+			if( button ) then
+				button:ClearAllPoints()
+				button:SetWidth(200)
+				button:SetPoint("CENTER", editBox, "CENTER", 0, -30)
+			end
+		end,
+		EditBoxOnEscapePressed = function() this:GetParent():Hide() end,
+		timeout = 0,
+		whileDead = 1,
+		hideOnEscape = 1,
+		maxLetters = 1024,
+	}	
+	
+	StaticPopup_Show("ELITISTGROUP_URL", nil, nil, url)
+end
+
 -- Really need to restructure all of this soon
 function Users:CreateUI()
 	if( Users.frame ) then
@@ -1377,13 +1414,13 @@ function Users:CreateUI()
 			button:GetFontString():SetPoint("LEFT", button.icon, "RIGHT", 2, 0)
 		end
 		
+		local offset = (key == "averageInfo" or key == "playerInfo") and -50 or 0
 		if( i > 1 ) then
-			local offset = key == "averageInfo" and -50 or 0
 			button:SetPoint("TOPLEFT", infoFrame[buttonList[i - 1]], "BOTTOMLEFT", 0, -4)
 			button:SetPoint("TOPRIGHT", infoFrame[buttonList[i - 1]], "BOTTOMRIGHT", offset, -4)
 		else
 			button:SetPoint("TOPLEFT", infoFrame, "TOPLEFT", 3, -4)
-			button:SetPoint("TOPRIGHT", infoFrame, "TOPRIGHT", 0, 0)
+			button:SetPoint("TOPRIGHT", infoFrame, "TOPRIGHT", offset, 0)
 		end
 		
 		infoFrame[key] = button
@@ -1400,6 +1437,17 @@ function Users:CreateUI()
 	talentInfo.highlight:SetVertexColor(1, 1, 1)
 	talentInfo.highlight:SetBlendMode("ADD")
 	]]
+
+	-- Elitist Armory hookin
+	local button = CreateFrame("Button", nil, infoFrame, "UIPanelButtonGrayTemplate")
+	button:SetWidth(40)
+	button:SetHeight(15)
+	button:SetPoint("LEFT", infoFrame.playerInfo, "RIGHT", 6, 0)
+	button:SetText(L["URL"])
+	button:SetScript("OnClick", showElitistArmoryURL)
+	button:SetScript("OnEnter", OnEnter)
+	button:SetScript("OnLeave", OnLeave)
+	button.tooltip = L["View the player on ElitistArmory.com"]
 	
 	-- Editing notes
 	local button = CreateFrame("Button", nil, infoFrame, "UIPanelButtonGrayTemplate")
