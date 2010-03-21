@@ -300,6 +300,7 @@ local function loadData()
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	Items.itemOverrides = {
+		[50179] = "tank", -- Last Word
 		[25897] = "never", -- Bracing Earthsiege Diamond
 		[41389] = "never", -- Beaming Earthsiege Diamond
 		[35503] = "manaless", -- Ember Skyfire Diamond
