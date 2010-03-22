@@ -16,6 +16,7 @@ function ElitistGroup:OnInitialize()
 				databaseExpanded = true,
 				selectedTab = "achievements",
 				showSlotName = false,
+				summaryQueue = true,
 			},
 			auto = {
 				autoPopup = false,

@@ -304,6 +304,10 @@ function Summary:CreateUI()
 	frame:SetScript("OnHide", function()
 		Summary:UnregisterMessage("EG_DATA_UPDATED")
 		Summary:UnregisterEvent("RAID_ROSTER_UPDATE")
+		
+		if( not ElitistGroup.db.profile.summaryQueue ) then
+			ElitistGroup.modules.Scan:ResetQueue()
+		end
 	end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then

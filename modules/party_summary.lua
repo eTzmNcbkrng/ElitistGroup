@@ -328,7 +328,13 @@ function Summary:CreateUI()
 	frame:EnableMouse(true)
 	frame:SetMovable(true)
 	frame:SetToplevel(true)
-	frame:SetScript("OnHide", function() ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData) end)
+	frame:SetScript("OnHide", function()
+		ElitistGroup:ReleaseTables(equipmentData, enchantData, gemData)
+	
+		if( not ElitistGroup.db.profile.summaryQueue ) then
+			ElitistGroup.modules.Scan:ResetQueue()
+		end
+	end)
 	frame:SetScript("OnDragStart", function(self, mouseButton)
 		if( mouseButton == "RightButton" ) then
 			frame:ClearAllPoints()

@@ -55,10 +55,17 @@ local function loadOptions()
 						name = L["Announce synced data"],
 						desc = L["Alerts you in chat when you receive new notes or gear information from somebody."],
 					},
-					showSlotName = {
+					sep = { order = 2, type = "description", name = "", width = "full"},
+					summaryQueue = {
 						order = 2,
 						type = "toggle",
-						name = L["Show slot name"],
+						name = L["Always process group queue"],
+						desc = L["When /eg summary is closed, the group inspect queue will always be processed.|n|nUnchecking this means the inspect queue is reset when /eg summary is closed."]
+					},
+					showSlotName = {
+						order = 3,
+						type = "toggle",
+						name = L["Show slot names"],
 						desc = L["Instead of listing item link when viewing overall status, you'll instead see the name of the slot."],
 					}
 				},
@@ -100,7 +107,7 @@ local function loadOptions()
 						order = 1,
 						type = "description",
 						name = function()
-							local text = L["Main/alt experience is a way of letting other Elitist Group users see that you have experience in dungeons on more than one character. By setting a main, when people inspect your alt they will see your experience on both your main and alt. Your main will remain anonymous, only the experience data is shown to other users."]
+							local text = L["Main/alt experience is a way of letting other Elitist Group users see that you have experience in dungeons on more than one character. By setting a main, when people inspect your alt they will see your experience on both your main and alt. Your main will remain anonymous, only the experience data is shown to other users.\nThis will only show up for people who inspect you."]
 							if( ElitistGroup.db.global.main.character ) then
 								return text .. "\n\n" .. string.format(L["Your main is currently: %s."], ElitistGroup.db.global.main.character)
 							end
