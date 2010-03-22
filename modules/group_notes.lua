@@ -180,7 +180,7 @@ function Notes:Update()
 					row.comment:SetText("")
 				end
 
-				role = defaultRole > 0 and defaultRole or playerNote.role
+				role = ( defaultRole > 0 or not playerNote ) and defaultRole or playerNote.role
 			end
 			
 			SetDesaturation(row.roleTank:GetNormalTexture(), bit.band(role, ElitistGroup.ROLE_TANK) == 0)
