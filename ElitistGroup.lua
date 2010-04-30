@@ -523,7 +523,8 @@ function ElitistGroup:GetGearSummary(userData)
 					equipSlot = equipSlot .. "_UNIQUE"
 				end
 				
-				equipment[fullItemLink] = string.format("%s%s|r", ITEM_QUALITY_COLORS[itemQuality].hex, _G[string.upper(equipSlot)])
+				color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[1]
+				equipment[fullItemLink] = string.format("%s%s|r", color.hex, _G[string.upper(equipSlot)])
 			end
 
 			-- Now check item
