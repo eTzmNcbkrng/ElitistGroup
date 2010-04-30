@@ -57,7 +57,7 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["suitational-caster"] = L["Suitational (Caster)"], ["suitational-healer"] = L["Suitational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"]}
+	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["suitational-caster"] = L["Suitational (Caster)"], ["suitational-healer"] = L["Suitational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"], ["spirit/cloak"] = L["Caster (Spirit)"]}
 
 	local function mergeTable(into, ...)
 		for i=1, select("#", ...) do
@@ -80,12 +80,12 @@ local function loadData()
 	local meleeDamage = {["all"] = true, ["melee"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true}
 	local rangeDamage = {["all"] = true, ["range-dps"] = true, ["tank/ranged"] = true, ["physical-dps"] = true, ["physical-all"] = true, ["healer/dps"] = true, ["tank/dps"] = true, ["dps"] = true}
 	local healer = {["all"] = true, ["healer"] = true, ["caster"] = true, ["healer/dps"] = true}
-	local spiritHealer = mergeTable({}, healer, "caster-spirit")
+	local spiritHealer = mergeTable({}, healer, "caster-spirit", "spirit/cloak")
 
 	-- Now define type by spec
 	Items.talentToRole = {
 		-- Shamans
-		["elemental-shaman"] = mergeTable({}, casterDamage, "elemental/pvp"),
+		["elemental-shaman"] = mergeTable({}, casterDamage, "elemental/pvp", "spirit/cloak"),
 		["enhance-shaman"] = meleeDamage,
 		["resto-shaman"] = healer,
 		-- Mages
@@ -301,6 +301,12 @@ local function loadData()
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	Items.itemOverrides = {
+		[47316] = "caster-dps", -- Reign of the Dead
+		[47477] = "caster-dps", -- Reign of the Dead (Heroic)
+		[50658] = "caster", -- Amulet of the Silent Eulogy
+		[48032] = "caster", -- Lightbane Focus
+		[50668] = "spirit/cloak", -- Greatcloak of the Turned Champion (Heroic)
+		[50014] = "spirit/cloak", -- Greatcloak of the Turned Champion
 		[50179] = "tank", -- Last Word
 		[25897] = "never", -- Bracing Earthsiege Diamond
 		[41389] = "never", -- Beaming Earthsiege Diamond

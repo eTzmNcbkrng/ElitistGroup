@@ -120,7 +120,7 @@ local function loadData()
 		-- 10 man dungeons
 		{name = L["Raids"], parent = true, id = "10-man", players = 10},
 		{name = L["Naxxramas"], childOf = "10-man", id = "naxx-10m", players = 10,
-			experienced = 260, -- 3 full clears / 2 full clears + undying
+			experienced = 130, -- 1 full clear
 			[1361] = 2, -- Anub'Rekhan kills (Naxxramas 10 player)
 			[1362] = 2, -- Grand Widow Faerlina kills (Naxxramas 10 player)
 			[1363] = 6, -- Maexxna kills (Naxxramas 10 player)
@@ -140,12 +140,12 @@ local function loadData()
 			[2187] = 65, -- The Undying
 		},
 		{name = L["Sartharion"], childOf = "10-man", id = "sarth-10m", players = 10,
-			experienced = 30, -- 3 kills or a 3-drake kill
+			experienced = 10, -- 3 kills or a 3-drake kill
 			[1392] = 10, -- Sartharion kills (Chamber of the Aspects 10 player)
 			[2051] = 30, -- The Twilight Zone (10 player)
 		},
 		{name = L["Malygos"], childOf = "10-man", id = "malygos-10m", players = 10,
-			experienced = 30, -- 3 kills or a sub-6 minute kill
+			experienced = 10, -- 3 kills or a sub-6 minute kill
 			[1391] = 10, -- Malygos kills (10 player)
 			[1874] = 30, -- You Don't Have An Eternity (10 player)
 		},
@@ -184,19 +184,20 @@ local function loadData()
 		},
 		
 		{name = L["Icecrown Citadel"], childOf = "10-man", id = "icc-10m-n", players = 10,
-			experienced = 180, -- 3 full clears
+			experienced = 195, -- 3 full clears
+			cap = {[4639] = 10, [4643] = 10, [4644] = 10, [4645] = 10},
 			[4639] = 1, -- Lord Marrowgar kills (Icecrown 10 player)
 			[4643] = 1, -- Lady Deathwhisper kills (Icecrown 10 player)
 			[4644] = 1, -- Gunship Battle victories (Icecrown 10 player)
-			[4645] = 2, -- Deathbringer kills (Icecrown 10 player)
-			[4646] = 2, -- Festergut kills (Icecrown 10 player)
+			[4645] = 1, -- Deathbringer kills (Icecrown 10 player)
+			[4646] = 1, -- Festergut kills (Icecrown 10 player)
 			[4647] = 2, -- Rotface kills (Icecrown 10 player)
-			[4650] = 6, -- Professor Putricide kills (Icecrown 10 player)
-			[4648] = 3, -- Blood Prince Council kills (Icecrown 10 player)
-			[4651] = 7, -- Blood Queen Lana'thel kills (Icecrown 10 player)
-			[4649] = 3, -- Valithria Dreamwalker rescues (Icecrown 10 player)
-			[4652] = 7, -- Sindragosa kills (Icecrown 10 player)
-			[4653] = 10, -- Victories over the Lich King (Icecrown 10 player)
+			[4650] = 5, -- Professor Putricide kills (Icecrown 10 player)
+			[4648] = 2, -- Blood Prince Council kills (Icecrown 10 player)
+			[4651] = 5, -- Blood Queen Lana'thel kills (Icecrown 10 player)
+			[4649] = 2, -- Valithria Dreamwalker rescues (Icecrown 10 player)
+			[4652] = 5, -- Sindragosa kills (Icecrown 10 player)
+			[4653] = 30, -- Victories over the Lich King (Icecrown 10 player)
 			--[4527] = 5, -- The Frostwing Halls (10 player)
 			--[4528] = 5, -- The Plagueworks (10 player)
 			--[4529] = 5, -- The Crimson Hall (10 player)
@@ -208,26 +209,26 @@ local function loadData()
 			[4016] = 20, -- Earth, Wind & Fire (10 player)
 		},
 		{name = L["Archavon the Stone Watcher"], childOf = "voa-10m", id = "arch-10m", players = 10,
-			experienced = 10,
+			experienced = 5,
 			[1753] = 5, -- Archavon the Stone Watcher kills (Wintergrasp 10 player)
 		},
 		{name = L["Emalon the Storm Watcher"], childOf = "voa-10m", id = "emal-10m", players = 10,
-			experienced = 30,
+			experienced = 10,
 			[2870] = 10, -- Emalon the Storm Watcher kills (Wintergrasp 10 player)
 		},
 		{name = L["Koralon the Flame Watcher"], childOf = "voa-10m", id = "kora-10m", players = 10,
-			experienced = 45,
+			experienced = 15,
 			[4074] = 15, -- Koralon the Flame Watcher kills (Wintergrasp 10 player)
 		},
 		{name = L["Toravon the Ice Watcher"], childOf = "voa-10m", id = "tora-10m", players = 10,
-			experienced = 60,
+			experienced = 40,
 			[4657] = 20, -- Toravon the Ice Watcher kills (Wintergrasp 10 player)
 		},
 			
 		-- 25 man raids
 		{name = L["Raids"], parent = true, id = "25-man", players = 25},
 		{name = L["Naxxramas"], childOf = "25-man", id = "naxx-25m", players = 25,
-			experienced = 280, -- 3 full clears/2 full clears + immortal
+			experienced = 130, -- 1 full clear
 			[1368] = 2, -- Anub'Rekhan kills (Naxxramas 25 player)
 			[1380] = 2, -- Grand Widow Faerlina kills (Naxxramas 25 player)
 			[1386] = 6, -- Maexxna kills (Naxxramas 25 player)
@@ -247,12 +248,12 @@ local function loadData()
 			[2186] = 70, -- The Immortal
 		},
 		{name = L["Sartharion"], childOf = "25-man", id = "sarth-25m", players = 25,
-			experienced = 30, -- 3 kills or 3-drake
+			experienced = 10, -- 3 kills or 3-drake
 			[1393] = 10, -- Sartharion kills (Chamber of the Aspects 25 player)
 			[2054] = 30, -- The Twilight Zone (25 player)
 		},
 		{name = L["Malygos"], childOf = "25-man", id = "malygos-25m", players = 25,
-			experienced = 30,
+			experienced = 10,
 			[1394] = 10, -- Malygos kills (25 player)
 			[1875] = 30, -- You Don't Have An Eternity (25 player)
 		},
@@ -289,19 +290,20 @@ local function loadData()
 			[4397] = 10, -- Onyxia's Lair (25 player)
 		},
 		{name = L["Icecrown Citadel"], childOf = "25-man", id = "icc-25m-n", players = 25,
-			experienced = 180, -- 3 full clears
+			experienced = 195, -- 3 full clears
+			cap = {[4641] = 10, [4655] = 10, [4660] = 10, [4663] = 10},
 			[4641] = 1, -- Lord Marrowgar kills (Icecrown 25 player)
 			[4655] = 1, -- Lady Deathwhisper kills (Icecrown 25 player)
 			[4660] = 1, -- Gunship Battle victories (Icecrown 25 player)
-			[4663] = 2, -- Deathbringer kills (Icecrown 25 player)
-			[4666] = 2, -- Festergut kills (Icecrown 25 player)
+			[4663] = 1, -- Deathbringer kills (Icecrown 25 player)
+			[4666] = 1, -- Festergut kills (Icecrown 25 player)
 			[4669] = 2, -- Rotface kills (Icecrown 25 player)
-			[4678] = 6, -- Professor Putricide kills (Icecrown 25 player)
-			[4672] = 3, -- Blood Prince Council kills (Icecrown 25 player)
-			[4681] = 7, -- Blood Queen Lana'thel kills (Icecrown 25 player)
-			[4675] = 3, -- Valithria Dreamwalker rescues (Icecrown 25 player)
-			[4683] = 7, -- Sindragosa kills (Icecrown 25 player)
-			[4687] = 10, -- Victories over the Lich King (Icecrown 25 player)
+			[4678] = 5, -- Professor Putricide kills (Icecrown 25 player)
+			[4672] = 2, -- Blood Prince Council kills (Icecrown 25 player)
+			[4681] = 5, -- Blood Queen Lana'thel kills (Icecrown 25 player)
+			[4675] = 2, -- Valithria Dreamwalker rescues (Icecrown 25 player)
+			[4683] = 5, -- Sindragosa kills (Icecrown 25 player)
+			[4687] = 30, -- Victories over the Lich King (Icecrown 25 player)
 			--[4604] = 0, -- Storming the Citadel (25 player)
 			--[4605] = 0, -- The Plagueworks (25 player)
 			--[4606] = 0, -- The Crimson Hall (25 player)
@@ -313,19 +315,19 @@ local function loadData()
 			[4017] = 20, -- Earth, Wind & Fire (25 player)
 		},
 		{name = L["Archavon the Stone Watcher"], childOf = "voa-25m", id = "arch-25m", players = 25,
-			experienced = 10,
+			experienced = 5,
 			[1754] = 5, -- Archavon the Stone Watcher kills (Wintergrasp 25 player)
 		},
 		{name = L["Emalon the Storm Watcher"], childOf = "voa-25m", id = "emal-25m", players = 25,
-			experienced = 30,
+			experienced = 10,
 			[3236] = 10, -- Emalon the Storm Watcher kills (Wintergrasp 25 player)
 		},
 		{name = L["Koralon the Flame Watcher"], childOf = "voa-25m", id = "kora-25m", players = 25,
-			experienced = 45,
+			experienced = 15,
 			[4075] = 15, -- Koralon the Flame Watcher kills (Wintergrasp 25 player)
 		},
 		{name = L["Toravon the Ice Watcher"], childOf = "voa-25m", id = "tora-25m", players = 25,
-			experienced = 60,
+			experienced = 20,
 			[4658] = 20, -- Toravon the Ice Watcher kills (Wintergrasp 25 player)
 		},
 
@@ -356,19 +358,20 @@ local function loadData()
 			[4080] = 30, -- A Tribute to Dedicated Insanity
 		},
 		{name = L["Icecrown Citadel"], childOf = "10-man-hard", id = "icc-10m-h", cascade = "icc-10m-n", heroic = true, players = 10,
-			experienced = 90, -- 1 full clear
+			experienced = 125, -- 1 full clear
+			cap = {[4640] = 5, [4659] = 5, [4668] = 5, [4671] = 5},
 			[4640] = 1, -- Lord Marrowgar kills (Heroic Icecrown 10 player)
-			[4654] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 10 player)
+			[4654] = 5, -- Lady Deathwhisper kills (Heroic Icecrown 10 player)
 			[4659] = 1, -- Gunship Battle victories (Heroic Icecrown 10 player)
 			[4662] = 2, -- Deathbringer kills (Heroic Icecrown 10 player)
 			[4665] = 2, -- Festergut kills (Heroic Icecrown 10 player)
-			[4668] = 2, -- Rotface kills (Heroic Icecrown 10 player)
-			[4677] = 6, -- Professor Putricide kills (Heroic Icecrown 10 player)
-			[4671] = 3, -- Blood Prince Council kills (Heroic Icecrown 10 player)
-			[4680] = 7, -- Blood Queen Lana'thel kills (Heroic Icecrown 10 player)
-			[4674] = 3, -- Valithria Dreamwalker rescues (Heroic Icecrown 10 player)
+			[4668] = 1, -- Rotface kills (Heroic Icecrown 10 player)
+			[4677] = 5, -- Professor Putricide kills (Heroic Icecrown 10 player)
+			[4671] = 1, -- Blood Prince Council kills (Heroic Icecrown 10 player)
+			[4680] = 5, -- Blood Queen Lana'thel kills (Heroic Icecrown 10 player)
+			[4674] = 2, -- Valithria Dreamwalker rescues (Heroic Icecrown 10 player)
 			[4684] = 7, -- Sindragosa kills (Heroic Icecrown 10 player)
-			[4686] = 10, -- Victories over the Lich King (Heroic Icecrown 10 player)
+			[4686] = 15, -- Victories over the Lich King (Heroic Icecrown 10 player)
 			--[4628] = 0, -- Heroic: Storming the Citadel (10 player)
 			--[4629] = 0, -- Heroic: The Plagueworks (10 player)
 			--[4630] = 0, -- Heroic: The Crimson Hall (10 player)
@@ -401,19 +404,20 @@ local function loadData()
 			[3819] = 30, -- A Tribute to Insanity (25 player)
 		},
 		{name = L["Icecrown Citadel"], childOf = "25-man-hard", id = "icc-25m-h", cascade = "icc-25m-n", heroic = true, players = 25,
-			experienced = 90, -- 1 full clear
+			experienced = 125, -- 1 full clear
+			cap = {[4642] = 5, [4661] = 5, [4670] = 5, [4673] = 5},
 			[4642] = 1, -- Lord Marrowgar kills (Heroic Icecrown 25 player)
-			[4656] = 1, -- Lady Deathwhisper kills (Heroic Icecrown 25 player)
+			[4656] = 5, -- Lady Deathwhisper kills (Heroic Icecrown 25 player)
 			[4661] = 1, -- Gunship Battle victories (Heroic Icecrown 25 player)
 			[4664] = 2, -- Deathbringer kills (Heroic Icecrown 25 player)
 			[4667] = 2, -- Festergut kills (Heroic Icecrown 25 player)
-			[4670] = 2, -- Rotface kills (Heroic Icecrown 25 player)
-			[4679] = 6, -- Professor Putricide kills (Heroic Icecrown 25 player)
-			[4673] = 3, -- Blood Prince Council kills (Heroic Icecrown 25 player)
-			[4682] = 7, -- Blood Queen Lana'thel kills (Heroic Icecrown 25 player)
-			[4676] = 3, -- Valithria Dreamwalker rescues (Heroic Icecrown 25 player)
-			[4685] = 10, -- Sindragosa kills (Heroic Icecrown 25 player)
-			[4688] = 10, -- Victories over the Lich King (Heroic Icecrown 25 player)
+			[4670] = 1, -- Rotface kills (Heroic Icecrown 25 player)
+			[4679] = 5, -- Professor Putricide kills (Heroic Icecrown 25 player)
+			[4673] = 1, -- Blood Prince Council kills (Heroic Icecrown 25 player)
+			[4682] = 5, -- Blood Queen Lana'thel kills (Heroic Icecrown 25 player)
+			[4676] = 2, -- Valithria Dreamwalker rescues (Heroic Icecrown 25 player)
+			[4685] = 7, -- Sindragosa kills (Heroic Icecrown 25 player)
+			[4688] = 15, -- Victories over the Lich King (Heroic Icecrown 25 player)
 			--[4632] = 0, -- Heroic: Storming the Citadel (25 player)
 			--[4633] = 0, -- Heroic: The Plagueworks (25 player)
 			--[4634] = 0, -- Heroic: The Crimson Hall (25 player)
@@ -424,9 +428,16 @@ local function loadData()
 
 	Dungeons.experienceParents = {}
 	Dungeons.achievements = {}
+	Dungeons.experienceCap = {}
 	for _, data in pairs(Dungeons.experience) do
 		if( data.subParent ) then
 			Dungeons.experienceParents[data.id] = data.childOf
+		end
+		
+		if( data.cap ) then
+			for achievementID, cap in pairs(data.cap) do
+				Dungeons.experienceCap[achievementID] = cap
+			end
 		end
 		
 		for achievementID, points in pairs(data) do

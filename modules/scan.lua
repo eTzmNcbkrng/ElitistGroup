@@ -364,11 +364,18 @@ function Scan:QueueSize()
 end
 
 -- Try and speed up the queue so people who are initially in range are done first not perfectly obviously, but better than nothing
+local hasPlayerData
 local function sortQueue(a, b)
 	local aInspect = a and CanInspect(a)
 	local bInspect = b and CanInspect(b)
 	
 	if( aInspect == bInspect ) then
+		if( hasPlayerData[a] and not hasPlayerData[b] ) then
+			return true
+		elseif( not hasPlayerData[a] and hasPlayerData[b] ) then
+			return false
+		end
+		
 		return a < b
 	elseif( aInspect ) then
 		return true
@@ -378,6 +385,7 @@ local function sortQueue(a, b)
 end
 
 function Scan:QueueGroup(unitType, total)
+	hasPlayerData = {}
 	for i=1, total do
 		local unit = unitType .. i
 		if( UnitIsUnit(unit, "player") ) then
@@ -385,6 +393,12 @@ function Scan:QueueGroup(unitType, total)
 		elseif( not inspectQueue[unit] ) then
 			inspectQueue[unit] = 0
 			table.insert(inspectQueue, unit)
+
+			-- Indicate we have data on a player for sorting
+			local name = ElitistGroup:GetPlayerID(unit)
+			if( name and ElitistGroup.db.faction.users[name] ) then
+				hasPlayerData[unit] = true
+			end
 		end
 	end
 	

@@ -558,11 +558,21 @@ function Users:UpdateAchievementData()
 			
 		for id, points in pairs(data) do
 			if( userData.achievements[id] ) then
-				experienceData[data.id] = experienceData[data.id] + (userData.achievements[id] * points)
+				total = userData.achievements[id] * points
+				if( DungeonData.experienceCap[id] and DungeonData.experienceCap[id] < total ) then
+					total = DungeonData.experienceCap[id]
+				end
+				
+				experienceData[data.id] = experienceData[data.id] + total
 			end
 			
 			if( userData.mainAchievements and userData.mainAchievements[id] ) then
-				experienceDataMain[data.id] = experienceDataMain[data.id] + (userData.mainAchievements[id] * points)
+				total = userData.mainAchievements[id] * points
+				if( DungeonData.experienceCap[id] and DungeonData.experienceCap[id] < total ) then
+					total = DungeonData.experienceCap[id]
+				end
+
+				experienceDataMain[data.id] = experienceDataMain[data.id] + total
 			end
 		end
 		
