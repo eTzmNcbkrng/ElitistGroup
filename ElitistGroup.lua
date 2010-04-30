@@ -168,7 +168,9 @@ local locale = GetLocale()
 function ElitistGroup:GetArmoryURL(realm, name)
 	local region = string.match(GetCVar("realmList"), "^(.-)%.")
 	region = locale == "koKR" and "kr" or locale == "zhCN" and "cn" or locale == "zhTW" and "tw" or region
-
+	realm = string.gsub(realm, " ", "%20")
+	name = string.gsub(name, " ", "%20")
+	
 	return region and realm and name and string.format("http://elitistarmory.com/%s/%s/%s", region, realm, name)
 end
 
@@ -523,7 +525,7 @@ function ElitistGroup:GetGearSummary(userData)
 					equipSlot = equipSlot .. "_UNIQUE"
 				end
 				
-				color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[1]
+				local color = ITEM_QUALITY_COLORS[itemQuality] or ITEM_QUALITY_COLORS[1]
 				equipment[fullItemLink] = string.format("%s%s|r", color.hex, _G[string.upper(equipSlot)])
 			end
 
