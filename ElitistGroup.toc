@@ -1,6 +1,6 @@
 ## Interface: 30300
 ## Title: Elitist Group
-## Notes: Provides quick access to information on your group and their gear/enchant/gem choices
+## Notes: Provides quick access to information on your group and their equipment, enchant and gem choices
 ## Author: Shadowed
 ## OptionalDeps: Ace3
 ## SavedVariables: ElitistGroupDB
