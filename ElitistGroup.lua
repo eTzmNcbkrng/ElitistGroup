@@ -164,10 +164,45 @@ function ElitistGroup:OnInitialize()
 	self.modules.Sync:Setup()
 end
 
+function ElitistGroup:ShowURLPopup(url, long)
+	StaticPopupDialogs["ELITISTGROUP_URL"] = StaticPopupDialogs["ELITISTGROUP_URL"] or {
+		text = not long and "Elitist Armory URL" or "Elitist Armory URL. You will be given a shorter URL once you go to the site.",
+		button2 = CLOSE,
+		hasEditBox = 1,
+		hasWideEditBox = 1,
+		OnShow = function(self, url)
+			local editBox = _G[this:GetName() .. "WideEditBox"]
+			if( editBox ) then
+				editBox:SetText(url)
+				editBox:SetFocus()
+				editBox:HighlightText(0)
+			end
+			
+			local button = _G[this:GetName().."Button2"]
+			if( button ) then
+				button:ClearAllPoints()
+				button:SetWidth(200)
+				button:SetPoint("CENTER", editBox, "CENTER", 0, -30)
+			end
+		end,
+		EditBoxOnEscapePressed = function() this:GetParent():Hide() end,
+		timeout = 0,
+		whileDead = 1,
+		hideOnEscape = 1,
+		maxLetters = 1024,
+	}	
+	
+	StaticPopup_Show("ELITISTGROUP_URL", nil, nil, url)
+end
+
 local locale = GetLocale()
-function ElitistGroup:GetArmoryURL(realm, name)
+function ElitistGroup:GetRegion()
 	local region = string.match(GetCVar("realmList"), "^(.-)%.")
-	region = locale == "koKR" and "kr" or locale == "zhCN" and "cn" or locale == "zhTW" and "tw" or region
+	return locale == "koKR" and "kr" or locale == "zhCN" and "cn" or locale == "zhTW" and "tw" or region
+end
+
+function ElitistGroup:GetArmoryURL(realm, name)
+	region = self:GetRegion()
 	realm = string.gsub(realm, " ", "%20")
 	name = string.gsub(name, " ", "%20")
 	
@@ -284,7 +319,7 @@ function ElitistGroup:SetTalentText(fontString, specType, specName, userData, ta
 		end
 	end
 	
-	fontString:SetFormattedText("%d/%d/%d (%s)", specData.talentTree1, specData.talentTree2, specData.talentTree3, detailText)
+	fontString:SetFormattedText("%d/%d/%d (%s)", specData.talentTree1 or 0, specData.talentTree2 or 0, specData.talentTree3 or 0, detailText)
 	fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role."], talentTypeText, specName, specType)
 end
 	

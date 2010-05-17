@@ -1084,34 +1084,7 @@ local function showElitistArmoryURL(self)
 		return
 	end
 	
-	StaticPopupDialogs["ELITISTGROUP_URL"] = StaticPopupDialogs["ELITISTGROUP_URL"] or {
-		text = "Elitist Armory URLz",
-		button2 = CLOSE,
-		hasEditBox = 1,
-		hasWideEditBox = 1,
-		OnShow = function(self, url)
-			local editBox = _G[ this:GetName() .. "WideEditBox"]
-			if( editBox ) then
-				editBox:SetText(url)
-				editBox:SetFocus()
-				editBox:HighlightText(0)
-			end
-			
-			local button = _G[this:GetName().."Button2"]
-			if( button ) then
-				button:ClearAllPoints()
-				button:SetWidth(200)
-				button:SetPoint("CENTER", editBox, "CENTER", 0, -30)
-			end
-		end,
-		EditBoxOnEscapePressed = function() this:GetParent():Hide() end,
-		timeout = 0,
-		whileDead = 1,
-		hideOnEscape = 1,
-		maxLetters = 1024,
-	}	
-	
-	StaticPopup_Show("ELITISTGROUP_URL", nil, nil, url)
+	ElitistGroup:ShowURLPopup(url)
 end
 
 -- Really need to restructure all of this soon
@@ -1449,7 +1422,7 @@ function Users:CreateUI()
 	]]
 
 	-- Elitist Armory hookin
-	local button = CreateFrame("Button", nil, infoFrame, "UIPanelButtonGrayTemplate")
+	local button = CreateFrame("Button", nil, infoFrame, "GameMenuButtonTemplate")
 	button:SetWidth(40)
 	button:SetHeight(15)
 	button:SetPoint("LEFT", infoFrame.playerInfo, "RIGHT", 6, 0)
@@ -1462,7 +1435,7 @@ function Users:CreateUI()
 	-- Editing notes
 	local button = CreateFrame("Button", nil, infoFrame, "UIPanelButtonGrayTemplate")
 	button:SetWidth(45)
-	button:SetHeight(15)
+	button:SetHeight(18)
 	button:SetPoint("LEFT", infoFrame.averageInfo, "RIGHT", 2, 0)
 	button:SetText(L["Edit"])
 	button:SetScript("OnClick", function(self)
