@@ -87,7 +87,8 @@ end
 
 local function getFullName(name)
 	local name = string.match(name, "(.-)%-") or name
-	local server = string.match(name, "%-(.+)") or GetRealmName()
+	local server = string.match(name, "%-(.+)")
+	server = server and server ~= "" and server or GetRealmName()
 
 	return string.format("%s-%s", name, server), name, server
 end

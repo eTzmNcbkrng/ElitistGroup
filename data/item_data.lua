@@ -383,7 +383,8 @@ local function loadData()
 		CHANCE_MELEE_OR_RANGE = L["chance on melee or range"], CHANCE_MELEE_AND_RANGE = L["chance on melee and range"], RANGED_CRITICAL_STRIKE = L["ranged critical"],
 		MELEE_OR_RANGE = L["melee or range"], SPELL_DAMAGE = L["spell damage"], MELEE_AND_RANGE = L["melee and ranged"], DEAL_DAMAGE = L["deal damage"],
 		ARMOR_BY = L["armor by"], ARMOR_FOR = L["armor for"], WHEN_HIT = L["when hit"], ROOT_DURATION = L["root duration"], SILENCE_DURATION = L["silence duration"],
-		STUN_RESISTANCE = L["stun resistance"], FEAR_DURATION = L["fear duration"], STUN_DURATION = L["stun duration"], RUN_SPEED = L["run speed"]
+		STUN_RESISTANCE = L["stun resistance"], FEAR_DURATION = L["fear duration"], STUN_DURATION = L["stun duration"], RUN_SPEED = L["run speed"],
+		MAGICAL_HEALS = L["magical heals"],
 	}
 
 	Items.safeStatMatch = {}
@@ -410,7 +411,7 @@ local function loadData()
 		{type = "never",		gems = "MANA@", exclusive = true},
 		{type = "healer", 		gems = "MANA@", skipOn = "ITEM_MOD_INTELLECT_SHORT", skipOn2 = "ITEM_MOD_SPELL_POWER_SHORT"},
 		{type = "tank",			default = "DEFENSE_SKILL_RATING@", trinkets = "WHEN_HIT@"},
-		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@"},
+		{type = "healer",		default = "SPELL_HEALING_DONE@", trinkets = "HELPFUL_SPELL@MAGICAL_HEALS@"},
 		{type = "caster-dps",	default = "HIT_SPELL_RATING@", trinkets = "HARMFUL_SPELL@PERIODIC_DAMAGE@SPELL_DAMAGE@"},
 		{type = "caster-dps",	default = "HIT_RATING@", require = "ITEM_MOD_SPELL_POWER_SHORT", require2 = "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT"},
 		{type = "physical-all",	default = "AGILITY@"},

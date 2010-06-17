@@ -203,8 +203,8 @@ end
 
 function ElitistGroup:GetArmoryURL(realm, name)
 	region = self:GetRegion()
-	realm = string.gsub(realm, " ", "%20")
-	name = string.gsub(name, " ", "%20")
+	realm = string.gsub(realm, " ", "%%20")
+	name = string.gsub(name, " ", "%%20")
 	
 	return region and realm and name and string.format("http://elitistarmory.com/%s/%s/%s", region, realm, name)
 end
@@ -305,7 +305,7 @@ function ElitistGroup:SetTalentText(fontString, specType, specName, userData, ta
 		else
 			fontString:SetFormattedText(L["|cffff2020%d unspent|r (Secondary)"], specData.unspentPoints)
 		end
-		fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role.\n\nThe player has not spent %d talent points."], talentTypeText, specName, specType, specData.unspentPoints)
+		fontString.tooltip = string.format(L["|cffffffff%s|r %s, %s role.\n\nThe player has not spent %d talent points."], talentTypeText, specName or L["Unknown"], specType or L["Unknown"], specData.unspentPoints)
 		return
 	end
 	

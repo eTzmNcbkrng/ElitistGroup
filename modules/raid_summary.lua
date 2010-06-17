@@ -299,7 +299,7 @@ local function showElitistArmoryURL()
 		realmText = GetRealmName()
 	end
 	
-	ElitistGroup:ShowURLPopup(string.format("http://elitistarmory.com/gs/%s/%s/%s", ElitistGroup:GetRegion(), string.gsub(realmText, " ", "%20"), string.gsub(table.concat(names, ","), " ", "%20")), true)
+	ElitistGroup:ShowURLPopup(string.format("http://elitistarmory.com/gs/%s/%s/%s", ElitistGroup:GetRegion(), string.gsub(realmText, " ", "%%20"), string.gsub(table.concat(names, ","), " ", "%%20")), true)
 end
 
 function Summary:CreateUI()
