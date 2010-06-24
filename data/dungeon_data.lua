@@ -1,11 +1,16 @@
 local ElitistGroup = select(2, ...)
 local L = ElitistGroup.L
+local CURRENT_BUILD = tonumber((select(2, GetBuildInfo()))) or 0
 
 local function loadData()
 	local Dungeons = ElitistGroup.Dungeons
 	-- normal/heroic is for separating the dungeons like TotC/TotGC, hard will be for dungeons like Ulduar or Sartharion with hard modes on heroic
 	Dungeons.types = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
-
+	
+	local dungeonBuild = {
+		[L["The Ruby Sanctum"]] = 12213,
+	}
+		
 	Dungeons.suggested = {
 		L["T7 Dungeons"],					200, 5,		"heroic",
 		L["Sartharion"],					200, 10,	"normal",
@@ -32,11 +37,28 @@ local function loadData()
 		L["Trial of the Crusader"],			245, 25,	"normal",
 		L["Trial of the Grand Crusader"],	245, 10,	"heroic",
 		L["Icecrown Citadel"], 				251, 10,	"normal",
+		L["The Ruby Sanctum"],				258, 10,	"normal",
 		L["Trial of the Grand Crusader"],	258, 25,	"heroic",
 		L["Icecrown Citadel"], 				264, 25,	"normal", 
 		L["Icecrown Citadel"],				264, 10,	"heroic",
+		L["The Ruby Sanctum"],				271, 25,	"normal",
+		L["The Ruby Sanctum"],				271, 10,	"heroic",
 		L["Icecrown Citadel"], 				277, 25,	"heroic",
+		L["The Ruby Sanctum"],				284, 25,	"heroic",
 	}
+	
+	-- Remove any dungeons that aren't in the game yet
+	for i=#(Dungeons.suggested), 1, -4 do
+		local name = Dungeons.suggested[i - 3]
+		
+		if( dungeonBuild[name] and dungeonBuild[name] < CURRENT_BUILD ) then
+			table.remove(Dungeons.suggested, i)
+			table.remove(Dungeons.suggested, i - 1)
+			table.remove(Dungeons.suggested, i - 2)
+			table.remove(Dungeons.suggested, i - 3)
+		end
+	end
+	
 
 	local BASE_MOD = 0.89
 
@@ -61,7 +83,6 @@ local function loadData()
 	end
 
 	Dungeons.levelDiff = Dungeons.maxLevel - Dungeons.minLevel
-
 
 	--[[
 		Here's what you need to know about this file:
@@ -204,6 +225,14 @@ local function loadData()
 			--[4531] = 5, -- Storming the Citadel (10 player)
 			[4532] = 45, -- Fall of the Lich King (10 player)
 		},
+		
+		{name = L["The Ruby Sanctum"], childOf = "10-man", id = "trs-10m-n", players = 10,
+			experienced = 45,
+			[4821] = 5, -- Halion kills (Ruby Sanctum 10 player)
+			[4817] = 30, --  The Twilight Destroyer (10 player)
+		},
+		
+
 		{name = L["Vault of Archavon"], childOf = "10-man", id = "voa-10m", players = 10, subParent = true,
 			experienced = 120, -- 4 full clears, or three with Toravon
 			[4016] = 20, -- Earth, Wind & Fire (10 player)
@@ -310,6 +339,13 @@ local function loadData()
 			--[4607] = 0, -- The Frostwing Halls (25 player)
 			[4608] = 45, -- Fall of the Lich King (25 player)
 		},
+		{name = L["The Ruby Sanctum"], childOf = "25-man", id = "trs-25m-n", players = 25,
+			experienced = 45,
+			[4820] = 5, -- Halion kills (Ruby Sanctum 25 player)
+			[4815] = 30, -- The Twilight Destroyer (25 player)
+		},
+		
+		
 		{name = L["Vault of Archavon"], childOf = "25-man", id = "voa-25m", players = 25, subParent = true,
 			experienced = 120, -- 4 full clears, or three with Toravon
 			[4017] = 20, -- Earth, Wind & Fire (25 player)
@@ -378,6 +414,11 @@ local function loadData()
 			--[4631] = 0, -- Heroic: The Frostwing Halls (10 player)
 			[4636] = 45, -- Heroic: Fall of the Lich King (10 player)
 		},
+		{name = L["The Ruby Sanctum"], childOf = "10-man-hard", id = "trs-10m-h", cascade = "trs-10m-n", heroic = true, players = 10,
+			experienced = 45,
+			[4822] = 5, -- Halion kills (Heroic Ruby Sanctum 10 player)
+			[4818] = 30, -- Heroic: The Twilight Destroyer (10 player)
+		},
 		
 		{name = L["Raids"], parent = true, id = "25-man-hard", players = 25, heroic = true},
 		{name = L["Ulduar"], childOf = "25-man-hard", id = "ulduar-25m-h", cascade = "ulduar-25m-n", heroic = true, players = 25,
@@ -424,7 +465,21 @@ local function loadData()
 			--[4635] = 0, -- Heroic: The Frostwing Halls (25 player)
 			[4637] = 45, -- Heroic: Fall of the Lich King (25 player)
 		},
+		{name = L["The Ruby Sanctum"], childOf = "25-man-hard", id = "trs-25m-h", cascade = "trs-25m-n", heroic = true, players = 25,
+			experienced = 45,
+			[4823] = 5, -- Halion kills (Heroic Ruby Sanctum 25 player)
+			[4816] = 30, -- Heroic: The Twilight Destroyer (25 player)
+		},
 	}
+
+	-- Remove any dungeons that aren't in the game yet
+	for i=#(Dungeons.experience), 1, -1 do
+		local data = Dungeons.experience[i]
+		if( data.name and dungeonBuild[data.name] and dungeonBuild[data.name] < CURRENT_BUILD ) then
+			table.remove(Dungeons.experience, i)
+		end
+	end
+	
 
 	Dungeons.experienceParents = {}
 	Dungeons.achievements = {}

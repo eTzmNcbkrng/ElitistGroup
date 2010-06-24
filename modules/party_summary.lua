@@ -245,7 +245,7 @@ end
 
 local function showElitistArmoryURL()
 	local names, realms = {(UnitName("player"))}, {GetRealmName()}
-	local diffRealms
+	local diffRealms, realmText
 	
 	for i=1, GetNumPartyMembers() do
 		local name, realm = UnitName("party" .. i)

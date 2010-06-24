@@ -558,7 +558,7 @@ function Users:UpdateAchievementData()
 			
 		for id, points in pairs(data) do
 			if( userData.achievements[id] ) then
-				total = userData.achievements[id] * points
+				local total = userData.achievements[id] * points
 				if( DungeonData.experienceCap[id] and DungeonData.experienceCap[id] < total ) then
 					total = DungeonData.experienceCap[id]
 				end
@@ -567,7 +567,7 @@ function Users:UpdateAchievementData()
 			end
 			
 			if( userData.mainAchievements and userData.mainAchievements[id] ) then
-				total = userData.mainAchievements[id] * points
+				local total = userData.mainAchievements[id] * points
 				if( DungeonData.experienceCap[id] and DungeonData.experienceCap[id] < total ) then
 					total = DungeonData.experienceCap[id]
 				end
@@ -786,7 +786,7 @@ function Users:BuildDungeonSuggestPage()
 
 	FauxScrollFrame_Update(self.dungeonFrame.scroll, TOTAL_DUNGEONS, MAX_DUNGEON_ROWS - 1, 28)
 	if( self.forceOffset ) then
-		self.forceOffset = math.min(self.forceOffset, TOTAL_DUNGEONS - MAX_DUNGEON_ROWS + 1)
+		self.forceOffset = math.ceil(math.min(self.forceOffset, TOTAL_DUNGEONS - MAX_DUNGEON_ROWS + 1))
 		self.dungeonFrame.scroll.offset = self.forceOffset
 		self.dungeonFrame.scroll.bar:SetValue(28 * self.forceOffset)
 		self.forceOffset = nil

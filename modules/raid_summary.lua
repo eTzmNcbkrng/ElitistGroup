@@ -278,7 +278,7 @@ end
 
 local function showElitistArmoryURL()
 	local names, realms = {}, {}
-	local diffRealms
+	local diffRealms, realmText
 	
 	for i=1, GetNumRaidMembers() do
 		local name, realm = UnitName("raid" .. i)

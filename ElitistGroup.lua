@@ -202,7 +202,7 @@ function ElitistGroup:GetRegion()
 end
 
 function ElitistGroup:GetArmoryURL(realm, name)
-	region = self:GetRegion()
+	local region = self:GetRegion()
 	realm = string.gsub(realm, " ", "%%20")
 	name = string.gsub(name, " ", "%%20")
 	

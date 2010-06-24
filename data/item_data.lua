@@ -76,7 +76,7 @@ local function loadData()
 	
 	-- Set the primary spec arch types
 	local tank = {["all"] = true, ["tank"] = true, ["melee"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["tank/ranged"] = true, ["tank/pvp"] = true}
-	local casterDamage = {["all"] = true, ["caster-spirit"] = true, ["caster-dps"] = true, ["caster"] = true, ["healer/dps"] = true, ["tank/dps"] = true, ["dps"] = true}
+	local casterDamage = {["all"] = true, ["caster-spirit"] = true, ["caster-dps"] = true, ["caster"] = true, ["healer/dps"] = true, ["tank/dps"] = true, ["dps"] = true, ["spirit/cloak"] = true}
 	local meleeDamage = {["all"] = true, ["melee"] = true, ["melee-dps"] = true, ["physical-dps"] = true, ["physical-all"] = true, ["tank/dps"] = true, ["healer/dps"] = true, ["dps"] = true}
 	local rangeDamage = {["all"] = true, ["range-dps"] = true, ["tank/ranged"] = true, ["physical-dps"] = true, ["physical-all"] = true, ["healer/dps"] = true, ["tank/dps"] = true, ["dps"] = true}
 	local healer = {["all"] = true, ["healer"] = true, ["caster"] = true, ["healer/dps"] = true}
