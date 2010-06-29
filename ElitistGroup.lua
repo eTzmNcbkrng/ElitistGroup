@@ -197,7 +197,7 @@ function ElitistGroup:ShowInfoPanel()
 	frame.title:SetText("Elitist Group")
 
 	frame.text = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-	frame.text:SetText(L["As of 3.3.5, Blizzard has started to throttle inspections to 5 inspections every 10 seconds.|n|nElitist Group has been updated to account for this, but you may see throttle messages when using /eg, group scans will also be slower. A new option has been added in /eg config to save X amount of inspections when scanning.|n|nYou can still use Elitist Armory to check groups without the throttle limit.|n|n|cffff2020Warning!|r|nGearscore has a habit of sending a higher than normal amount of inspect requests, disabling it is recommended.|nTipTop and other tooltip addons that show talents will also contribute to the limit.|n|nYou will only see this message once."])
+	frame.text:SetText(L["As of 3.3.5, Blizzard has started to throttle inspections to 6 inspections every ~10 seconds.|n|nElitist Group has been updated to account for this, but you may see throttle messages when using /eg, group scans will also be slower. A new option has been added in /eg config to save X amount of inspections when scanning.|n|nYou can still use Elitist Armory to check groups without the throttle limit.|n|n|cffff2020Warning!|r|nGearscore has a habit of sending a higher than normal amount of inspect requests, disabling it is recommended.|nTipTop and other tooltip addons that show talents will also contribute to the limit.|n|nYou will only see this message once."])
 	frame.text:SetPoint("TOPLEFT", 12, -22)
 	frame.text:SetWidth(frame:GetWidth() - 20)
 	frame.text:SetJustifyH("LEFT")

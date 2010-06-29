@@ -9,8 +9,8 @@ ElitistGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["ra
 ElitistGroup.MAX_LINK_LENGTH = 80
 ElitistGroup.MAX_NOTE_LENGTH = 256
 
-local INSPECT_RESET_TIMER = 10
-local INSPECTS_PER_INTERVAL = 5
+local INSPECT_RESET_TIMER = 11
+local INSPECTS_PER_INTERVAL = 6
 local inspectsLeft, inspectResetAt = INSPECTS_PER_INTERVAL
 
 local MAX_QUEUE_RETRIES = 50
@@ -67,8 +67,6 @@ hooksecurefunc("NotifyInspect", function(unit)
 		end
 
 		inspectsLeft = inspectsLeft - 1
-		
-		print(inspectsLeft, inspectResetAt, inspectResetAt and inspectResetAt - GetTime())
 		
 		-- Out of inspects =( wait)
 		if( inspectsLeft <= 0 ) then
@@ -487,7 +485,6 @@ function Scan:ProcessQueue()
 	-- We're trying to keep some inspects so we don't tap out, or we ran out and need to wait
 	elseif( ( inspectsLeft <= 0 or inspectsLeft <= ElitistGroup.db.profile.auto.keepInspects ) and inspectResetAt and inspectResetAt > GetTime() ) then
 		self.frame.queueTimer = inspectResetAt - GetTime()
-		print("WAiting", self.frame.queueTimer, inspectsLeft)
 		return
 	end
 	

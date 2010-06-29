@@ -100,7 +100,7 @@ local function loadOptions()
 						type = "range",
 						name = L["How many inspects to save"],
 						desc = L["When automatically scanning your group, this is the number of inspects that will be saved so you can still inspect other people while the scan runs.|n|nThe more inspects you keep, the longer a scan will take."],
-						min = 0, max = 4, step = 1,
+						min = 0, max = 5, step = 1,
 					}
 				},
 			},
