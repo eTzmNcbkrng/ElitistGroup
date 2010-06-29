@@ -95,6 +95,13 @@ local function loadOptions()
 						name = L["Show summary on dungeon start"],
 						desc = L["Pops up the summary window when you first zone into an instance using the Looking for Dungeon system showing you info on your group."],
 					},
+					keepInspects = {
+						order = 4,
+						type = "range",
+						name = L["How many inspects to save"],
+						desc = L["When automatically scanning your group, this is the number of inspects that will be saved so you can still inspect other people while the scan runs.|n|nThe more inspects you keep, the longer a scan will take."],
+						min = 0, max = 4, step = 1,
+					}
 				},
 			},
 			main = {
@@ -523,11 +530,13 @@ SlashCmdList["ELITISTGROUP"] = function(msg)
 		if( UnitExists("target") and UnitIsFriend("target", "player") and not UnitIsUnit("target", "player") and UnitIsPlayer("target") ) then
 			if( CanInspect("target", true) ) then
 				playerID = ElitistGroup:GetPlayerID("target")
-				if( not ElitistGroup.modules.Scan:IsInspectPending() ) then
+				if( not ElitistGroup.userData[playerID] and ElitistGroup.modules.Scan:GetInspectTimer() ) then
+					ElitistGroup:Print(string.format(L["Cannot inspect %s yet, you have to wait %.1f seconds before you can inspect again."], UnitName("target"), ElitistGroup.modules.Scan:GetInspectTimer()))
+				elseif( not ElitistGroup.modules.Scan:IsInspectPending() ) then
 					ElitistGroup.modules.Scan:InspectUnit("target")
 					ElitistGroup.modules.Sync:RequestMainData("target")
 				elseif( not ElitistGroup.userData[playerID] ) then
-					ElitistGroup:Print(L["An inspection is currently pending, please wait a second and try again."])
+					ElitistGroup:Print(string.format(L["No data found for %s, and an inspection is pending. You'll have to wait a second and try again."], UnitName("target")))
 				end
 			end
 		else

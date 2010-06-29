@@ -9,6 +9,10 @@ ElitistGroup.VALID_NOTE_FIELDS = {["time"] = "number", ["role"] = "number", ["ra
 ElitistGroup.MAX_LINK_LENGTH = 80
 ElitistGroup.MAX_NOTE_LENGTH = 256
 
+local INSPECT_RESET_TIMER = 10
+local INSPECTS_PER_INTERVAL = 5
+local inspectsLeft, inspectResetAt = INSPECTS_PER_INTERVAL
+
 local MAX_QUEUE_RETRIES = 50
 local MAX_GEM_RETRIES = 50
 local QUEUE_RECHECK_TIME = 2
@@ -46,7 +50,33 @@ function Scan:OnInitialize()
 	self.frame:Hide()
 end
 
+function Scan:GetInspectTimer()
+	if( inspectsLeft <= 0 and inspectResetAt > GetTime() ) then
+		return inspectResetAt - GetTime()
+	end
+	
+	return nil
+end
+
 hooksecurefunc("NotifyInspect", function(unit)
+	-- Handle the inspect throttle
+	if( CanInspect(unit) and not UnitIsUnit(unit, "player") and not UnitIsGhost(unit) ) then
+		if( not inspectResetAt or inspectResetAt < GetTime() ) then
+			inspectResetAt = GetTime() + INSPECT_RESET_TIMER
+			inspectsLeft = INSPECTS_PER_INTERVAL
+		end
+
+		inspectsLeft = inspectsLeft - 1
+		
+		print(inspectsLeft, inspectResetAt, inspectResetAt and inspectResetAt - GetTime())
+		
+		-- Out of inspects =( wait)
+		if( inspectsLeft <= 0 ) then
+			Scan.allowInspect = nil
+			return
+		end
+	end
+
 	if( InCombatLockdown() or not Scan.allowInspect ) then return end
 	Scan.allowInspect = nil
 	
@@ -56,7 +86,7 @@ hooksecurefunc("NotifyInspect", function(unit)
 	end
 
 	-- Seems that we can inspect them
-	if( not UnitIsDeadOrGhost(unit) and UnitIsConnected(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
+	if( not UnitIsGhost(unit) and UnitIsConnected(unit) and UnitIsFriend(unit, "player") and CanInspect(unit) and UnitName(unit) ~= UNKNOWN ) then
 		table.wipe(pending)
 		table.wipe(pendingGear)
 
@@ -447,14 +477,17 @@ function Scan:PLAYER_REGEN_ENABLED()
 	self:ProcessQueue()
 end
 
---hooksecurefunc("NotifyInspect", function(...) print(...) end)
-
 local checkedGemQueue
 function Scan:ProcessQueue()
 	if( #(inspectQueue) == 0 and #(inspectBadGems) == 0 ) then
 		self:ResetQueue()
 		return
 	elseif( InCombatLockdown() or ( pending.activeInspect and pending.expirationTime and pending.expirationTime > GetTime() ) ) then
+		return
+	-- We're trying to keep some inspects so we don't tap out, or we ran out and need to wait
+	elseif( ( inspectsLeft <= 0 or inspectsLeft <= ElitistGroup.db.profile.auto.keepInspects ) and inspectResetAt and inspectResetAt > GetTime() ) then
+		self.frame.queueTimer = inspectResetAt - GetTime()
+		print("WAiting", self.frame.queueTimer, inspectsLeft)
 		return
 	end
 	
