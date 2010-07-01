@@ -168,8 +168,8 @@ end
 
 function ElitistGroup:ShowInfoPanel()
 	-- We don't need to show this after the next TOC update, it should be known by then
-	if( ElitistGroupDB.reportedThrottle or select(4, GetBuildInfo()) > 30300 ) then return end
-	ElitistGroupDB.reportedThrottle = true
+	if( ElitistGroupDB.throttleAnnounced or select(4, GetBuildInfo()) > 30300 ) then return end
+	ElitistGroupDB.throttleAnnounced = true
 	
 	local frame = CreateFrame("Frame", nil, UIParent)
 	frame:SetClampedToScreen(true)
