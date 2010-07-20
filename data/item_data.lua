@@ -57,7 +57,7 @@ local function loadData()
 		["INVTYPE_ROBE"] = "chest", ["INVTYPE_CHEST"] = "chest",
 	}
 
-	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["suitational-caster"] = L["Suitational (Caster)"], ["suitational-healer"] = L["Suitational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"], ["spirit/cloak"] = L["Caster (Spirit)"]}
+	Items.itemRoleText = {["pvp"] = L["PVP"], ["healer"] = L["Healer (All)"], ["caster-dps"] = L["DPS (Caster)"], ["caster"] = L["Caster (All)"], ["tank"] = L["Tank"], ["unknown"] = L["Unknown"], ["melee-dps"] = L["DPS (Melee)"], ["range-dps"] = L["DPS (Ranged)"], ["physical-dps"] = L["DPS (Physical)"], ["melee"] = L["Melee (All)"], ["never"] = L["Always bad"], ["dps"] = L["DPS (All)"], ["healer/dps"] = L["Healer/DPS"], ["tank/dps"] = L["Tank/DPS"], ["all"] = L["All"], ["physical-all"] = L["Physical (All)"], ["tank/pvp"] = L["Tank/PVP"], ["caster-spirit"] = L["Caster (Spirit)"], ["situational-caster"] = L["situational (Caster)"], ["situational-healer"] = L["situational (Healer)"], ["manaless"] = L["Healing Priest/Druid"], ["tank/ranged"] = L["Tank/Ranged DPS"], ["elemental/pvp"] = L["PVP/Elemental Shaman"], ["spirit/cloak"] = L["Caster (Spirit)"]}
 
 	local function mergeTable(into, ...)
 		for i=1, select("#", ...) do
@@ -261,15 +261,15 @@ local function loadData()
 	local TRINKET1 = GetInventorySlotInfo("Trinket0Slot")
 	local TRINKET2 = GetInventorySlotInfo("Trinket1Slot")
 	local solaceIDs = {["47041"] = true, ["47059"] = true, ["47271"] = true, ["47432"] = true}
-	Items.suitationalOverrides = {
+	Items.situationalOverrides = {
 		-- Revitalizing Skyflare Diamond
 		["item:41376"] = function(type, userData, specType)
 			if( specType == "disc-priest" or specType == "resto-shaman" ) then return "healer" end
 			
-			return "suitational-healer"
+			return "situational-healer"
 			--[[
 			if( specType == "disc-priest" or specType == "resto-shaman" ) then return "healer" end
-			if( specType ~= "resto-shaman" ) then return "suitational-healer" end
+			if( specType ~= "resto-shaman" ) then return "situational-healer" end
 			
 			-- As per: http://elitistjerks.com/f47/t24796-shaman_restoration/#Gems
 			-- One or more Solace trinkets makes Revitalizing Skyflare Diamond good for Shamans
@@ -279,7 +279,7 @@ local function loadData()
 				return "healer"
 			end
 			
-			return "suitational-healer", L["Revitalizing meta requires a Solace of the Fallen/Defeated trinket for it to be a good meta gem for Restoration Shamans."]
+			return "situational-healer", L["Revitalizing meta requires a Solace of the Fallen/Defeated trinket for it to be a good meta gem for Restoration Shamans."]
 			]]
 		end,
 		-- Shiny Shard of the Flame
@@ -289,15 +289,15 @@ local function loadData()
 			
 			-- 49488 Shiny Shard of the Scale / 49310 Purified Shard of the Scale
 			if( trinket == "49488" or trinket == "49310" ) then
-				return "healer"
+				return "caster"
 			end
 				
-			return "suitational-caster", L["Purified/Shiny Shard of the Flame are only good if the player also has the \"of the Scale\" trinket."]
+			return "situational-caster", L["Purified/Shiny Shard of the Flame are only good if the player also has the \"of the Scale\" trinket."]
 		end,
 	}
 	
 	-- Purified Shard of the Flame
-	Items.suitationalOverrides["item:49463"] = Items.suitationalOverrides["item:49464"]
+	Items.situationalOverrides["item:49463"] = Items.situationalOverrides["item:49464"]
 
 	-- Certain items can't be classified with normal stat scans, you can specify a specific type using this
 	Items.itemOverrides = {

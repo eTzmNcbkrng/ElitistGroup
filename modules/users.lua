@@ -135,7 +135,7 @@ function Users:BuildUI(userData, updateType)
 			local g = (percent > 0.5 and 1.0 or percent * 2) * 255
 			infoFrame.equipmentInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] [%s%d|r] Equipment"], r, g, percent * 100, ElitistGroup:GetItemColor(equipmentData.totalScore), equipmentData.totalScore)
 			infoFrame.equipmentInfo.tooltip = equipmentTooltip
-			infoFrame.equipmentInfo.suitationalTooltip = ElitistGroup:GetSuitationalTooltip(nil, equipmentData)
+			infoFrame.equipmentInfo.situationalTooltip = ElitistGroup:GetSituationalTooltip(nil, equipmentData)
 			infoFrame.equipmentInfo.disableWrap = true
 		
 			-- ENCHANTS
@@ -164,7 +164,7 @@ function Users:BuildUI(userData, updateType)
 
 				infoFrame.gemInfo:SetFormattedText(L["[|cff%02x%02x00%d%%|r] Gems"], r, g, percent * 100)
 				infoFrame.gemInfo.tooltip = gemTooltip
-				infoFrame.gemInfo.suitationalTooltip = ElitistGroup:GetSuitationalTooltip(nil, nil, gemData)
+				infoFrame.gemInfo.situationalTooltip = ElitistGroup:GetSituationalTooltip(nil, nil, gemData)
 				infoFrame.gemInfo.disableWrap = not gemData.noData
 			else
 				infoFrame.gemInfo:SetText(L["[|cffff20200%|r] Gems"])
@@ -481,7 +481,7 @@ function Users:BuildEquipmentPage()
 				slot.enchantTooltip = enchantTooltips[itemLink]
 				slot.isBadType = equipmentData[itemLink] and "|cffff2020[!]|r " or ""
 				slot.itemTalentType = ElitistGroup.Items.itemRoleText[ElitistGroup.ITEM_TALENTTYPE[baseItemLink]] or ElitistGroup.ITEM_TALENTTYPE[baseItemLink]
-				slot.suitationalTooltip = ElitistGroup:GetSuitationalTooltip(itemLink, equipmentData, gemData)
+				slot.situationalTooltip = ElitistGroup:GetSituationalTooltip(itemLink, equipmentData, gemData)
 				slot.fullItemLink = fullItemLink
 				slot.icon:SetTexture(itemIcon)
 				slot.typeText:SetText(slot.itemTalentType)
@@ -1113,10 +1113,10 @@ function Users:CreateUI()
 			GameTooltip:SetText(self.tooltip, nil, nil, nil, nil, not self.disableWrap)
 			GameTooltip:Show()
 
-			if( self.suitationalTooltip ) then
-				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupSuitationalTooltip", UIParent, "GameTooltipTemplate")
+			if( self.situationalTooltip ) then
+				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupsituationalTooltip", UIParent, "GameTooltipTemplate")
 				suitTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-				suitTooltip:SetText(self.suitationalTooltip, nil, nil, nil, nil, true)
+				suitTooltip:SetText(self.situationalTooltip, nil, nil, nil, nil, true)
 				suitTooltip:SetPoint("TOPLEFT", GameTooltip, "TOPRIGHT", 0, 10)
 			end
 
@@ -1135,10 +1135,10 @@ function Users:CreateUI()
 			
 			GameTooltip:Show()
 			
-			if( self.suitationalTooltip ) then
-				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupSuitationalTooltip", UIParent, "GameTooltipTemplate")
+			if( self.situationalTooltip ) then
+				suitTooltip = suitTooltip or CreateFrame("GameTooltip", "ElitistGroupsituationalTooltip", UIParent, "GameTooltipTemplate")
 				suitTooltip:SetOwner(GameTooltip, "ANCHOR_NONE")
-				suitTooltip:SetText(self.suitationalTooltip, nil, nil, nil, nil, true)
+				suitTooltip:SetText(self.situationalTooltip, nil, nil, nil, nil, true)
 				suitTooltip:SetPoint("TOPLEFT", GameTooltip, "BOTTOMLEFT", 0, -10)
 			end
 			

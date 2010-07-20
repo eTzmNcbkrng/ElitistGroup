@@ -388,7 +388,7 @@ function ElitistGroup:ReleaseTables(...)
 	end
 end
 
-function ElitistGroup:GetSuitationalTooltip(filterItem, equipmentData, gemData)
+function ElitistGroup:GetsituationalTooltip(filterItem, equipmentData, gemData)
 	local tempList = self:GetTable()
 	
 	if( equipmentData ) then
@@ -478,7 +478,7 @@ function ElitistGroup:GetGearSummaryTooltip(equipment, enchantData, gemData)
 	end
 	
 	self:ReleaseTables(tempList)
-	return enchantTooltips, gemTooltips, suitationalTooltips
+	return enchantTooltips, gemTooltips, situationalTooltips
 end
 
 function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantData)
@@ -553,10 +553,10 @@ function ElitistGroup:GetGeneralSummaryTooltip(equipmentData, gemData, enchantDa
 	return equipmentTooltip or L["Equipment: |cffffffffPass|r"], gemTooltip or L["Gems: |cffffffffPass|r"], enchantTooltip or L["Enchants: |cffffffffPass|r"]
 end
 
-local function getSuitationalOverride(type, itemLink, itemType, userData, spec)
-	local suitational = ElitistGroup.Items.suitationalOverrides[itemLink]
-	if( suitational ) then
-		local type, message = suitational(type, userData, spec)
+local function getSituationalOverride(type, itemLink, itemType, userData, spec)
+	local situational = ElitistGroup.Items.situationalOverrides[itemLink]
+	if( situational ) then
+		local type, message = situational(type, userData, spec)
 		if( type ) then
 			return type, message or false
 		end
@@ -598,7 +598,7 @@ function ElitistGroup:GetGearSummary(userData)
 			local equipID = self.Items.equipToType[itemEquipType]
 			local roleOverride = self.Items.roleOverrides[spec] and self.Items.roleOverrides[spec].type == equipID and self.Items.roleOverrides[spec]
 			-- Check if we have an override on this item
-			local itemTalent, suitMessage = getSuitationalOverride(inventoryID, baseItemLink, self.ITEM_TALENTTYPE[baseItemLink], userData, spec)
+			local itemTalent, suitMessage = getSituationalOverride(inventoryID, baseItemLink, self.ITEM_TALENTTYPE[baseItemLink], userData, spec)
 			
 			-- Figure out the items slot name if necessary
 			if( ElitistGroup.db.profile.general.showSlotName ) then
@@ -663,7 +663,7 @@ function ElitistGroup:GetGearSummary(userData)
 					gems.totalUsed = gems.totalUsed + 1
 					itemUnsocketed = itemUnsocketed - 1
 					
-					local gemTalent, suitMessage = getSuitationalOverride(nil, gemLink, self.GEM_TALENTTYPE[gemLink], userData, spec)
+					local gemTalent, suitMessage = getSituationalOverride(nil, gemLink, self.GEM_TALENTTYPE[gemLink], userData, spec)
 					if( gemTalent ~= "unknown" and validSpecTypes and not validSpecTypes[gemTalent] ) then
 						table.insert(gems, fullItemLink)
 						table.insert(gems, gemLink)
