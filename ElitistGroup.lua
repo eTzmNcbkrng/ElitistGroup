@@ -388,7 +388,7 @@ function ElitistGroup:ReleaseTables(...)
 	end
 end
 
-function ElitistGroup:GetsituationalTooltip(filterItem, equipmentData, gemData)
+function ElitistGroup:GetSituationalTooltip(filterItem, equipmentData, gemData)
 	local tempList = self:GetTable()
 	
 	if( equipmentData ) then
