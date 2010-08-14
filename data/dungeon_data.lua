@@ -8,7 +8,6 @@ local function loadData()
 	Dungeons.types = {["normal"] = L["Normal"], ["heroic"] = L["Heroic"], ["hard"] = L["Hard"]}
 	
 	local dungeonBuild = {
-		[L["The Ruby Sanctum"]] = 12213,
 	}
 		
 	Dungeons.suggested = {
@@ -475,7 +474,7 @@ local function loadData()
 	-- Remove any dungeons that aren't in the game yet
 	for i=#(Dungeons.experience), 1, -1 do
 		local data = Dungeons.experience[i]
-		if( data.name and dungeonBuild[data.name] and dungeonBuild[data.name] < CURRENT_BUILD ) then
+		if( data.name and dungeonBuild[data.name] and dungeonBuild[data.name] > CURRENT_BUILD ) then
 			table.remove(Dungeons.experience, i)
 		end
 	end
